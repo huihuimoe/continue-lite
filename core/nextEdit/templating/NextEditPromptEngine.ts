@@ -22,6 +22,10 @@ export const NEXT_EDIT_MODEL_TEMPLATES: Record<
   instinct: {
     template: `${INSTINCT_USER_PROMPT_PREFIX}\n\n### Context:\n{{{contextSnippets}}}\n\n### User Edits:\n\n{{{editDiffHistory}}}\n\n### User Excerpt:\n{{{currentFilePath}}}\n\n{{{currentFileContent}}}\`\`\`\n### Response:`,
   },
+  "sweep-next-edit": {
+    template:
+      "{{{contextFilesBlock}}}\n{{{recentDiffsBlock}}}\n<|file_sep|>original/{{{currentFilePath}}}\n{{{originalContent}}}\n<|file_sep|>current/{{{currentFilePath}}}\n{{{currentContent}}}\n<|file_sep|>updated/{{{currentFilePath}}}",
+  },
 };
 
 // Export a utility for providers to use

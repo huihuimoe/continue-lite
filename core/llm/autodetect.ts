@@ -282,6 +282,7 @@ function isProviderHandlesTemplatingOrNoTemplateTypeRequired(
 const MODEL_SUPPORTS_NEXT_EDIT: string[] = [
   NEXT_EDIT_MODELS.MERCURY_CODER,
   NEXT_EDIT_MODELS.INSTINCT,
+  NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT,
 ];
 
 function modelSupportsNextEdit(

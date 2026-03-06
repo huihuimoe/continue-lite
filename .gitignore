@@ -177,4 +177,5 @@ keys
 .users_cache.json
 .copy-status
 .copy-log
-
+codemap.md
+.slim

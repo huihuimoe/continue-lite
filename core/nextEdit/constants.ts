@@ -13,6 +13,7 @@ export const MODEL_WINDOW_SIZES: Record<
     bottomMargin: 5,
   }, // mercury coder uses full file diff, so this should be unnecessary
   instinct: { topMargin: 1, bottomMargin: 5 },
+  "sweep-next-edit": { topMargin: 0, bottomMargin: 5 },
 };
 
 export const UNIQUE_TOKEN = "<|!@#IS_NEXT_EDIT!@#|>";

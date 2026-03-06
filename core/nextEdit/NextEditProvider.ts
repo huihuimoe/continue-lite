@@ -423,6 +423,7 @@ export class NextEditProvider {
       editableRegionEndLine,
       diffContext: combinedDiffContext,
       autocompleteContext: this.autocompleteContext,
+      workspaceDirs,
       historyDiff: createDiff({
         beforeContent:
           DocumentHistoryTracker.getInstance().getMostRecentDocumentHistory(
@@ -473,24 +474,39 @@ export class NextEditProvider {
       }
     }
 
-    // Send prompts to LLM (using only user prompt for fine-tuned models).
-    // prompts[1] extracts the user prompt from the system-user prompt pair.
-    // NOTE: Stream is currently set to false, but this should ideally be a per-model flag.
-    // Mercury Coder currently does not support streaming.
-    const msg: ChatMessage = await llm.chat(
-      this.endpointType === "fineTuned" ? [prompts[1]] : prompts,
-      token,
-      {
-        stream: false,
-      },
-    );
+    const inferenceConfig = this.modelProvider.getInferenceConfig();
+    let rawCompletion: string;
 
-    if (typeof msg.content !== "string") {
-      return undefined;
+    if (inferenceConfig.mode === "complete") {
+      const userPrompt = prompts[prompts.length - 1];
+
+      if (!userPrompt || userPrompt.role !== "user") {
+        return undefined;
+      }
+
+      rawCompletion = await llm.complete(
+        userPrompt.content,
+        token,
+        inferenceConfig.options,
+      );
+    } else {
+      // Send prompts to LLM (using only user prompt for fine-tuned models).
+      // prompts[1] extracts the user prompt from the system-user prompt pair.
+      const msg: ChatMessage = await llm.chat(
+        this.endpointType === "fineTuned" ? [prompts[1]] : prompts,
+        token,
+        inferenceConfig.options,
+      );
+
+      if (typeof msg.content !== "string") {
+        return undefined;
+      }
+
+      rawCompletion = msg.content;
     }
 
     // Extract completion using model-specific logic.
-    let nextCompletion = this.modelProvider.extractCompletion(msg.content);
+    let nextCompletion = this.modelProvider.extractCompletion(rawCompletion);
 
     // Postprocess the completion (same as autocomplete).
     const postprocessed = postprocessCompletion({

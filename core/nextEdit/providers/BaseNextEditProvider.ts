@@ -1,17 +1,23 @@
 import * as path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-import { HelperVars } from "../../autocomplete/util/HelperVars.js";
+import type { HelperVars } from "../../autocomplete/util/HelperVars.js";
 import { myersDiff } from "../../diff/myers.js";
-import { DiffLine, IDE, ILLM, Position, RangeInFile } from "../../index.js";
+import type {
+  DiffLine,
+  IDE,
+  ILLM,
+  Position,
+  RangeInFile,
+} from "../../index.js";
 import { countTokens } from "../../llm/countTokens.js";
 import {
   calculateFinalCursorPosition,
   DiffGroup,
   groupDiffLines,
 } from "../diff/diff.js";
-import { PrefetchQueue } from "../NextEditPrefetchQueue.js";
 import {
+  NextEditInferenceConfig,
   ModelSpecificContext,
   NextEditOutcome,
   Prompt,
@@ -45,6 +51,15 @@ export abstract class BaseNextEditModelProvider {
     editableRegionStartLine: number;
     editableRegionEndLine: number;
   };
+
+  getInferenceConfig(): NextEditInferenceConfig {
+    return {
+      mode: "chat",
+      options: {
+        stream: false,
+      },
+    };
+  }
 
   // Methods that can be used as default fallback.
   public async handlePartialFileDiff(params: {
@@ -134,6 +149,7 @@ export abstract class BaseNextEditModelProvider {
       5,
     ).filter((group) => !isWhitespaceOnlyDeletion(group.lines));
     const currentLine = helper.pos.line;
+    const { PrefetchQueue } = await import("../NextEditPrefetchQueue.js");
     const prefetchQueue = PrefetchQueue.getInstance();
 
     const cursorLocalDiffGroup = await this.processDiffGroups({
@@ -174,7 +190,12 @@ export abstract class BaseNextEditModelProvider {
     helper: HelperVars;
     startTime: number;
     llm: ILLM;
-    prefetchQueue: PrefetchQueue;
+    prefetchQueue: {
+      enqueueProcessed: (item: {
+        location: RangeInFile;
+        outcome: NextEditOutcome;
+      }) => void;
+    };
     promptMetadata: PromptMetadata;
     ide: IDE;
     profileType?: "local" | "platform" | "control-plane";
@@ -217,7 +238,12 @@ export abstract class BaseNextEditModelProvider {
     helper: HelperVars;
     startTime: number;
     llm: ILLM;
-    prefetchQueue: PrefetchQueue;
+    prefetchQueue: {
+      enqueueProcessed: (item: {
+        location: RangeInFile;
+        outcome: NextEditOutcome;
+      }) => void;
+    };
     promptMetadata: PromptMetadata;
     ide: IDE;
     profileType?: "local" | "platform" | "control-plane";
