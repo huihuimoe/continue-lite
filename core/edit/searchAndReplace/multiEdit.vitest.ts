@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EditOperation } from "../../tools/definitions/multiEdit";
+import { EditOperation } from "./types";
 import { ContinueErrorReason } from "../../util/errors";
 import { validateMultiEdit } from "./multiEditValidation";
 import { executeMultiFindAndReplace } from "./performReplace";

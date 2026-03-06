@@ -7,7 +7,6 @@ import { extractMinimalStackTraceInfo } from "core/util/extractMinimalStackTrace
 import { Telemetry } from "core/util/posthog";
 import * as vscode from "vscode";
 
-import { SentryLogger } from "core/util/sentry/SentryLogger";
 import { getExtensionVersion } from "./util/util";
 export { default as buildTimestamp } from "./.buildTimestamp";
 
@@ -32,12 +31,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window
       .showWarningMessage(
         "Error activating the Continue extension.",
-        "View Logs",
+        "Open Developer Tools",
         "Retry",
       )
       .then((selection) => {
-        if (selection === "View Logs") {
-          vscode.commands.executeCommand("continue.viewLogs");
+        if (selection === "Open Developer Tools") {
+          vscode.commands.executeCommand("workbench.action.toggleDevTools");
         } else if (selection === "Retry") {
           // Reload VS Code window
           vscode.commands.executeCommand("workbench.action.reloadWindow");
@@ -56,5 +55,4 @@ export function deactivate() {
   );
 
   Telemetry.shutdownPosthogClient();
-  SentryLogger.shutdownSentryClient();
 }

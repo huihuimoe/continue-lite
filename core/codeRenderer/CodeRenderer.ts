@@ -12,7 +12,6 @@ import {
   transformerNotationDiff,
   transformerNotationHighlight,
 } from "@shikijs/transformers";
-import { JSDOM } from "jsdom";
 import {
   BundledLanguage,
   BundledTheme,
@@ -50,6 +49,66 @@ interface Dimensions {
 type DataUri = PngUri | SvgUri;
 type PngUri = string;
 type SvgUri = string;
+
+type ParsedShikiSpan = {
+  text: string;
+  style: string;
+  className: string;
+};
+
+type ParsedShikiLine = {
+  className: string;
+  spans: ParsedShikiSpan[];
+};
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function stripTags(text: string): string {
+  return decodeHtmlEntities(text.replace(/<[^>]+>/g, ""));
+}
+
+function getAttribute(tag: string, name: string): string {
+  const match = tag.match(new RegExp(`${name}="([^"]*)"`));
+  return match?.[1] ?? "";
+}
+
+function parseShikiLines(shikiHtml: string): ParsedShikiLine[] {
+  const codeBlockMatch = shikiHtml.match(/<code>([\s\S]*?)<\/code>/);
+  if (!codeBlockMatch) {
+    return [];
+  }
+
+  return Array.from(codeBlockMatch[1].matchAll(/<span class="([^"]*)">([\s\S]*?)<\/span>/g)).map(
+    ([, className, content]) => ({
+      className,
+      spans: Array.from(content.matchAll(/<span([^>]*)>([\s\S]*?)<\/span>|([^<]+)/g)).map(
+        (match) => {
+          const tag = match[1] ?? "";
+          const nestedText = match[2];
+          const plainText = match[3];
+          return {
+            text: stripTags(nestedText ?? plainText ?? ""),
+            style: getAttribute(tag, "style"),
+            className: getAttribute(tag, "class"),
+          };
+        },
+      ),
+    }),
+  );
+}
+
+function getPreBackgroundColor(shikiHtml: string): string {
+  const preMatch = shikiHtml.match(/<pre[^>]*style="([^"]*)"/);
+  const style = preMatch?.[1] ?? "";
+  return style.match(/background-color:\s*(#[0-9a-fA-F]{6})/)?.[1] ?? "#333333";
+}
 
 export class CodeRenderer {
   private static instance: CodeRenderer;
@@ -272,10 +331,7 @@ export class CodeRenderer {
     options: ConversionOptions,
     diffChars: DiffChar[],
   ): { guts: string; lineBackgrounds: string } {
-    const dom = new JSDOM(shikiHtml);
-    const document = dom.window.document;
-
-    const lines = Array.from(document.querySelectorAll(".line"));
+    const lines = parseShikiLines(shikiHtml);
 
     const additionSegmentsByLine = new Map<
       number,
@@ -321,36 +377,18 @@ export class CodeRenderer {
       additionSegmentsByLine.set(lineIndex, merged);
     });
     const svgLines = lines.map((line, index) => {
-      const spans = Array.from(line.childNodes)
-        .map((node) => {
-          if (node.nodeType === 3) {
-            return `<tspan xml:space="preserve">${escapeForSVG(node.textContent ?? "")}</tspan>`;
-          }
-
-          const el = node as HTMLElement;
-          const style = el.getAttribute("style") || "";
-          const colorMatch = style.match(/color:\s*(#[0-9a-fA-F]{6})/);
-          const classes = el.getAttribute("class") || "";
+      const spans = line.spans
+        .map((span) => {
+          const colorMatch = span.style.match(/color:\s*(#[0-9a-fA-F]{6})/);
           let fill = colorMatch ? ` fill="${colorMatch[1]}"` : "";
-          if (classes.includes("highlighted")) {
+          if (span.className.includes("highlighted")) {
             fill = ` fill="${this.editorLineHighlight}"`;
           }
 
-          const content = el.textContent || "";
-          return `<tspan xml:space="preserve"${fill}>${escapeForSVG(content)}</tspan>`;
+          return `<tspan xml:space="preserve"${fill}>${escapeForSVG(span.text)}</tspan>`;
         })
         .join("");
 
-      // Typography notes:
-      // Each line of code is a <text> inside a <rect>.
-      // Math becomes interesting here; the y value is actually aligned to the topmost border.
-      // So y = 0 will have the rect be flush with the top border.
-      // More importantly, text will also be positioned that way.
-      // Since y = 0 is the axis the text will align itself to, the default settings will actually have the text sitting "on top of" the y = 0 axis, which effectively shifts them up.
-      // To prevent this, we want the alignment axis to be at the middle of each rect, and have the text align itself vertically to the center (skwered by the axis).
-      // The first step is to add lineHeight / 2 to move the axis down.
-      // The second step is to add 'dominant-baseline="central"' to vertically center the text.
-      // Note that we choose "central" over "middle". "middle" will center the text too perfectly, which is actually undesirable!
       const y = index * options.lineHeight + options.lineHeight / 2;
       return `<text x="0" y="${y}" font-family="${options.fontFamily}" font-size="${options.fontSize.toString()}" xml:space="preserve" dominant-baseline="central" shape-rendering="crispEdges">${spans}</text>`;
     });
@@ -360,7 +398,7 @@ export class CodeRenderer {
 
     const lineBackgrounds = lines
       .map((line, index) => {
-        const classes = line?.getAttribute("class") || "";
+        const classes = line.className;
         const y = index * options.lineHeight;
         const segments = additionSegmentsByLine.get(index) ?? [];
         const backgrounds: string[] = [];
@@ -395,20 +433,7 @@ export class CodeRenderer {
   }
 
   getBackgroundColor(shikiHtml: string): string {
-    const dom = new JSDOM(shikiHtml);
-    const document = dom.window.document;
-
-    const preElement = document.querySelector("pre");
-    let backgroundColor = "#333333"; // Default white background
-    if (preElement) {
-      const style = preElement.getAttribute("style") || "";
-      const bgColorMatch = style.match(/background-color:\s*(#[0-9a-fA-F]{6})/);
-      if (bgColorMatch) {
-        backgroundColor = bgColorMatch[1];
-      }
-    }
-
-    return backgroundColor;
+    return getPreBackgroundColor(shikiHtml);
   }
 
   async getDataUri(

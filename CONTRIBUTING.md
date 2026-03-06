@@ -115,12 +115,12 @@ process as welcoming and straightforward as possible.
 
 #### Pre-requisites
 
-You should have Node.js version 20.19.0 (LTS) or higher installed. You can get it
-on [nodejs.org](https://nodejs.org/en/download) or, if you are using NVM (Node Version Manager), you can set the correct
+You should have Node.js version 22.22.0 or higher installed. You can get it
+on [nodejs.org](https://nodejs.org/en/download) or, if you are using [fnm](https://fnm.vercel.app/), you can set the correct
 version of Node.js for this project by running the following command in the root of the project:
 
 ```bash
-nvm use
+fnm use
 ```
 
 Then, install Vite globally

@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { EXTENSION_NAME } from "core/control-plane/env";
 // @ts-ignore
 import * as vscode from "vscode";
 
-import { DiffChar, DiffLine } from "core";
+import type { DiffChar, DiffLine } from "core";
 import { CodeRenderer } from "core/codeRenderer/CodeRenderer";
 import { myersCharDiff } from "core/diff/myers";
 import { getOffsetPositionAtLastNewLine } from "core/nextEdit/diff/diff";
@@ -668,17 +667,11 @@ export class NextEditWindowManager {
   }
 
   private shouldRenderTip(uri: vscode.Uri): boolean {
-    const isAllowedUri =
+    return (
       !this.excludedURIPrefixes.some((prefix) =>
         uri.toString().startsWith(prefix),
-      ) && uri.scheme !== "comment";
-
-    const isEnabled =
-      !!vscode.workspace
-        .getConfiguration(EXTENSION_NAME)
-        .get<boolean>("showInlineTip") === true;
-
-    return isAllowedUri && isEnabled;
+      ) && uri.scheme !== "comment"
+    );
   }
 
   /**

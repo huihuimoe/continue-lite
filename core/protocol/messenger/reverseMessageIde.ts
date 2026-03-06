@@ -109,11 +109,6 @@ export class ReverseMessageIde {
       return this.ide.showLines(data.filepath, data.startLine, data.endLine);
     });
 
-    this.on("getControlPlaneSessionInfo", async (msg) => {
-      // Not supported in testing
-      return undefined;
-    });
-
     this.on("writeFile", (data) => {
       return this.ide.writeFile(data.path, data.contents);
     });
@@ -152,14 +147,6 @@ export class ReverseMessageIde {
 
     this.on("getPinnedFiles", () => {
       return this.ide.getPinnedFiles();
-    });
-
-    this.on("getSearchResults", (data) => {
-      return this.ide.getSearchResults(data.query, data.maxResults);
-    });
-
-    this.on("getFileResults", (data) => {
-      return this.ide.getFileResults(data.pattern, data.maxResults);
     });
 
     this.on("getProblems", (data) => {

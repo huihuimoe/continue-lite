@@ -154,7 +154,6 @@ class Ollama extends BaseLLM implements ModelInstaller {
   static defaultOptions: Partial<LLMOptions> = {
     apiBase: "http://localhost:11434/",
     model: "codellama-7b",
-    maxEmbeddingBatchSize: 64,
   };
 
   private static modelsBeingInstalled: Set<string> = new Set();
@@ -190,7 +189,6 @@ class Ollama extends BaseLLM implements ModelInstaller {
         }
         const body = await response.json();
         if (body.parameters) {
-          const params = [];
           for (const line of body.parameters.split("\n")) {
             let parts = line.match(/^(\S+)\s+((?:".*")|\S+)$/);
             if (parts.length < 2) {
@@ -228,7 +226,7 @@ class Ollama extends BaseLLM implements ModelInstaller {
          */
         this.fimSupported = !!body?.template?.includes(".Suffix");
       })
-      .catch((e) => {
+      .catch(() => {
         // console.warn("Error calling the Ollama /api/show endpoint: ", e);
       });
   }
@@ -424,17 +422,6 @@ class Ollama extends BaseLLM implements ModelInstaller {
       stream: options.stream,
       // format: options.format, // Not currently in base completion options
     };
-    // This logic is because tools can ONLY be included with user message for ollama
-    if (options.tools?.length && ollamaMessages.at(-1)?.role === "user") {
-      chatOptions.tools = options.tools.map((tool) => ({
-        type: "function",
-        function: {
-          name: tool.function.name,
-          description: tool.function.description,
-          parameters: tool.function.parameters,
-        },
-      }));
-    }
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -638,36 +625,6 @@ class Ollama extends BaseLLM implements ModelInstaller {
         "Failed to list Ollama models. Make sure Ollama is running.",
       );
     }
-  }
-
-  protected async _embed(chunks: string[]): Promise<number[][]> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (this.apiKey) {
-      headers.Authorization = `Bearer ${this.apiKey}`;
-    }
-    const resp = await this.fetch(new URL("api/embed", this.apiBase), {
-      method: "POST",
-      body: JSON.stringify({
-        model: this.model,
-        input: chunks,
-      }),
-      headers: headers,
-    });
-
-    if (!resp.ok) {
-      throw new Error(`Failed to embed chunk: ${await resp.text()}`);
-    }
-
-    const data = await resp.json();
-    const embedding: number[][] = data.embeddings;
-
-    if (!embedding || embedding.length === 0) {
-      throw new Error("Ollama generated empty embedding");
-    }
-    return embedding;
   }
 
   public async installModel(

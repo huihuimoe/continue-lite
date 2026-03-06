@@ -10,17 +10,13 @@ import { defaultConfig } from "./default";
 
 describe.skip("Test the ConfigHandler and E2E config loading", () => {
   test("should show only local profile", () => {
-    const profiles = testConfigHandler.currentOrg?.profiles;
-    expect(profiles?.length).toBe(1);
-    expect(profiles?.[0].profileDescription.id).toBe("local");
-
-    const currentProfile = testConfigHandler.currentProfile;
-    expect(currentProfile?.profileDescription.id).toBe("local");
+    const activeProfile = testConfigHandler.getActiveProfile();
+    expect(activeProfile?.profileDescription.id).toBe("local");
   });
 
   test("should load the default config successfully", async () => {
     const result = await testConfigHandler.loadConfig();
-    expect(result.config!.modelsByRole.chat.length).toBe(
+    expect(result.config!.modelsByRole.autocomplete?.length ?? 0).toBe(
       defaultConfig.models?.length,
     );
   });

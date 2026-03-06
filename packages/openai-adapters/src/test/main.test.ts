@@ -6,7 +6,7 @@ import { DEEPSEEK_API_BASE } from "../apis/DeepSeek.js";
 import { INCEPTION_API_BASE } from "../apis/Inception.js";
 import { OpenAIApi } from "../apis/OpenAI.js";
 import { constructLlmApi } from "../index.js";
-import { getLlmApi, testChat, testEmbed, testFim, testRerank } from "./util.js";
+import { getLlmApi, testChat, testFim } from "./util.js";
 
 dotenv.config();
 
@@ -32,14 +32,6 @@ function testConfig(_config: ModelConfig & { options?: TestConfigOptions }) {
     )
   ) {
     testChat(api, model, options);
-  }
-
-  if (config.roles?.includes("embed")) {
-    testEmbed(api, model);
-  }
-
-  if (config.roles?.includes("rerank")) {
-    testRerank(api, model);
   }
 
   if (config.roles?.includes("autocomplete")) {
@@ -115,36 +107,6 @@ const TESTS: Omit<ModelConfig & { options?: TestConfigOptions }, "name">[] = [
   //   roles: ["autocomplete"],
   // },
   {
-    provider: "openai",
-    model: "text-embedding-3-small",
-    apiKey: process.env.OPENAI_API_KEY!,
-    roles: ["embed"],
-  },
-  {
-    provider: "voyage",
-    model: "voyage-code-3",
-    apiKey: process.env.VOYAGE_API_KEY!,
-    roles: ["embed"],
-  },
-  // {
-  //   provider: "cohere",
-  //   model: "embed-v4.0",
-  //   apiKey: process.env.COHERE_API_KEY!,
-  //   roles: ["embed"],
-  // },
-  // {
-  //   provider: "gemini",
-  //   model: "models/text-embedding-004",
-  //   apiKey: process.env.GEMINI_API_KEY!,
-  //   roles: ["embed"],
-  // },
-  {
-    provider: "voyage",
-    model: "rerank-lite-1",
-    apiKey: process.env.VOYAGE_API_KEY!,
-    roles: ["rerank"],
-  },
-  {
     provider: "relace",
     model: "instant-apply",
     apiKey: process.env.RELACE_API_KEY!,
@@ -165,12 +127,6 @@ const TESTS: Omit<ModelConfig & { options?: TestConfigOptions }, "name">[] = [
       expectUsage: true,
     },
   },
-  // {
-  //   provider: "cohere",
-  //   model: "rerank-v3.5",
-  //   apiKey: process.env.COHERE_API_KEY!,
-  //   roles: ["rerank"],
-  // },
   {
     provider: "azure",
     model: "gpt-4.1",

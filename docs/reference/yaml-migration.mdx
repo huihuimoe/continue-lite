@@ -151,8 +151,8 @@ config.json
 ```json
 {
   "contextProviders": [
-    { "name": "docs" },
-    { "name": "codebase", "params": { "nRetrieve": 30, "nFinal": 3 } },
+    { "name": "web" },
+    { "name": "code", "params": {} },
     { "name": "diff", "params": {} }
   ]
 }
@@ -164,11 +164,8 @@ config.yaml
 
 ```yaml
 context:
-  - provider: docs
-  - provider: codebase
-    params:
-      nRetrieve: 30
-      nFinal: 3
+  - provider: web
+  - provider: code
   - provider: diff
 ```
 

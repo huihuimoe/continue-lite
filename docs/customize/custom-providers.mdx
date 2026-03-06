@@ -61,20 +61,6 @@ config.yaml
 context:  - provider: terminal
 ```
 
-### @Docs Context Provider – Reference Documentation Site Content
-
-Reference the contents from any documentation site.
-
-config.yaml
-
-```
-context:  - provider: docs
-```
-
-Note that this will only enable the `@Docs` context provider.
-
-To use it, you need to add a documentation site to your config file. See the [docs](/guides/codebase-documentation-awareness) page for more information.
-
 ### @Open Context Provider – Reference All Open Files or Pinned Files
 
 Reference the contents of all of your open files. Set `onlyPinned` to `true` to only reference pinned files.
@@ -103,28 +89,7 @@ context:
       n: 5
 ```
 
-### @Codebase Context Provider – Reference Relevant Codebase Snippets
-
-Reference the most relevant snippets from your codebase.
-
-config.yaml
-
-```
-context:
-  - provider: codebase
-```
-
-Read more about indexing and retrieval [here](/guides/codebase-documentation-awareness).
-
-### @Folder Context Provider – Reference Code from a Specific Folder
-
-Uses the same retrieval mechanism as `@Codebase`, but only on a single folder.
-
-config.yaml
-
-```
-context:  - provider: folder
-```
+> `@Docs`, `@Codebase`, and `@Folder` have been removed. For repository and documentation context, use the [codebase and documentation awareness guide](/guides/codebase-documentation-awareness).
 
 ### @Search Context Provider – Reference Code Search Results
 
@@ -139,7 +104,7 @@ context:
       maxResults: 100 # optional, defaults to 200
 ```
 
-This context provider is powered by [ripgrep](https://github.com/BurntSushi/ripgrep).
+This context provider surfaces codebase search results from the current workspace.
 
 ### @Url Context Provider – Reference Content from a URL
 

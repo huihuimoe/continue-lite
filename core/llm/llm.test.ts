@@ -183,8 +183,6 @@ function testLLM(
             }
           }
 
-          // For Mistral, if no tool calls were received, skip the test
-          // as it may not support forced tool use
           if (args === "" && llm.constructor.name === "Mistral") {
             console.log(
               "Mistral did not return tool calls, skipping assertion",
@@ -202,7 +200,16 @@ function testLLM(
 }
 
 describe("LLM", () => {
-  if (process.env.IGNORE_API_KEY_TESTS === "true") {
+  const ignoreApiKeyTests = process.env.IGNORE_API_KEY_TESTS === "true";
+
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const mistralApiKey = process.env.MISTRAL_API_KEY;
+  const hasLiveTestableProviderKey =
+    !!anthropicApiKey || !!openaiApiKey || !!mistralApiKey;
+
+  if (ignoreApiKeyTests) {
     test("Skipping API key tests", () => {
       console.log(
         "Skipping API key tests due to IGNORE_API_KEY_TESTS being set",
@@ -211,39 +218,51 @@ describe("LLM", () => {
     return;
   }
 
-  testLLM(
-    new Anthropic({
-      model: "claude-sonnet-4-0",
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    }),
-    { skip: false, testToolCall: true },
-  );
-  testLLM(new OpenAI({ apiKey: process.env.OPENAI_API_KEY, model: "gpt-4o" }), {
-    skip: false,
-    testToolCall: true,
-  });
-  testLLM(
-    new OpenAI({ apiKey: process.env.OPENAI_API_KEY, model: "o3-mini" }),
-    { skip: false, timeout: 60000 },
-  );
-  testLLM(new OpenAI({ apiKey: process.env.OPENAI_API_KEY, model: "o1" }), {
-    skip: false,
-    timeout: 60000,
-  });
+  if (!hasLiveTestableProviderKey) {
+    test("Skipping live LLM API tests without provider keys", () => {
+      console.log(
+        "Skipping live LLM API tests because no provider API keys are configured",
+      );
+    });
+    return;
+  }
+
+  if (anthropicApiKey) {
+    testLLM(
+      new Anthropic({
+        model: "claude-sonnet-4-0",
+        apiKey: anthropicApiKey,
+      }),
+      { testToolCall: true },
+    );
+  }
+  if (openaiApiKey) {
+    testLLM(new OpenAI({ apiKey: openaiApiKey, model: "gpt-4o" }), {
+      testToolCall: true,
+    });
+    testLLM(new OpenAI({ apiKey: openaiApiKey, model: "o3-mini" }), {
+      timeout: 60000,
+    });
+    testLLM(new OpenAI({ apiKey: openaiApiKey, model: "o1" }), {
+      timeout: 60000,
+    });
+  }
   testLLM(
     new Gemini({
       model: "gemini-2.0-flash-exp",
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: geminiApiKey,
     }),
     { skip: true }, // Skipped - @google/genai getReader issue
   );
-  testLLM(
-    new Mistral({
-      apiKey: process.env.MISTRAL_API_KEY,
-      model: "codestral-latest",
-    }),
-    { testFim: true, skip: false, testToolCall: true, timeout: 60000 },
-  );
+  if (mistralApiKey) {
+    testLLM(
+      new Mistral({
+        apiKey: mistralApiKey,
+        model: "codestral-latest",
+      }),
+      { testFim: true, testToolCall: true, timeout: 60000 },
+    );
+  }
   testLLM(
     new Azure({
       apiKey: process.env.AZURE_OPENAI_API_KEY,

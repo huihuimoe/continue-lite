@@ -2,6 +2,11 @@ import { Writable } from "stream";
 import {
   AssistantChatMessage,
   ChatMessage,
+  ThinkingChatMessage,
+  UserChatMessage,
+} from "./chatTypes";
+import type { ToolCallDelta } from "./tooling";
+import {
   LLMInteractionCancel,
   LLMInteractionError,
   LLMInteractionItem,
@@ -9,9 +14,6 @@ import {
   LLMInteractionStartComplete,
   LLMInteractionStartFim,
   LLMInteractionSuccess,
-  ThinkingChatMessage,
-  ToolCallDelta,
-  UserChatMessage,
 } from "..";
 import { LLMLogger } from "./logger";
 

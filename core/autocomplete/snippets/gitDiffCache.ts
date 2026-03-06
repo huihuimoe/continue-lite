@@ -1,4 +1,6 @@
-import { IDE } from "../..";
+interface DiffIde {
+  getDiff(includeUnstaged: boolean): Promise<string[]>;
+}
 
 type GetDiffFn = () => Promise<string[]>;
 
@@ -63,11 +65,11 @@ export class GitDiffCache {
 }
 
 // factory to make diff cache more testable
-export function getDiffFn(ide: IDE): GetDiffFn {
+export function getDiffFn(ide: DiffIde): GetDiffFn {
   return () => ide.getDiff(true);
 }
 
-export async function getDiffsFromCache(ide: IDE): Promise<string[]> {
+export async function getDiffsFromCache(ide: DiffIde): Promise<string[]> {
   const diffCache = GitDiffCache.getInstance(getDiffFn(ide));
   return await diffCache.get();
 }

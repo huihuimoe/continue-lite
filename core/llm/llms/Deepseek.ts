@@ -15,7 +15,6 @@ class Deepseek extends OpenAI {
     promptTemplates: {
       edit: osModelsEditPrompt,
     },
-    useLegacyCompletionsEndpoint: false,
   };
   maxStopWords: number | undefined = 16;
 

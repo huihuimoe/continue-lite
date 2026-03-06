@@ -1,4 +1,4 @@
-import { EditOperation } from "../../tools/definitions/multiEdit";
+import { EditOperation } from "./types";
 import { ContinueError, ContinueErrorReason } from "../../util/errors";
 import { validateSingleEdit } from "./findAndReplaceUtils";
 

@@ -18,7 +18,6 @@ class VertexAI extends BaseLLM {
   static AUTH_SCOPES = "https://www.googleapis.com/auth/cloud-platform";
 
   static defaultOptions: Partial<LLMOptions> | undefined = {
-    maxEmbeddingBatchSize: 250,
     region: "us-central1",
   };
 
@@ -26,9 +25,7 @@ class VertexAI extends BaseLLM {
 
   protected useOpenAIAdapterFor: (LlmApiRequestType | "*")[] = [
     "chat",
-    "embed",
     "list",
-    "rerank",
     "streamChat",
     "streamFim",
   ];
@@ -59,13 +56,6 @@ class VertexAI extends BaseLLM {
       https://cloud.google.com/vertex-ai/generative-ai/docs/start/express-mode/overview#models
   */
   constructor(_options: LLMOptions) {
-    if (_options.region !== "us-central1") {
-      // Any region outside of us-central1 has a max batch size of 5.
-      _options.maxEmbeddingBatchSize = Math.min(
-        _options.maxEmbeddingBatchSize ?? 5,
-        5,
-      );
-    }
     super(_options);
 
     this.vertexProvider =
@@ -511,39 +501,6 @@ class VertexAI extends BaseLLM {
   supportsFim(): boolean {
     return (
       this.model.includes("code-gecko") || this.model.includes("codestral")
-    );
-  }
-
-  protected async _embed(chunks: string[]): Promise<number[][]> {
-    const client = await this.clientPromise;
-    const result = await client?.getAccessToken();
-    if (!result?.token) {
-      throw new Error(
-        "Could not get an access token. Set up your Google Application Default Credentials.",
-      );
-    }
-
-    const resp = await this.fetch(
-      new URL(`publishers/google/models/${this.model}:predict`, this.apiBase),
-      {
-        method: "POST",
-        body: JSON.stringify({
-          instances: chunks.map((chunk) => ({ content: chunk })),
-        }),
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${result.token}`,
-        },
-      },
-    );
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-
-    const data = (await resp.json()) as any;
-    return data.predictions.map(
-      (prediction: any) => prediction.embeddings.values,
     );
   }
 }

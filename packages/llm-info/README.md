@@ -1,6 +1,6 @@
 # @continuedev/llm-info
 
-A lightweight package providing information about various Large Language Models (LLMs), including embedding, reranking, and other models.
+A lightweight package providing information about various Large Language Models (LLMs) for chat and autocomplete surfaces.
 
 Whereas @continuedev/openai-adapters is responsible for translation between API types, @continuedev/llm-info is concerned with
 

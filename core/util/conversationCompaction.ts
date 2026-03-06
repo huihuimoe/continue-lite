@@ -1,4 +1,5 @@
-import { ChatHistoryItem, ILLM, ToolResultChatMessage } from "..";
+import { ChatHistoryItem, ILLM } from "..";
+import type { ToolResultChatMessage } from "../llm/chatTypes";
 import { HistoryManager } from "./history";
 import { stripImages } from "./messageContent";
 

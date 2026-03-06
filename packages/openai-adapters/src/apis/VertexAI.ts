@@ -10,19 +10,12 @@ import {
   Completion,
   CompletionCreateParamsNonStreaming,
   CompletionCreateParamsStreaming,
-  CreateEmbeddingResponse,
-  EmbeddingCreateParams,
   Model,
 } from "openai/resources/index";
 import { VertexAIConfig } from "../types.js";
-import { chatChunk, chatCompletion, customFetch, embedding } from "../util.js";
+import { chatChunk, chatCompletion, customFetch } from "../util.js";
 import { AnthropicApi } from "./Anthropic.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 import { GeminiApi } from "./Gemini.js";
 import { OpenAIApi } from "./OpenAI.js";
 
@@ -200,7 +193,7 @@ export class VertexAIApi implements BaseLlmApi {
     }
   }
 
-  private buildUrl(endpoint: string, model?: string): URL {
+  private buildUrl(endpoint: string): URL {
     const apiBase = this.getApiBase();
     const url = new URL(endpoint, apiBase);
 
@@ -512,55 +505,6 @@ export class VertexAIApi implements BaseLlmApi {
         });
       }
     }
-  }
-
-  async embed(body: EmbeddingCreateParams): Promise<CreateEmbeddingResponse> {
-    const headers = await this.getAuthHeaders();
-    const url = this.buildUrl(`publishers/google/models/${body.model}:predict`);
-
-    // Convert input to text strings
-    const textInputs = Array.isArray(body.input)
-      ? body.input.map((item) =>
-          typeof item === "string" ? item : JSON.stringify(item),
-        )
-      : [
-          typeof body.input === "string"
-            ? body.input
-            : JSON.stringify(body.input),
-        ];
-
-    const requestBody = {
-      instances: textInputs.map((text) => ({ content: text })),
-    };
-
-    const response = await customFetch(this.config.requestOptions)(
-      url.toString(),
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(requestBody),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `VertexAI API error: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const data = await response.json();
-    const embeddings = data.predictions.map(
-      (prediction: any) => prediction.embeddings.values,
-    );
-
-    return embedding({
-      data: embeddings,
-      model: body.model,
-    });
-  }
-
-  async rerank(body: RerankCreateParams): Promise<CreateRerankResponse> {
-    throw new Error("Reranking is not supported by VertexAI");
   }
 
   async list(): Promise<Model[]> {

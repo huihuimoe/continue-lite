@@ -112,7 +112,6 @@ To force usage of `completions` instead of `chat/completions` endpoint you can s
       provider: openai
       model: <MODEL_NAME>>
       apiBase: http://localhost:8000/v1
-      useLegacyCompletionsEndpoint: true
   ```
   </Tab>
   <Tab title="JSON (Deprecated)">
@@ -123,8 +122,7 @@ To force usage of `completions` instead of `chat/completions` endpoint you can s
         "title": "<OPENAI_API_COMPATIBLE_PROVIDER_MODEL>",
         "provider": "openai",
         "model": "<MODEL_NAME>",
-        "apiBase": "http://localhost:8000/v1",
-        "useLegacyCompletionsEndpoint": true
+        "apiBase": "http://localhost:8000/v1"
       }
     ]
   }

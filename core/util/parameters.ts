@@ -8,10 +8,6 @@ export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   debounceDelay: 350,
   modelTimeout: 150,
   multilineCompletions: "auto",
-  // @deprecated TO BE REMOVED
-  slidingWindowPrefixPercentage: 0.75,
-  // @deprecated TO BE REMOVED
-  slidingWindowSize: 500,
   useCache: true,
   onlyMyCode: true,
   useRecentlyEdited: true,

@@ -51,15 +51,6 @@ export const Mistral: ModelProvider = {
         "Larger sparse mixture of experts model leveraging up to 141B parameters but using about 39B during inference, providing better inference throughput at the cost of more vRAM.",
       regex: /open-mixtral-8x22b/i,
     },
-    {
-      model: "mistral-embed",
-      displayName: "Mistral Embeddings",
-      contextLength: 8192,
-      description:
-        "Model that converts text into numerical vectors of embeddings in 1024 dimensions. Enables retrieval and retrieval-augmented generation applications with a retrieval score of 55.26 on MTEB.",
-      regex: /mistral-embed/i,
-      recommendedFor: ["embed"],
-    },
     // devstral family
     {
       model: "devstral-small-2505",

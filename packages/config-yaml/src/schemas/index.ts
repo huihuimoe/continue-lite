@@ -1,7 +1,6 @@
 import * as z from "zod";
 import { commonModelSlugs } from "./commonSlugs.js";
 import { dataSchema } from "./data/index.js";
-import { mcpServerSchema, partialMcpServerSchema } from "./mcp/index.js";
 import {
   modelSchema,
   partialModelSchema,
@@ -14,27 +13,34 @@ export const contextSchema = z.object({
   params: z.any().optional(),
 });
 
-export { MCPServer } from "./mcp/index.js";
-
-const promptSchema = z.object({
+export const promptSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   prompt: z.string(),
   sourceFile: z.string().optional(),
 });
 
-export type Prompt = z.infer<typeof promptSchema>;
-
-const docSchema = z.object({
+export const docSchema = z.object({
   name: z.string(),
   startUrl: z.string(),
   rootUrl: z.string().optional(),
   faviconUrl: z.string().optional(),
-  useLocalCrawling: z.boolean().optional(),
   sourceFile: z.string().optional(),
 });
 
-export type DocsConfig = z.infer<typeof docSchema>;
+const mcpServerEnvSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.boolean()]),
+);
+
+export const mcpServerSchema = z.object({
+  name: z.string(),
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  env: mcpServerEnvSchema.optional(),
+  sourceSlug: z.string().optional(),
+  sourceFile: z.string().optional(),
+});
 
 const ruleObjectSchema = z.object({
   name: z.string(),
@@ -125,18 +131,7 @@ export const configYamlSchema = baseConfigYamlSchema.extend({
     .optional(),
   context: z.array(blockOrSchema(contextSchema)).optional(),
   data: z.array(blockOrSchema(dataSchema)).optional(),
-  mcpServers: z
-    .array(
-      z.union([
-        mcpServerSchema,
-        z.object({
-          uses: defaultUsesSchema,
-          with: z.record(z.string()).optional(),
-          override: partialMcpServerSchema.optional(),
-        }),
-      ]),
-    )
-    .optional(),
+  mcpServers: z.array(blockOrSchema(mcpServerSchema)).optional(),
   rules: z
     .array(
       z.union([
@@ -186,10 +181,10 @@ export const isAssistantUnrolledNonNullable = (
   (!a.models || a.models.every((m) => m !== null)) &&
   (!a.context || a.context.every((c) => c !== null)) &&
   (!a.data || a.data.every((d) => d !== null)) &&
-  (!a.mcpServers || a.mcpServers.every((s) => s !== null)) &&
   (!a.rules || a.rules.every((r) => r !== null)) &&
-  (!a.prompts || a.prompts.every((p) => p !== null)) &&
-  (!a.docs || a.docs.every((d) => d !== null));
+  (!a.mcpServers || a.mcpServers.every((mcp) => mcp !== null)) &&
+  (!a.prompts || a.prompts.every((prompt) => prompt !== null)) &&
+  (!a.docs || a.docs.every((doc) => doc !== null));
 
 export const blockSchema = baseConfigYamlSchema.and(
   z.union([
@@ -207,51 +202,17 @@ export const blockSchema = baseConfigYamlSchema.and(
 
 export type Block = z.infer<typeof blockSchema>;
 
-export const continueCommandSchema = z.object({
-  name: z.string(),
-  description: z.string().optional(),
-  prompt: z.string(),
-  placeholders: z.array(z.string()).optional(),
-  context: z.string().optional(),
-  contextWindowSize: z.number().optional(),
-  model: z.string().optional(),
-  systemMessage: z.string().optional(),
-  slashCommand: z.string().optional(),
-  hideFromCommandPalette: z.boolean().optional(),
-  hideFromSlashCommands: z.boolean().optional(),
-  mode: z.enum(["insert", "replace", "diff"]).optional(),
-  addEnhancedContext: z.boolean().optional(),
-});
-
 export const languageMarkerSchema = z.object({
   language: z.string(),
   markers: z.array(z.string()),
-});
-
-export const sidebarSchema = z.object({
-  enabled: z.boolean().optional(),
-  defaultOpen: z.boolean().optional(),
-  defaultWidth: z.number().optional(),
-  showButtonsThreshold: z.number().optional(),
-});
-
-const toolSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  defaultIcon: z.string().optional(),
 });
 
 export const autoindentExtensionsSchema = z.array(z.string());
 
 export const configSchema = z.object({
   models: z.array(modelSchema).optional(),
-  defaultModel: z.string().optional(),
   defaultRecentMessages: z.number().optional(),
-  commands: z.array(continueCommandSchema).optional(),
-  tools: z.array(toolSchema).optional(),
-  contextProviders: z.array(z.any()).optional(),
   langMarkers: z.array(languageMarkerSchema).optional(),
-  sidebar: sidebarSchema.optional(),
   tabAutocompleteModel: z.string().optional(),
   rules: z.array(ruleObjectSchema).optional(),
   doneWithBannerForever: z.boolean().optional(),

@@ -10,8 +10,6 @@ export const autocompleteEventSchema_0_1_0 = autocompleteEventAllSchema.pick({
   transform: true,
   template: true,
   multilineCompletions: true,
-  slidingWindowPrefixPercentage: true,
-  slidingWindowSize: true,
   useCache: true,
   onlyMyCode: true,
   useRecentlyEdited: true,

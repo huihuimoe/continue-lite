@@ -1,7 +1,6 @@
 import * as fs from "fs";
 
-import { BaseSessionMetadata, Session } from "../index.js";
-import { ListHistoryOptions } from "../protocol/core.js";
+import { ChatHistoryItem } from "../index.js";
 
 import { NEW_SESSION_TITLE } from "./constants.js";
 import {
@@ -9,6 +8,48 @@ import {
   getSessionsFolderPath,
   getSessionsListPath,
 } from "./paths.js";
+
+export type HistoryMessageMode = "chat" | "agent" | "plan" | "background";
+
+export interface HistorySessionUsage {
+  completionTokens: number;
+  promptTokens: number;
+  promptTokensDetails?: {
+    cachedTokens?: number;
+    cacheWriteTokens?: number;
+    audioTokens?: number;
+  };
+  completionTokensDetails?: {
+    acceptedPredictionTokens?: number;
+    reasoningTokens?: number;
+    rejectedPredictionTokens?: number;
+    audioTokens?: number;
+  };
+  totalCost: number;
+}
+
+export interface HistorySessionMetadata {
+  sessionId: string;
+  title: string;
+  dateCreated: string;
+  workspaceDirectory: string;
+  messageCount?: number;
+}
+
+export interface HistorySession {
+  sessionId: string;
+  title: string;
+  workspaceDirectory: string;
+  history: ChatHistoryItem[];
+  mode?: HistoryMessageMode;
+  chatModelTitle?: string | null;
+  usage?: HistorySessionUsage;
+}
+
+export interface ListHistoryOptions {
+  offset?: number;
+  limit?: number;
+}
 function safeParseArray<T>(
   value: string,
   errorMessage: string = "Error parsing array",
@@ -22,14 +63,14 @@ function safeParseArray<T>(
 }
 
 export class HistoryManager {
-  list(options: ListHistoryOptions): BaseSessionMetadata[] {
+  list(options: ListHistoryOptions): HistorySessionMetadata[] {
     const filepath = getSessionsListPath();
     if (!fs.existsSync(filepath)) {
       return [];
     }
     const content = fs.readFileSync(filepath, "utf8");
 
-    let sessions = safeParseArray<BaseSessionMetadata>(content) ?? [];
+    let sessions = safeParseArray<HistorySessionMetadata>(content) ?? [];
     sessions = sessions
       .filter((session: any) => {
         // Filter out old format
@@ -59,7 +100,7 @@ export class HistoryManager {
     const sessionsListFile = getSessionsListPath();
     const sessionsListRaw = fs.readFileSync(sessionsListFile, "utf-8");
     let sessionsList =
-      safeParseArray<BaseSessionMetadata>(
+      safeParseArray<HistorySessionMetadata>(
         sessionsListRaw,
         "Error parsing sessions.json",
       ) ?? [];
@@ -78,13 +119,15 @@ export class HistoryManager {
     fs.rmSync(getSessionsFolderPath(), { recursive: true, force: true });
   }
 
-  load(sessionId: string): Session {
+  load(sessionId: string): HistorySession {
     try {
       const sessionFile = getSessionFilePath(sessionId);
       if (!fs.existsSync(sessionFile)) {
         throw new Error(`Session file ${sessionFile} does not exist`);
       }
-      const session: Session = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
+      const session: HistorySession = JSON.parse(
+        fs.readFileSync(sessionFile, "utf8"),
+      );
       session.sessionId = sessionId;
       return session;
     } catch (e) {
@@ -98,11 +141,11 @@ export class HistoryManager {
     }
   }
 
-  save(session: Session) {
+  save(session: HistorySession) {
     // Save the main session json file
     // Explicitely rewriting here to influence the written key order in the file!
     // e.g. id at the top, history next, etc.
-    const orderedSession: Session = {
+    const orderedSession: HistorySession = {
       sessionId: session.sessionId,
       title: session.title,
       workspaceDirectory: session.workspaceDirectory,
@@ -128,7 +171,7 @@ export class HistoryManager {
     try {
       const rawSessionsList = fs.readFileSync(sessionsListFilePath, "utf-8");
 
-      let sessionsList: BaseSessionMetadata[];
+      let sessionsList: HistorySessionMetadata[];
       try {
         sessionsList = JSON.parse(rawSessionsList);
       } catch (e) {
@@ -142,7 +185,7 @@ export class HistoryManager {
 
       let found = false;
       const messageCount = session.history.filter(
-        (item) => item.message.role === "assistant",
+        (item: ChatHistoryItem) => item.message.role === "assistant",
       ).length;
       for (const sessionMetadata of sessionsList) {
         if (sessionMetadata.sessionId === session.sessionId) {
@@ -155,7 +198,7 @@ export class HistoryManager {
       }
 
       if (!found) {
-        const sessionMetadata: BaseSessionMetadata = {
+        const sessionMetadata: HistorySessionMetadata = {
           sessionId: session.sessionId,
           title: session.title,
           dateCreated: String(Date.now()),

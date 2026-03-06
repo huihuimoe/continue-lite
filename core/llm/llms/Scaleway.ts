@@ -8,7 +8,6 @@ class Scaleway extends OpenAI {
   static defaultOptions: Partial<LLMOptions> = {
     apiBase: "https://api.scaleway.ai/v1/",
     model: "qwen3-coder-30b-a3b-instruct",
-    useLegacyCompletionsEndpoint: false,
   };
 
   private static MODEL_IDS: { [name: string]: string } = {

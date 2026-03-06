@@ -73,8 +73,6 @@ However, only output codeblocks for suggestion and demonstration purposes, for e
 
 </important_rules>`;
 
-// The note about read-only tools is for MCP servers
-// For now, all MCP tools are included so model can decide if they are read-only
 export const DEFAULT_PLAN_SYSTEM_MESSAGE = `\
 <important_rules>
   You are in plan mode, in which you help the user understand and construct a plan.

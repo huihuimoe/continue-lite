@@ -35,16 +35,6 @@ class Inception extends OpenAI {
     return true;
   }
 
-  // It seems like this should be inherited automatically from the parent OpenAI class, but it sometimes doesn't.
-  // protected useOpenAIAdapterFor: (LlmApiRequestType | "*")[] = [
-  //   "chat",
-  //   "embed",
-  //   "list",
-  //   "rerank",
-  //   "streamChat",
-  //   "streamFim",
-  // ];
-
   protected modifyChatBody(
     body: ChatCompletionCreateParams,
   ): ChatCompletionCreateParams {

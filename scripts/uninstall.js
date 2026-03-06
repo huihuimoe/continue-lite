@@ -29,8 +29,6 @@ const directories = [
   "./packages/config-yaml/dist",
   "./packages/openai-adapters/node_modules",
   "./packages/openai-adapters/dist",
-  "./packages/hub/node_modules",
-  "./packages/hub/dist",
   // docs
   "./docs/node_modules",
   // root

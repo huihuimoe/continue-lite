@@ -2,7 +2,7 @@
 
 import fs from "fs";
 import path from "path";
-import { CodeSnippetsCodebaseIndex } from "../indexing/CodeSnippetsIndex";
+import * as treeSitterUtils from "./treeSitter";
 import { testIde, testLLM } from "../test/fixtures";
 import {
   addToTestDir,
@@ -33,26 +33,41 @@ describe.skip("generateRepoMap", () => {
 
     // Do not mock testIde.getWorkspaceDirs
 
-    // Mock CodeSnippetsCodebaseIndex.getPathsAndSignatures
-    jest
-      .spyOn(CodeSnippetsCodebaseIndex, "getPathsAndSignatures")
-      .mockImplementation(async (dirs, offset, limit) => {
-        // Return test data
-        return {
-          groupedByUri: {
-            [path.join(TEST_DIR, "file1.js")]: [
-              "function foo() {}",
-              "function bar() {}",
-            ],
-            [path.join(TEST_DIR, "subdir/file2.py")]: [
-              "def foo():",
-              "def bar():",
-            ],
-          },
-          hasMoreSnippets: false,
-          hasMoreUris: false,
-        };
-      });
+    // Mock tree-sitter symbol extraction
+    jest.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
+      [path.join(TEST_DIR, "file1.js")]: [
+        {
+          filepath: path.join(TEST_DIR, "file1.js"),
+          type: "function_definition",
+          name: "foo",
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 18 } },
+          content: "function foo() {}",
+        },
+        {
+          filepath: path.join(TEST_DIR, "file1.js"),
+          type: "function_definition",
+          name: "bar",
+          range: { start: { line: 1, character: 0 }, end: { line: 1, character: 18 } },
+          content: "function bar() {}",
+        },
+      ],
+      [path.join(TEST_DIR, "subdir/file2.py")]: [
+        {
+          filepath: path.join(TEST_DIR, "subdir/file2.py"),
+          type: "function_definition",
+          name: "foo",
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 10 } },
+          content: "def foo():",
+        },
+        {
+          filepath: path.join(TEST_DIR, "subdir/file2.py"),
+          type: "function_definition",
+          name: "bar",
+          range: { start: { line: 1, character: 0 }, end: { line: 1, character: 10 } },
+          content: "def bar():",
+        },
+      ],
+    });
 
     // Set testLLM properties
     testLLM._contextLength = 2048;
@@ -99,20 +114,11 @@ describe.skip("generateRepoMap", () => {
 
     // Do not mock testIde.getWorkspaceDirs
 
-    // Mock CodeSnippetsCodebaseIndex.getPathsAndSignatures
-    jest
-      .spyOn(CodeSnippetsCodebaseIndex, "getPathsAndSignatures")
-      .mockImplementation(async (dirs, offset, limit) => {
-        // Return test data
-        return {
-          groupedByUri: {
-            [path.join(TEST_DIR, "file1.js")]: [],
-            [path.join(TEST_DIR, "subdir/file2.py")]: [],
-          },
-          hasMoreSnippets: false,
-          hasMoreUris: false,
-        };
-      });
+    // Mock tree-sitter symbol extraction
+    jest.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
+      [path.join(TEST_DIR, "file1.js")]: [],
+      [path.join(TEST_DIR, "subdir/file2.py")]: [],
+    });
 
     // Set testLLM properties
     testLLM._contextLength = 2048;
@@ -153,20 +159,19 @@ describe.skip("generateRepoMap", () => {
 
     // Do not mock testIde.getWorkspaceDirs
 
-    // Mock CodeSnippetsCodebaseIndex.getPathsAndSignatures
-    jest
-      .spyOn(CodeSnippetsCodebaseIndex, "getPathsAndSignatures")
-      .mockImplementation(async (dirs, offset, limit) => {
-        // Return test data
-        return {
-          groupedByUri: {
-            [path.join(TEST_DIR, "file1.js")]: ["function foo() {}"],
-            [path.join(TEST_DIR, "subdir/file2.py")]: ["def foo():"],
-          },
-          hasMoreSnippets: false,
-          hasMoreUris: false,
-        };
-      });
+    // Mock tree-sitter symbol extraction
+    jest.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
+      [path.join(TEST_DIR, "file1.js")]: [],
+      [path.join(TEST_DIR, "subdir/file2.py")]: [
+        {
+          filepath: path.join(TEST_DIR, "subdir/file2.py"),
+          type: "function_definition",
+          name: "foo",
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 10 } },
+          content: "def foo():",
+        },
+      ],
+    });
 
     // Mock fs.promises.readFile to throw an error when reading file1.js
     jest

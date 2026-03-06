@@ -10,8 +10,6 @@
       "node_modules/axios/**/*"
     ],
     "assets": [
-      "../core/node_modules/sqlite3/**/*",
-      "node_modules/@lancedb/**/*",
       "out/tree-sitter.wasm",
       "out/tree-sitter-wasms/*"
     ],
@@ -29,7 +27,6 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@biomejs/biome": "1.6.4",
-    "@types/follow-redirects": "^1.14.4",
     "@types/jest": "^29.5.12",
     "@types/uuid": "^9.0.8",
     "@vercel/ncc": "^0.38.1",
@@ -43,19 +40,14 @@
   },
   "dependencies": {
     "@octokit/rest": "^20.1.2",
-    "adm-zip": "^0.5.16",
     "commander": "^12.0.0",
     "core": "file:../core",
-    "follow-redirects": "^1.15.5",
     "mac-ca": "^2.0.3",
     "ncp": "^2.0.0",
-    "node-fetch": "^3.3.2",
     "posthog-node": "^3.6.3",
     "system-ca": "^1.0.2",
-    "tar": "^7.5.1",
     "undici": "^7.16.0",
     "uuid": "^9.0.1",
-    "vectordb": "0.4.20",
     "win-ca": "^3.5.1"
   }
 }

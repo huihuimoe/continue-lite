@@ -33,6 +33,16 @@ export class DataLogger {
     return DataLogger.instance;
   }
 
+  private getSelectedProfileId(): string {
+    const configHandler: any = this.core?.configHandler;
+    const activeProfile =
+      typeof configHandler?.getActiveProfile === "function"
+        ? configHandler.getActiveProfile()
+        : configHandler?.currentProfile;
+
+    return activeProfile?.profileDescription?.id ?? "";
+  }
+
   async addBaseValues(
     body: Record<string, any>,
     eventName: string,
@@ -58,8 +68,7 @@ export class DataLogger {
         : "Unknown/Unknown (Continue/Unknown)";
     }
     if ("selectedProfileId" in zodSchema.shape) {
-      newBody.selectedProfileId =
-        this.core?.configHandler.currentProfile?.profileDescription.id ?? "";
+      newBody.selectedProfileId = this.getSelectedProfileId();
     }
     if ("userId" in zodSchema.shape) {
       newBody.userId = ideSettings?.userToken ?? "";
@@ -198,8 +207,7 @@ export class DataLogger {
           headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        const profileId =
-          this.core?.configHandler.currentProfile?.profileDescription.id ?? "";
+        const profileId = this.getSelectedProfileId();
         const response = await fetchwithRequestOptions(
           dataConfig.destination,
           {

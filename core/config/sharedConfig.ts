@@ -11,27 +11,10 @@ export const sharedConfigSchema = z
   .object({
     // boolean fields in config.json
     allowAnonymousTelemetry: z.boolean(),
-    disableIndexing: z.boolean(),
-    disableSessionTitles: z.boolean(),
 
     // `experimental` in `ContinueConfig`
-    useChromiumForDocsCrawling: z.boolean(),
-    readResponseTTS: z.boolean(),
-    promptPath: z.string(),
     useCurrentFileAsContext: z.boolean(),
-    enableExperimentalTools: z.boolean(),
-    onlyUseSystemMessageTools: z.boolean(),
-    codebaseToolCallingOnly: z.boolean(),
     enableStaticContextualization: z.boolean(),
-
-    // `ui` in `ContinueConfig`
-    showSessionTabs: z.boolean(),
-    codeBlockToolbarPosition: z.enum(["top", "bottom"]),
-    fontSize: z.number(),
-    codeWrap: z.boolean(),
-    displayRawMarkdown: z.boolean(),
-    showChatScrollbar: z.boolean(),
-    continueAfterToolRejection: z.boolean(),
 
     // `tabAutocompleteOptions` in `ContinueConfig`
     useAutocompleteCache: z.boolean(),
@@ -51,18 +34,6 @@ export function salvageSharedConfig(sharedConfig: object): SharedConfigSchema {
     const val = z.boolean().safeParse(sharedConfig.allowAnonymousTelemetry);
     if (val.success) {
       salvagedConfig.allowAnonymousTelemetry = val.data;
-    }
-  }
-  if ("disableIndexing" in sharedConfig) {
-    const val = z.boolean().safeParse(sharedConfig.disableIndexing);
-    if (val.success) {
-      salvagedConfig.disableIndexing = val.data;
-    }
-  }
-  if ("disableSessionTitles" in sharedConfig) {
-    const val = z.boolean().safeParse(sharedConfig.disableSessionTitles);
-    if (val.success) {
-      salvagedConfig.disableSessionTitles = val.data;
     }
   }
   if ("disableAutocompleteInFiles" in sharedConfig) {
@@ -119,79 +90,19 @@ export function modifyAnyConfigWithSharedConfig<
       sharedConfig.debounceDelay;
   }
 
-  configCopy.ui = {
-    ...configCopy.ui,
-  };
-
-  if (sharedConfig.codeBlockToolbarPosition !== undefined) {
-    configCopy.ui.codeBlockToolbarPosition =
-      sharedConfig.codeBlockToolbarPosition;
-  }
-  if (sharedConfig.fontSize !== undefined) {
-    configCopy.ui.fontSize = sharedConfig.fontSize;
-  }
-  if (sharedConfig.codeWrap !== undefined) {
-    configCopy.ui.codeWrap = sharedConfig.codeWrap;
-  }
-  if (sharedConfig.displayRawMarkdown !== undefined) {
-    configCopy.ui.displayRawMarkdown = sharedConfig.displayRawMarkdown;
-  }
-  if (sharedConfig.showChatScrollbar !== undefined) {
-    configCopy.ui.showChatScrollbar = sharedConfig.showChatScrollbar;
-  }
-
   if (sharedConfig.allowAnonymousTelemetry !== undefined) {
     configCopy.allowAnonymousTelemetry = sharedConfig.allowAnonymousTelemetry;
-  }
-  if (sharedConfig.disableIndexing !== undefined) {
-    configCopy.disableIndexing = sharedConfig.disableIndexing;
-  }
-  if (sharedConfig.disableSessionTitles !== undefined) {
-    configCopy.disableSessionTitles = sharedConfig.disableSessionTitles;
-  }
-
-  if (sharedConfig.showSessionTabs !== undefined) {
-    configCopy.ui.showSessionTabs = sharedConfig.showSessionTabs;
-  }
-
-  if (sharedConfig.continueAfterToolRejection !== undefined) {
-    configCopy.ui.continueAfterToolRejection =
-      sharedConfig.continueAfterToolRejection;
   }
 
   configCopy.experimental = {
     ...configCopy.experimental,
   };
 
-  if (sharedConfig.enableExperimentalTools !== undefined) {
-    configCopy.experimental.enableExperimentalTools =
-      sharedConfig.enableExperimentalTools;
-  }
-
-  if (sharedConfig.promptPath !== undefined) {
-    configCopy.experimental.promptPath = sharedConfig.promptPath;
-  }
-  if (sharedConfig.useChromiumForDocsCrawling !== undefined) {
-    configCopy.experimental.useChromiumForDocsCrawling =
-      sharedConfig.useChromiumForDocsCrawling;
-  }
-  if (sharedConfig.readResponseTTS !== undefined) {
-    configCopy.experimental.readResponseTTS = sharedConfig.readResponseTTS;
-  }
   if (sharedConfig.useCurrentFileAsContext !== undefined) {
     configCopy.experimental.useCurrentFileAsContext =
       sharedConfig.useCurrentFileAsContext;
   }
 
-  if (sharedConfig.onlyUseSystemMessageTools !== undefined) {
-    configCopy.experimental.onlyUseSystemMessageTools =
-      sharedConfig.onlyUseSystemMessageTools;
-  }
-
-  if (sharedConfig.codebaseToolCallingOnly !== undefined) {
-    configCopy.experimental.codebaseToolCallingOnly =
-      sharedConfig.codebaseToolCallingOnly;
-  }
   if (sharedConfig.enableStaticContextualization !== undefined) {
     configCopy.experimental.enableStaticContextualization =
       sharedConfig.enableStaticContextualization;

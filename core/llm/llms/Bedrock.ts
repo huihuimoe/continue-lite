@@ -8,37 +8,20 @@ import {
   ConverseStreamCommand,
   ConverseStreamCommandOutput,
   ImageFormat,
-  InvokeModelCommand,
   Message,
   ReasoningContentBlockDelta,
-  ToolConfiguration,
   ToolUseBlock,
   ToolUseBlockDelta,
 } from "@aws-sdk/client-bedrock-runtime";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 import type { CompletionOptions } from "../../index.js";
-import { ChatMessage, Chunk, LLMOptions, MessageContent } from "../../index.js";
-import { safeParseToolCallArgs } from "../../tools/parseArgs.js";
+import { ChatMessage, LLMOptions, MessageContent } from "../../index.js";
 import { renderChatMessage, stripImages } from "../../util/messageContent.js";
 import { parseDataUrl } from "../../util/url.js";
 import { BaseLLM } from "../index.js";
-import { PROVIDER_TOOL_SUPPORT } from "../toolSupport.js";
 import { getSecureID } from "../utils/getSecureID.js";
 import { withLLMRetry } from "../utils/retry.js";
-
-interface ModelConfig {
-  formatPayload: (text: string) => any;
-  extractEmbeddings: (responseBody: any) => number[][];
-}
-
-/**
- * Interface for prompt caching metrics
- */
-interface PromptCachingMetrics {
-  cacheReadInputTokens: number;
-  cacheWriteInputTokens: number;
-}
 
 class Bedrock extends BaseLLM {
   static providerName = "bedrock";
@@ -46,11 +29,6 @@ class Bedrock extends BaseLLM {
     region: "us-east-1",
     model: "anthropic.claude-3-sonnet-20240229-v1:0",
     profile: "bedrock",
-  };
-
-  private _promptCachingMetrics: PromptCachingMetrics = {
-    cacheReadInputTokens: 0,
-    cacheWriteInputTokens: 0,
   };
 
   public requestOptions: {
@@ -133,12 +111,6 @@ class Bedrock extends BaseLLM {
     if (!response?.stream) {
       throw new Error("No stream received from Bedrock API");
     }
-
-    // Reset cache metrics for new request
-    this._promptCachingMetrics = {
-      cacheReadInputTokens: 0,
-      cacheWriteInputTokens: 0,
-    };
 
     try {
       for await (const chunk of response.stream) {
@@ -273,36 +245,7 @@ class Bedrock extends BaseLLM {
       };
     }
 
-    // First get tools
-    const supportsTools =
-      (this.capabilities?.tools ||
-        PROVIDER_TOOL_SUPPORT.bedrock?.(options.model)) ??
-      false;
-
-    let toolConfig: undefined | ToolConfiguration = undefined;
-    const availableTools = new Set<string>();
-    if (supportsTools && options.tools && options.tools.length > 0) {
-      toolConfig = {
-        tools: options.tools.map((tool) => ({
-          toolSpec: {
-            name: tool.function.name,
-            description: tool.function.description,
-            inputSchema: {
-              json: tool.function.parameters,
-            },
-          },
-        })),
-      } as ToolConfiguration;
-      const shouldCacheToolsConfig = this.completionOptions.promptCaching;
-      if (shouldCacheToolsConfig) {
-        toolConfig.tools!.push({ cachePoint: { type: "default" } });
-      }
-      options.tools.forEach((tool) => {
-        availableTools.add(tool.function.name);
-      });
-    }
-
-    const convertedMessages = this._convertMessages(messages, availableTools);
+    const convertedMessages = this._convertMessages(messages);
 
     return {
       modelId: options.model,
@@ -311,7 +254,6 @@ class Bedrock extends BaseLLM {
           ? [{ text: systemMessage }, { cachePoint: { type: "default" } }]
           : [{ text: systemMessage }]
         : undefined,
-      toolConfig: toolConfig,
       messages: convertedMessages,
       inferenceConfig: {
         maxTokens: options.maxTokens,
@@ -347,10 +289,7 @@ class Bedrock extends BaseLLM {
     Converts the messages to the format expected by the Bedrock API.
     
     */
-  private _convertMessages(
-    messages: ChatMessage[],
-    availableTools: Set<string>,
-  ): Message[] {
+  private _convertMessages(messages: ChatMessage[]): Message[] {
     let currentRole: "user" | "assistant" = "user";
     let currentBlocks: ContentBlock[] = [];
 
@@ -399,8 +338,7 @@ class Bedrock extends BaseLLM {
         }
         // TOOL messages:
         // Tool messages are represented by "toolResult" blocks
-        // toolResult blocks must follow valid toolUse blocks (which also verifies that the tool name is present in toolConfig)
-        // If it doesn't, we convert it to a text block
+        // If there is no matching toolUse block, we convert them to a text block
         else if (message.role === "tool") {
           const trimmedContent = message.content.trim() || "No tool output";
           if (hasAddedToolCallIds.has(message.toolCallId)) {
@@ -440,28 +378,14 @@ class Bedrock extends BaseLLM {
             );
           }
           // TOOL CALLS:
-          // Tool calls are represented by "toolUse" blocks
-          // Each tool call must have an id and a function name
-          // The function name must match one of the available tools
-          // Otherwise, we will convert it to a text block (e.g. Chat mode will pass no tools)
+          // Tool calls are represented by text blocks in lite mode
           if (message.toolCalls) {
             for (const toolCall of message.toolCalls) {
               if (toolCall.id && toolCall.function?.name) {
-                if (availableTools.has(toolCall.function.name)) {
-                  currentBlocks.push({
-                    toolUse: {
-                      toolUseId: toolCall.id,
-                      name: toolCall.function.name,
-                      input: safeParseToolCallArgs(toolCall),
-                    },
-                  });
-                  hasAddedToolCallIds.add(toolCall.id);
-                } else {
-                  const toolCallText = `Assistant tool call:\nTool name: ${toolCall.function.name}\nTool Call ID: ${toolCall.id}\nArguments: ${toolCall.function?.arguments ?? "{}"}`;
-                  currentBlocks.push({
-                    text: toolCallText,
-                  });
-                }
+                const toolCallText = `Assistant tool call:\nTool name: ${toolCall.function.name}\nTool Call ID: ${toolCall.id}\nArguments: ${toolCall.function?.arguments ?? "{}"}`;
+                currentBlocks.push({
+                  text: toolCallText,
+                });
               } else {
                 console.warn(
                   `Bedrock: tool call missing id or name, skipping tool call: ${JSON.stringify(toolCall)}`,
@@ -598,156 +522,6 @@ class Bedrock extends BaseLLM {
       );
     }
     return await fromNodeProviderChain()();
-  }
-
-  // EMBED //
-  async _embed(chunks: string[]): Promise<number[][]> {
-    const credentials = await this._getCredentials();
-    const client = new BedrockRuntimeClient({
-      region: this.region,
-      credentials: {
-        accessKeyId: credentials.accessKeyId,
-        secretAccessKey: credentials.secretAccessKey,
-        sessionToken: credentials.sessionToken || "",
-      },
-    });
-
-    return (
-      await Promise.all(
-        chunks.map(async (chunk) => {
-          const input = this._generateInvokeModelCommandInput(chunk);
-          const command = new InvokeModelCommand(input);
-          const response = await client.send(command);
-          if (response.body) {
-            const decoder = new TextDecoder();
-            const decoded = decoder.decode(response.body);
-            try {
-              const responseBody = JSON.parse(decoded);
-              return this._extractEmbeddings(responseBody);
-            } catch (e) {
-              console.error(`Error parsing response body from:\n${decoded}`, e);
-            }
-          }
-          return [];
-        }),
-      )
-    ).flat();
-  }
-
-  private _generateInvokeModelCommandInput(text: string): any {
-    const modelConfig = this._getModelConfig();
-    const payload = modelConfig.formatPayload(text);
-
-    return {
-      body: JSON.stringify(payload),
-      modelId: this.model,
-      accept: "*/*",
-      contentType: "application/json",
-    };
-  }
-
-  private _extractEmbeddings(responseBody: any): number[][] {
-    const modelConfig = this._getModelConfig();
-    return modelConfig.extractEmbeddings(responseBody);
-  }
-
-  private _getModelConfig() {
-    const modelConfigs: { [key: string]: ModelConfig } = {
-      cohere: {
-        formatPayload: (text: string) => ({
-          texts: [text],
-          input_type: "search_document",
-          truncate: "END",
-        }),
-        extractEmbeddings: (responseBody: any) => responseBody.embeddings || [],
-      },
-      "amazon.titan-embed": {
-        formatPayload: (text: string) => ({
-          inputText: text,
-        }),
-        extractEmbeddings: (responseBody: any) =>
-          responseBody.embedding ? [responseBody.embedding] : [],
-      },
-    };
-
-    const modelPrefix = Object.keys(modelConfigs).find((prefix) =>
-      this.model!.startsWith(prefix),
-    );
-    if (!modelPrefix) {
-      throw new Error(`Unsupported model: ${this.model}`);
-    }
-    return modelConfigs[modelPrefix];
-  }
-
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    if (!query || !chunks.length) {
-      throw new Error("Query and chunks must not be empty");
-    }
-
-    try {
-      const credentials = await this._getCredentials();
-      const client = new BedrockRuntimeClient({
-        region: this.region,
-        credentials: {
-          accessKeyId: credentials.accessKeyId,
-          secretAccessKey: credentials.secretAccessKey,
-          sessionToken: credentials.sessionToken || "",
-        },
-      });
-
-      // Base payload for both models
-      const payload: any = {
-        query: query,
-        documents: chunks.map((chunk) => chunk.content),
-        top_n: chunks.length,
-      };
-
-      // Add api_version for Cohere model
-      if (this.model.startsWith("cohere.rerank")) {
-        payload.api_version = 2;
-      }
-
-      const input = {
-        body: JSON.stringify(payload),
-        modelId: this.model,
-        accept: "*/*",
-        contentType: "application/json",
-      };
-
-      const command = new InvokeModelCommand(input);
-      const response = await client.send(command);
-
-      if (!response.body) {
-        throw new Error("Empty response received from Bedrock");
-      }
-
-      const decoder = new TextDecoder();
-      const decoded = decoder.decode(response.body);
-      try {
-        const responseBody = JSON.parse(decoded);
-        // Sort results by index to maintain original order
-        return responseBody.results
-          .sort((a: any, b: any) => a.index - b.index)
-          .map((result: any) => result.relevance_score);
-      } catch (e) {
-        throw new Error(
-          `Error parsing JSON from Bedrock response body:\n${decoded}, ${JSON.stringify(e)}`,
-        );
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        if ("code" in error) {
-          // AWS SDK specific errors
-          throw new Error(
-            `AWS Bedrock rerank error (${(error as any).code}): ${error.message}`,
-          );
-        }
-        throw new Error(`Error in BedrockReranker.rerank: ${error.message}`);
-      }
-      throw new Error(
-        "Error in BedrockReranker.rerank: Unknown error occurred",
-      );
-    }
   }
 }
 

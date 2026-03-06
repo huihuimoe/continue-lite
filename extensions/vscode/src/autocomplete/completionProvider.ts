@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import { processSingleLineCompletion } from "core/autocomplete/util/processSingleLineCompletion";
 import {
@@ -6,16 +7,13 @@ import {
 } from "core/autocomplete/util/types";
 import { ConfigHandler } from "core/config/ConfigHandler";
 import * as URI from "uri-js";
-import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 
 import { handleLLMError } from "../util/errorHandling";
 import { VsCodeIde } from "../VsCodeIde";
-import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
 import { checkFim } from "core/nextEdit/diff/diff";
 import { NextEditLoggingService } from "core/nextEdit/NextEditLoggingService";
-import { PrefetchQueue } from "core/nextEdit/NextEditPrefetchQueue";
 import { NextEditProvider } from "core/nextEdit/NextEditProvider";
 import { NextEditOutcome } from "core/nextEdit/types";
 import { JumpManager } from "../activation/JumpManager";
@@ -30,12 +28,6 @@ import {
   setupStatusBar,
   stopStatusBarLoading,
 } from "./statusBar";
-
-interface VsCodeCompletionInput {
-  document: vscode.TextDocument;
-  position: vscode.Position;
-  context: vscode.InlineCompletionContext;
-}
 
 export class ContinueCompletionProvider
   implements vscode.InlineCompletionItemProvider
@@ -63,7 +55,6 @@ export class ContinueCompletionProvider
   private nextEditProvider: NextEditProvider;
   private nextEditLoggingService: NextEditLoggingService;
   private jumpManager: JumpManager;
-  private prefetchQueue: PrefetchQueue;
 
   public recentlyVisitedRanges: RecentlyVisitedRangesService;
   public recentlyEditedTracker: RecentlyEditedTracker;
@@ -82,7 +73,6 @@ export class ContinueCompletionProvider
   constructor(
     private readonly configHandler: ConfigHandler,
     private readonly ide: VsCodeIde,
-    private readonly webviewProtocol: VsCodeWebviewProtocol,
     usingFullFileDiff: boolean,
   ) {
     this.usingFullFileDiff = usingFullFileDiff;
@@ -116,29 +106,14 @@ export class ContinueCompletionProvider
     );
 
     this.jumpManager = JumpManager.getInstance();
-    this.prefetchQueue = PrefetchQueue.getInstance();
-    this.prefetchQueue.initialize(this.usingFullFileDiff);
 
     this.recentlyVisitedRanges = new RecentlyVisitedRangesService(ide);
   }
 
   _lastShownCompletion: AutocompleteOutcome | NextEditOutcome | undefined;
 
-  private async getRerankModel() {
-    const { config } = await this.configHandler.loadConfig();
-    if (!config) {
-      return;
-    }
-    return config.selectedModelByRole.rerank ?? undefined;
-  }
-
-  /**
-   * Updates this class and the prefetch queue's usingFullFileDiff flag.
-   * @param usingFullFileDiff New value to set.
-   */
   public updateUsingFullFileDiff(usingFullFileDiff: boolean) {
     this.usingFullFileDiff = usingFullFileDiff;
-    this.prefetchQueue.initialize(this.usingFullFileDiff);
   }
 
   /**
@@ -203,14 +178,12 @@ export class ContinueCompletionProvider
         return null;
       }
     }
-    let injectDetails: string | undefined = undefined;
-
     const currCursorPos = editor.selection.active;
 
     try {
       const abortController = new AbortController();
       const signal = abortController.signal;
-      const completionId = uuidv4();
+      const completionId = randomUUID();
 
       if (this.isNextEditActive) {
         this.nextEditLoggingService.trackPendingCompletion(completionId);
@@ -301,20 +274,11 @@ export class ContinueCompletionProvider
 
       // You will also see mentions of this.usingFullFileDiff.
       // This was initially a flag for whether we should let the model output a full file as an output (or to the best of its abilities).
-      // It ended up becoming a Mercury Coder vs. non-Mercury Coder flag, and is now used to determine whether we should prefetch next edits.
       // This is a good place to refactor on.
       // In the future, it will be desirable to have a map where we split models into different next edit requirements and capabilities,
       // Then use the model's name to retrieve all of its requirements (or better yet, have a model-specific logic inside children class).
 
-      // Prefetching is also a relic of the past.
-      // Before, I envisioned that we should call the model in the background to get next next edits.
-      // Due to subpar results, lack of satisfactory next edit location suggestion algorithms and token cost/latency issues, I scratched the idea.
-
       let outcome: AutocompleteOutcome | NextEditOutcome | undefined;
-
-      // TODO: We can probably decide here if we want to do the jumping logic.
-      // If we aren't going to jump anyways, then we should be not be using the prefetch queue or the jump manager.
-      // It would simplify the logic quite substantially.
 
       // Here, we introduce the concept of jumping and chains.
       // Jump and chain are next edit-specific concepts, and autocomplete has nothing to do with it.
@@ -331,23 +295,8 @@ export class ContinueCompletionProvider
       // Determine why this method was triggered.
       const isJumping = this.jumpManager.isJumpInProgress();
       let chainExists = this.nextEditProvider.chainExists();
-      const processedCount = this.prefetchQueue.processedCount;
-      const unprocessedCount = this.prefetchQueue.unprocessedCount;
-      // console.debug("isJumping:", isJumping, "/ chainExists:", chainExists);
-      this.prefetchQueue.peekThreeProcessed();
 
       let resetChainInFullFileDiff = false;
-      if (
-        chainExists &&
-        this.usingFullFileDiff &&
-        processedCount === 0 &&
-        unprocessedCount === 0
-      ) {
-        // Skipping jump logic due to empty queues while using full file diff
-        await this.nextEditProvider.deleteChain();
-        chainExists = false;
-        resetChainInFullFileDiff = true;
-      }
 
       if (isJumping && chainExists) {
         // Case 2: Jumping (chain exists, jump was taken)
@@ -356,87 +305,17 @@ export class ContinueCompletionProvider
         // Reset jump state.
         this.jumpManager.setJumpInProgress(false);
 
-        // Use the saved completion from JumpManager instead of dequeuing.
-        const savedCompletion = this.jumpManager.completionAfterJump;
-        if (savedCompletion) {
-          outcome = savedCompletion.outcome;
-          this.jumpManager.clearCompletionAfterJump();
-        } else {
-          // Fall back to prefetch queue. This technically should not happen.
-          console.error(
-            "Fell back to prefetch queue even after jump was taken",
-          );
-          outcome = this.prefetchQueue.dequeueProcessed()?.outcome;
-
-          // Fill in the spot after dequeuing.
-          if (!this.usingFullFileDiff) {
-            this.prefetchQueue.process({
-              ...ctx,
-              recentlyVisitedRanges: this.recentlyVisitedRanges.getSnippets(),
-              recentlyEditedRanges:
-                await this.recentlyEditedTracker.getRecentlyEditedRanges(),
-            });
-          }
-        }
+        await this.nextEditProvider.deleteChain();
+        chainExists = false;
+        resetChainInFullFileDiff = this.usingFullFileDiff;
       } else if (chainExists) {
-        // Case 3: Accepting next edit outcome (chain exists, jump is not taken).
-        // console.debug("trigger reason: accepting");
+        await this.nextEditProvider.deleteChain();
+        chainExists = false;
+        resetChainInFullFileDiff = this.usingFullFileDiff;
+      }
 
-        // Try suggesting jump for each location.
-        let isJumpSuggested = false;
-
-        while (this.prefetchQueue.processedCount > 0 && !isJumpSuggested) {
-          const nextItemInQueue = this.prefetchQueue.dequeueProcessed();
-          if (!nextItemInQueue) continue;
-
-          // Fill in the spot after dequeuing.
-          if (!this.usingFullFileDiff) {
-            this.prefetchQueue.process({
-              ...ctx,
-              recentlyVisitedRanges: this.recentlyVisitedRanges.getSnippets(),
-              recentlyEditedRanges:
-                await this.recentlyEditedTracker.getRecentlyEditedRanges(),
-            });
-          }
-
-          const nextLocation = nextItemInQueue.location;
-          outcome = nextItemInQueue.outcome;
-
-          const jumpPosition = new vscode.Position(
-            nextLocation.range.start.line,
-            nextLocation.range.start.character,
-          );
-
-          isJumpSuggested = await this.jumpManager.suggestJump(
-            currCursorPos,
-            jumpPosition,
-            outcome.completion,
-          );
-
-          if (isJumpSuggested) {
-            // Store completion to be rendered after a jump.
-            this.jumpManager.setCompletionAfterJump({
-              completionId: completionId,
-              outcome,
-              currentPosition: jumpPosition,
-            });
-
-            // Don't display anything yet. This will be handled in Case 2.
-            // Recall from above that provideInlineCompletions runs on every cursor movement.
-            return undefined;
-          }
-        }
-
-        if (!isJumpSuggested) {
-          // console.debug(
-          //   "No suitable jump location found after trying all positions",
-          // );
-          this.nextEditProvider.deleteChain();
-          return undefined;
-        }
-      } else {
+      if (!chainExists && !outcome) {
         // Case 1: Typing (chain does not exist).
-        // if resetChainInFullFileDiff is true then we are Rebuilding next edit chain after clearing empty queues in full file diff mode
         this.nextEditProvider.startChain();
 
         const input: AutocompleteInput = {
@@ -462,12 +341,6 @@ export class ContinueCompletionProvider
           ) {
             // No next edit outcome after resetting chain; returning null
             return null;
-          }
-
-          // Start prefetching next edits if not using full file diff.
-          // NOTE: this is better off not awaited. fire and forget.
-          if (!this.usingFullFileDiff) {
-            this.prefetchQueue.process(ctx);
           }
 
           // If initial outcome is null, suggest a jump instead.
@@ -522,7 +395,6 @@ export class ContinueCompletionProvider
         outcome.completion = selectedCompletionInfo.text + outcome.completion;
       }
       const willDisplay = this.willDisplay(
-        document,
         selectedCompletionInfo,
         signal,
         outcome,
@@ -710,13 +582,12 @@ export class ContinueCompletionProvider
   }
 
   willDisplay(
-    document: vscode.TextDocument,
     selectedCompletionInfo: vscode.SelectedCompletionInfo | undefined,
     abortSignal: AbortSignal,
     outcome: AutocompleteOutcome | NextEditOutcome,
   ): boolean {
     if (selectedCompletionInfo) {
-      const { text, range } = selectedCompletionInfo;
+      const { text } = selectedCompletionInfo;
       if (!outcome.completion.startsWith(text)) {
         // console.debug(
         //   `Won't display completion because text doesn't match: ${text}, ${outcome.completion}`,

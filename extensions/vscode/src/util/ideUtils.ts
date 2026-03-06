@@ -1,22 +1,13 @@
 import { EXTENSION_NAME } from "core/control-plane/env";
 import { findUriInDirs } from "core/util/uri";
-import _ from "lodash";
 import * as URI from "uri-js";
 import * as vscode from "vscode";
 
-import { threadStopped } from "../debug/debug";
-import { VsCodeExtension } from "../extension/VsCodeExtension";
 import { GitExtension, Repository } from "../otherExtensions/git";
-import {
-  SuggestionRanges,
-  acceptSuggestionCommand,
-  rejectSuggestionCommand,
-  showSuggestion as showSuggestionInEditor,
-} from "../suggestions";
 
 import { getUniqueId, openEditorAndRevealRange } from "./vscode";
 
-import type { Range, Thread } from "core";
+import type { Thread } from "core";
 
 const util = require("node:util");
 const asyncExec = util.promisify(require("node:child_process").exec);
@@ -80,19 +71,6 @@ export class VsCodeIdeUtils {
 
   getUniqueId() {
     return getUniqueId();
-  }
-
-  showSuggestion(uri: vscode.Uri, range: Range, suggestion: string) {
-    showSuggestionInEditor(
-      uri,
-      new vscode.Range(
-        range.start.line,
-        range.start.character,
-        range.end.line,
-        range.end.character,
-      ),
-      suggestion,
-    );
   }
 
   async openFile(uri: vscode.Uri, range?: vscode.Range) {
@@ -230,15 +208,15 @@ export class VsCodeIdeUtils {
 
   showVirtualFile(name: string, contents: string) {
     vscode.workspace
-      .openTextDocument(
-        vscode.Uri.parse(
-          `${
-            VsCodeExtension.continueVirtualDocumentScheme
-          }:${encodeURIComponent(name)}?${encodeURIComponent(contents)}`,
-        ),
-      )
+      .openTextDocument({
+        language: "plaintext",
+        content: contents,
+      })
       .then((doc) => {
-        vscode.window.showTextDocument(doc, { preview: false });
+        void vscode.window.showTextDocument(doc, {
+          preview: false,
+          viewColumn: vscode.ViewColumn.Beside,
+        });
       });
   }
 
@@ -261,17 +239,6 @@ export class VsCodeIdeUtils {
       .update(key, secret, vscode.ConfigurationTarget.Global);
 
     return secret;
-  }
-
-  // ------------------------------------ //
-  // Initiate Request
-
-  acceptRejectSuggestion(accept: boolean, key: SuggestionRanges) {
-    if (accept) {
-      acceptSuggestionCommand(key);
-    } else {
-      rejectSuggestionCommand(key);
-    }
   }
 
   // ------------------------------------ //
@@ -362,10 +329,9 @@ export class VsCodeIdeUtils {
 
   private async _getThreads(session: vscode.DebugSession) {
     const threadsResponse = await session.customRequest("threads");
-    const threads = threadsResponse.threads.filter((thread: any) =>
-      threadStopped.get(thread.id),
+    const threads = (threadsResponse.threads ?? []).sort(
+      (a: any, b: any) => a.id - b.id,
     );
-    threads.sort((a: any, b: any) => a.id - b.id);
     threadsResponse.threads = threads;
 
     return threadsResponse;
@@ -444,7 +410,9 @@ export class VsCodeIdeUtils {
             const scope = scopeResponse.scopes[0];
 
             return await this.retrieveSource(
-              scope.source && !_.isEmpty(scope.source) ? scope : stackFrame,
+              scope.source && Object.keys(scope.source).length > 0
+                ? scope
+                : stackFrame,
             );
           }),
       );

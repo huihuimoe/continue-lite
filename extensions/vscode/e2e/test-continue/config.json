@@ -82,7 +82,7 @@
   },
   "contextProviders": [
     {
-      "name": "docs"
+      "name": "open"
     },
     {
       "name": "diff"
@@ -91,11 +91,10 @@
       "name": "url"
     },
     {
-      "name": "folder"
+      "name": "code"
     },
     {
       "name": "terminal"
     }
-  ],
-  "docs": []
+  ]
 }

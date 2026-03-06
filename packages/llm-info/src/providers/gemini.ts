@@ -174,13 +174,6 @@ export const Gemini: ModelProvider = {
       mediaTypes: AllMediaTypes,
       regex: /gemini-1\.0-pro/i,
     },
-    // embed
-    {
-      model: "models/text-embedding-004",
-      displayName: "Gemini Text Embedding",
-      description: "Text embedding model for vectorizing content",
-      recommendedFor: ["embed"],
-    },
   ],
   id: "gemini",
   displayName: "Gemini",

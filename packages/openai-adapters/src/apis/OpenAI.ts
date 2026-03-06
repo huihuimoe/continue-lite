@@ -18,12 +18,7 @@ import type {
 import { z } from "zod";
 import { OpenAIConfigSchema } from "../types.js";
 import { customFetch } from "../util.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 import {
   createResponsesStreamState,
   fromResponsesChunk,
@@ -90,17 +85,7 @@ export class OpenAIApi implements BaseLlmApi {
     return body;
   }
 
-  modifyEmbedBody<T extends OpenAI.Embeddings.EmbeddingCreateParams>(
-    body: T,
-  ): T {
-    return body;
-  }
-
   modifyFimBody<T extends FimCreateParamsStreaming>(body: T): T {
-    return body;
-  }
-
-  modifyRerankBody<T extends RerankCreateParams>(body: T): T {
     return body;
   }
 
@@ -212,27 +197,6 @@ export class OpenAIApi implements BaseLlmApi {
         yield chunk;
       }
     }
-  }
-
-  async embed(
-    body: OpenAI.Embeddings.EmbeddingCreateParams,
-  ): Promise<OpenAI.Embeddings.CreateEmbeddingResponse> {
-    const response = await this.openai.embeddings.create(
-      this.modifyEmbedBody(body),
-    );
-    return response;
-  }
-
-  async rerank(body: RerankCreateParams): Promise<CreateRerankResponse> {
-    const endpoint = new URL("rerank", this.apiBase);
-    const modifiedBody = this.modifyRerankBody(body);
-    const response = await customFetch(this.config.requestOptions)(endpoint, {
-      method: "POST",
-      body: JSON.stringify(modifiedBody),
-      headers: this.getHeaders(),
-    });
-    const data = await response.json();
-    return data as any;
   }
 
   async list(): Promise<Model[]> {

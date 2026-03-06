@@ -1,8 +1,7 @@
 import { NextEditProvider } from "core/nextEdit/NextEditProvider";
-import { NextEditOutcome } from "core/nextEdit/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as vscode from "vscode";
-import { CompletionDataForAfterJump, JumpManager } from "./JumpManager";
+import { JumpManager } from "./JumpManager";
 
 // Mock VSCode API
 vi.mock("vscode", () => {
@@ -37,7 +36,7 @@ vi.mock("vscode", () => {
       }),
     },
     workspace: {
-      getConfiguration: vi.fn().mockImplementation((section?: string) => {
+      getConfiguration: vi.fn().mockImplementation((_section?: string) => {
         // Return a configuration object with a get method
         return {
           get: vi.fn().mockImplementation((key: string) => {
@@ -126,68 +125,6 @@ vi.mock("core/nextEdit/NextEditProvider", () => {
     },
   };
 });
-
-const createMockNextEditOutcome = (
-  overrides: Partial<NextEditOutcome> = {},
-): NextEditOutcome => {
-  return {
-    // TabAutocompleteOptions properties
-    disable: false,
-    maxPromptTokens: 2048,
-    debounceDelay: 300,
-    modelTimeout: 5000,
-    maxSuffixPercentage: 0.5,
-    prefixPercentage: 0.8,
-    transform: true,
-    template: "default",
-    multilineCompletions: "auto",
-    slidingWindowPrefixPercentage: 0.5,
-    slidingWindowSize: 100,
-    useCache: true,
-    onlyMyCode: false,
-    useRecentlyEdited: true,
-    useRecentlyOpened: true,
-    disableInFiles: [".env", "node_modules/**"],
-    useImports: true,
-    showWhateverWeHaveAtXMs: 2000,
-    experimental_includeClipboard: true,
-    experimental_includeRecentlyVisitedRanges: true,
-    experimental_includeRecentlyEditedRanges: true,
-    experimental_includeDiff: true,
-    experimental_enableStaticContextualization: false,
-    // Base properties
-    elapsed: 1500,
-    modelProvider: "openai",
-    modelName: "gpt-4",
-    completionOptions: {
-      temperature: 0.7,
-      max_tokens: 1000,
-    },
-    completionId: "comp_12345abcde",
-    uniqueId: "ne_67890fghij",
-    timestamp: Date.now(),
-    gitRepo: "continuedev/continue",
-
-    // NextEdit specific properties
-    fileUri: "file:///workspace/project/src/main.ts",
-    workspaceDirUri: "file:///workspace/project",
-    prompt: "Add error handling to this function",
-    userEdits: "// I added a try/catch block",
-    userExcerpts: "function example() { ... }",
-    originalEditableRange: "function example() {\n  return fetch(url);\n}",
-    completion:
-      "function example() {\n  try {\n    return fetch(url);\n  } catch (error) {\n    console.error('Fetch failed:', error);\n    throw error;\n  }\n}",
-    cursorPosition: { line: 2, character: 10 },
-    finalCursorPosition: { line: 4, character: 5 },
-    accepted: true,
-    editableRegionStartLine: 1,
-    editableRegionEndLine: 3,
-    diffLines: [],
-
-    // Apply any overrides
-    ...overrides,
-  };
-};
 
 describe("JumpManager", () => {
   let jumpManager: JumpManager;
@@ -373,6 +310,24 @@ describe("JumpManager", () => {
         vscode.TextEditorRevealType.InCenter,
       );
     });
+
+    it("should reset jumpInProgress when jump is accepted", async () => {
+      const currentPosition = new vscode.Position(1, 0);
+      const nextJumpLocation = new vscode.Position(8, 0);
+
+      await jumpManager.suggestJump(currentPosition, nextJumpLocation);
+      expect(jumpManager.isJumpInProgress()).toBe(true);
+
+      const commandArgs = vi
+        .mocked(vscode.commands.registerCommand)
+        .mock.calls.find((call: any) => call[0] === "continue.acceptJump");
+      expect(commandArgs).toBeDefined();
+
+      const acceptJumpHandler = commandArgs![1];
+      await acceptJumpHandler();
+
+      expect(jumpManager.isJumpInProgress()).toBe(false);
+    });
   });
 
   describe("registerKeyListeners", () => {
@@ -465,6 +420,24 @@ describe("JumpManager", () => {
       );
     });
 
+    it("should reset jumpInProgress when jump is rejected", async () => {
+      const currentPosition = new vscode.Position(1, 0);
+      const nextJumpLocation = new vscode.Position(8, 0);
+
+      await jumpManager.suggestJump(currentPosition, nextJumpLocation);
+      expect(jumpManager.isJumpInProgress()).toBe(true);
+
+      const commandArgs = vi
+        .mocked(vscode.commands.registerCommand)
+        .mock.calls.find((call: any) => call[0] === "continue.rejectJump");
+      expect(commandArgs).toBeDefined();
+
+      const rejectJumpHandler = commandArgs![1];
+      await rejectJumpHandler();
+
+      expect(jumpManager.isJumpInProgress()).toBe(false);
+    });
+
     it("should register selection change listener that rejects jump on cursor movement", async () => {
       const privateJumpManager = jumpManager as any;
       privateJumpManager._jumpDecorationVisible = true;
@@ -504,62 +477,6 @@ describe("JumpManager", () => {
     });
   });
 
-  describe("setCompletionAfterJump", () => {
-    it("should store completion data", () => {
-      const completionData: CompletionDataForAfterJump = {
-        completionId: "test-id",
-        outcome: createMockNextEditOutcome(),
-        currentPosition: new vscode.Position(1, 0),
-      };
-
-      // Set the completion data
-      jumpManager.setCompletionAfterJump(completionData);
-
-      // Verify the completion data was stored correctly
-      expect((jumpManager as any)._completionAfterJump).toEqual(completionData);
-    });
-
-    it("should process completion data when jump is completed", async () => {
-      const completionData: CompletionDataForAfterJump = {
-        completionId: "test-id",
-        outcome: createMockNextEditOutcome(),
-        currentPosition: new vscode.Position(1, 0),
-      };
-
-      // Set the completion data
-      jumpManager.setCompletionAfterJump(completionData);
-
-      // Verify the completion data was set correctly
-      expect((jumpManager as any)._completionAfterJump).toEqual(completionData);
-
-      // Reset executeCommand mock to clear previous calls
-      vi.mocked(vscode.commands.executeCommand).mockClear();
-
-      // Directly simulate what happens when a jump is completed
-      // by manipulating the internal state
-      (jumpManager as any)._jumpInProgress = false;
-
-      // Now directly call the method that would show the completion
-      // We need to manually implement what the callback would do
-      if ((jumpManager as any)._completionAfterJump) {
-        vscode.commands.executeCommand(
-          "continue.showNextEditAfterJump",
-          (jumpManager as any)._completionAfterJump,
-        );
-        (jumpManager as any)._completionAfterJump = null;
-      }
-
-      // Verify that the command was called with the completion data
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        "continue.showNextEditAfterJump",
-        completionData,
-      );
-
-      // Verify that _completionAfterJump was reset to null
-      expect((jumpManager as any)._completionAfterJump).toBeNull();
-    });
-  });
-
   describe("clearJumpDecoration", () => {
     it("should dispose decoration and reset state", async () => {
       // Setup private method access
@@ -571,6 +488,7 @@ describe("JumpManager", () => {
         dispose: mockDispose,
       };
       privateJumpManager._jumpDecorationVisible = true;
+      privateJumpManager._jumpInProgress = true;
 
       // Reset executeCommand mock
       vi.mocked(vscode.commands.executeCommand).mockClear();
@@ -584,6 +502,7 @@ describe("JumpManager", () => {
       // Expect decoration to be undefined after clearing
       expect(privateJumpManager._jumpDecoration).toBeUndefined();
       expect(privateJumpManager._jumpDecorationVisible).toBe(false);
+      expect(jumpManager.isJumpInProgress()).toBe(false);
 
       // Expect context to be reset
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(

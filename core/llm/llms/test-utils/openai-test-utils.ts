@@ -331,45 +331,5 @@ export const createOpenAISubclassTests = (
         ],
       });
     });
-
-    test("should handle embeddings", async () => {
-      const provider = new ProviderClass({
-        apiKey: "test-api-key",
-        model: "text-embedding-ada-002",
-        apiBase: config.defaultApiBase || "https://api.openai.com/v1/",
-      });
-
-      // Skip test if provider doesn't support embeddings (e.g., ncompass with undefined endpoint)
-      if (config.providerName === "ncompass" && !config.customEmbeddingsUrl) {
-        return;
-      }
-
-      await runLlmTest({
-        llm: provider,
-        methodToTest: "embed",
-        params: [["Hello", "World"]],
-        expectedRequest: {
-          url:
-            config.customEmbeddingsUrl ||
-            `${config.defaultApiBase || "https://api.openai.com/v1/"}embeddings`,
-          method: "POST",
-          headers: config.customEmbeddingsHeaders || {
-            Authorization: "Bearer test-api-key",
-            "Content-Type": "application/json",
-            "api-key": "test-api-key",
-          },
-          body: config.customEmbeddingsBody || {
-            input: ["Hello", "World"],
-            model: "text-embedding-ada-002",
-          },
-        },
-        mockResponse: {
-          data: [
-            { embedding: [0.1, 0.2, 0.3] },
-            { embedding: [0.4, 0.5, 0.6] },
-          ],
-        },
-      });
-    });
   });
 };

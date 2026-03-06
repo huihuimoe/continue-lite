@@ -6,8 +6,6 @@ import { VsCodeExtension } from "../extension/VsCodeExtension";
 import { getExtensionVersion, isUnsupportedPlatform } from "../util/util";
 
 import { GlobalContext } from "core/util/GlobalContext";
-import { VsCodeContinueApi } from "./api";
-import setupInlineTips from "./InlineTipManager";
 
 export async function activateExtension(context: vscode.ExtensionContext) {
   const platformCheck = isUnsupportedPlatform();
@@ -38,9 +36,6 @@ export async function activateExtension(context: vscode.ExtensionContext) {
   // Add necessary files
   getTsConfigPath();
   getContinueRcPath();
-
-  // Register commands and providers
-  setupInlineTips(context);
 
   const vscodeExtension = new VsCodeExtension(context);
 
@@ -82,17 +77,9 @@ export async function activateExtension(context: vscode.ExtensionContext) {
     );
   }
 
-  const api = new VsCodeContinueApi(vscodeExtension);
-  const continuePublicApi = {
-    registerCustomContextProvider: api.registerCustomContextProvider.bind(api),
-  };
-
-  // 'export' public api-surface
-  // or entire extension for testing
   return process.env.NODE_ENV === "test"
     ? {
-        ...continuePublicApi,
         extension: vscodeExtension,
       }
-    : continuePublicApi;
+    : undefined;
 }

@@ -13,20 +13,12 @@ import {
   CompletionCreateParamsNonStreaming,
   CompletionCreateParamsStreaming,
   CompletionUsage,
-  CreateEmbeddingResponse,
-  EmbeddingCreateParams,
   Model,
 } from "openai/resources/index";
 
 import { v4 as uuidv4 } from "uuid";
 import { GeminiConfig } from "../types.js";
-import {
-  chatChunk,
-  chatChunkFromDelta,
-  customFetch,
-  embedding,
-  usageChatChunk,
-} from "../util.js";
+import { chatChunk, chatChunkFromDelta, usageChatChunk } from "../util.js";
 import {
   convertOpenAIToolToGeminiFunction,
   GeminiChatContent,
@@ -34,12 +26,7 @@ import {
   GeminiToolFunctionDeclaration,
 } from "../util/gemini-types.js";
 import { safeParseArgs } from "../util/parseArgs.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 
 type UsageInfo = Pick<
   CompletionUsage,
@@ -124,8 +111,9 @@ export class GeminiApi implements BaseLlmApi {
     if (oaiBody.temperature !== undefined && oaiBody.temperature !== null) {
       generationConfig.temperature = oaiBody.temperature;
     }
-    if (oaiBody.max_tokens) {
-      generationConfig.maxOutputTokens = oaiBody.max_tokens;
+    const maxTokens = (oaiBody as any).max_tokens;
+    if (maxTokens) {
+      generationConfig.maxOutputTokens = maxTokens;
     }
     if (oaiBody.stop) {
       const stop = Array.isArray(oaiBody.stop) ? oaiBody.stop : [oaiBody.stop];
@@ -451,54 +439,15 @@ export class GeminiApi implements BaseLlmApi {
     throw new Error("Method not implemented.");
   }
   completionStream(
-    body: CompletionCreateParamsStreaming,
+    _body: CompletionCreateParamsStreaming,
   ): AsyncGenerator<Completion> {
     throw new Error("Method not implemented.");
   }
   fimStream(
-    body: FimCreateParamsStreaming,
+    _body: FimCreateParamsStreaming,
   ): AsyncGenerator<ChatCompletionChunk> {
     throw new Error("Method not implemented.");
   }
-  async rerank(body: RerankCreateParams): Promise<CreateRerankResponse> {
-    throw new Error("Method not implemented.");
-  }
-
-  async embed(body: EmbeddingCreateParams): Promise<CreateEmbeddingResponse> {
-    const inputs = Array.isArray(body.input) ? body.input : [body.input];
-    const response = await customFetch(this.config.requestOptions)(
-      new URL(`${body.model}:batchEmbedContents`, this.apiBase),
-      {
-        method: "POST",
-        body: JSON.stringify({
-          requests: inputs.map((input) => ({
-            model: body.model,
-            content: {
-              role: "user",
-              parts: [{ text: input }],
-            },
-          })),
-        }),
-        headers: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          "x-goog-api-key": this.config.apiKey,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          "Content-Type": "application/json",
-        },
-      },
-    );
-
-    const data = (await response.json()) as any;
-    return embedding({
-      model: body.model,
-      usage: {
-        total_tokens: data.total_tokens,
-        prompt_tokens: data.prompt_tokens,
-      },
-      data: data.batchEmbedContents.map((embedding: any) => embedding.values),
-    });
-  }
-
   list(): Promise<Model[]> {
     throw new Error("Method not implemented.");
   }

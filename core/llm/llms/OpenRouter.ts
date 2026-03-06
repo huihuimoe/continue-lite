@@ -15,7 +15,6 @@ class OpenRouter extends OpenAI {
     promptTemplates: {
       edit: osModelsEditPrompt,
     },
-    useLegacyCompletionsEndpoint: false,
   };
 
   /**

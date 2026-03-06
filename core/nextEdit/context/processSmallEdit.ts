@@ -1,7 +1,7 @@
 import { IDE, Position } from "../..";
 import { GetLspDefinitionsFunction } from "../../autocomplete/types";
 import { ConfigHandler } from "../../config/ConfigHandler";
-import { isSecurityConcern } from "../../indexing/ignore.js";
+import { isSecurityConcern } from "../../util/ignore.js";
 import { NextEditProvider } from "../NextEditProvider";
 import { EditAggregator } from "./aggregateEdits";
 import { BeforeAfterDiff, createDiff, DiffFormatType } from "./diffFormatting";

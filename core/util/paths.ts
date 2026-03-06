@@ -211,19 +211,9 @@ export function getTsConfigPath(): string {
 }
 
 export function getContinueRcPath(): string {
-  // Disable indexing of the config folder to prevent infinite loops
   const continuercPath = path.join(getContinueGlobalPath(), ".continuerc.json");
   if (!fs.existsSync(continuercPath)) {
-    fs.writeFileSync(
-      continuercPath,
-      JSON.stringify(
-        {
-          disableIndexing: true,
-        },
-        null,
-        2,
-      ),
-    );
+    fs.writeFileSync(continuercPath, JSON.stringify({}, null, 2));
   }
   return continuercPath;
 }
@@ -403,34 +393,6 @@ export function getPromptLogsPath(): string {
 
 export function getGlobalFolderWithName(name: string): string {
   return path.join(getContinueGlobalPath(), name);
-}
-
-export function getGlobalPromptsPath(): string {
-  return getGlobalFolderWithName("prompts");
-}
-
-export function readAllGlobalPromptFiles(
-  folderPath: string = getGlobalPromptsPath(),
-): { path: string; content: string }[] {
-  if (!fs.existsSync(folderPath)) {
-    return [];
-  }
-  const files = fs.readdirSync(folderPath);
-  const promptFiles: { path: string; content: string }[] = [];
-  files.forEach((file) => {
-    const filepath = path.join(folderPath, file);
-    const stats = fs.statSync(filepath);
-
-    if (stats.isDirectory()) {
-      const nestedPromptFiles = readAllGlobalPromptFiles(filepath);
-      promptFiles.push(...nestedPromptFiles);
-    } else if (file.endsWith(".prompt")) {
-      const content = fs.readFileSync(filepath, "utf8");
-      promptFiles.push({ path: filepath, content });
-    }
-  });
-
-  return promptFiles;
 }
 
 export function getRepoMapFilePath(): string {

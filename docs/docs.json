@@ -222,10 +222,7 @@
               "reference",
               "reference/yaml-migration",
               "reference/continue-mcp",
-              "reference/json-reference",
-              "reference/deprecated-context-providers",
-              "reference/deprecated-codebase",
-              "reference/deprecated-docs"
+              "reference/json-reference"
             ]
           },
           {
@@ -573,19 +570,19 @@
     },
     {
       "source": "/walkthroughs/codebase-embeddings",
-      "destination": "/reference/deprecated-codebase"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/features/codebase-embeddings",
-      "destination": "/reference/deprecated-codebase"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/advanced/deep-dives/codebase",
-      "destination": "/reference/deprecated-codebase"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/advanced/context/codebase",
-      "destination": "/reference/deprecated-codebase"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/walkthroughs/tab-autocomplete",
@@ -701,19 +698,19 @@
     },
     {
       "source": "/features/talk-to-your-docs",
-      "destination": "/reference/deprecated-docs"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/advanced/context-integration/documentation",
-      "destination": "/reference/deprecated-docs"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/advanced/deep-dives/docs",
-      "destination": "/reference/deprecated-docs"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/advanced/context/documentation",
-      "destination": "/reference/deprecated-docs"
+      "destination": "/guides/codebase-documentation-awareness"
     },
     {
       "source": "/reference/Model Providers/anthropicllm",
@@ -1155,47 +1152,47 @@
 
     {
       "source": "/customize/custom-providers#@greptile-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@commits-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@discord-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@jira-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@gitlab-merge-request-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@google-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@database-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@issue-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@url-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@search-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/customize/custom-providers#@web-context-provider",
-      "destination": "/reference/deprecated-context-providers"
+      "destination": "/customize/custom-providers"
     },
     {
       "source": "/troubleshooting#faqs",

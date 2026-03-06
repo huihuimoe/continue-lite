@@ -7,9 +7,8 @@ import {
   LLMOptions,
   MessagePart,
   TextMessagePart,
-  ToolCallDelta,
 } from "../../index.js";
-import { safeParseToolCallArgs } from "../../tools/parseArgs.js";
+import { safeParseToolCallArgs, type ToolCallDelta } from "../tooling.js";
 import { renderChatMessage, stripImages } from "../../util/messageContent.js";
 import { extractBase64FromDataUrl } from "../../util/url.js";
 import { BaseLLM } from "../index.js";
@@ -20,8 +19,6 @@ import {
   GeminiChatRequestBody,
   GeminiChatResponse,
   GeminiGenerationConfig,
-  GeminiToolFunctionDeclaration,
-  convertContinueToolToGeminiFunction,
 } from "./gemini-types";
 
 interface GeminiToolCallDelta extends ToolCallDelta {
@@ -39,14 +36,11 @@ class Gemini extends BaseLLM {
     model: "gemini-pro",
     apiBase: "https://generativelanguage.googleapis.com/v1beta/",
     maxStopWords: 5,
-    maxEmbeddingBatchSize: 100,
   };
 
   protected useOpenAIAdapterFor: (LlmApiRequestType | "*")[] = [
     "chat",
-    "embed",
     "list",
-    "rerank",
     "streamChat",
     "streamFim",
   ];
@@ -337,29 +331,6 @@ class Gemini extends BaseLLM {
           parts: [{ text: stripImages(systemMessage) }],
         };
       }
-      // Convert and add tools if present
-      if (options.tools?.length) {
-        // Choosing to map all tools to the functionDeclarations of one tool
-        // Rather than map each tool to its own tool + functionDeclaration
-        // Same difference
-        const functions: GeminiToolFunctionDeclaration[] = [];
-        options.tools.forEach((tool) => {
-          try {
-            functions.push(convertContinueToolToGeminiFunction(tool));
-          } catch (e) {
-            console.warn(
-              `Failed to convert tool to gemini function definition. Skipping: ${JSON.stringify(tool, null, 2)}`,
-            );
-          }
-        });
-        if (functions.length) {
-          body.tools = [
-            {
-              functionDeclarations: functions,
-            },
-          ];
-        }
-      }
     }
     return body;
   }
@@ -506,39 +477,6 @@ class Gemini extends BaseLLM {
     }
     const data = await response.json();
     yield { role: "assistant", content: data.candidates[0].content };
-  }
-
-  async _embed(batch: string[]): Promise<number[][]> {
-    // Batch embed endpoint: https://ai.google.dev/api/embeddings?authuser=1#EmbedContentRequest
-    const requests = batch.map((text) => ({
-      model: this.model,
-      content: {
-        role: "user",
-        parts: [{ text }],
-      },
-    }));
-
-    const resp = await this.fetch(
-      new URL(`${this.model}:batchEmbedContents`, this.apiBase),
-      {
-        method: "POST",
-        body: JSON.stringify({
-          requests,
-        }),
-        headers: {
-          "x-goog-api-key": this.apiKey,
-          "Content-Type": "application/json",
-        } as any,
-      },
-    );
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-
-    const data = (await resp.json()) as any;
-
-    return data.embeddings.map((embedding: any) => embedding.values);
   }
 }
 

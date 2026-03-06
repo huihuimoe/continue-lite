@@ -182,12 +182,6 @@ export async function llmFromDescription(
 
   if (desc.provider === "continue-proxy") {
     options.apiKey = ideSettings.userToken;
-    if (ideSettings.remoteConfigServerUrl) {
-      options.apiBase = new URL(
-        "/proxy/v1",
-        ideSettings.remoteConfigServerUrl,
-      ).toString();
-    }
   }
 
   return new cls(options);

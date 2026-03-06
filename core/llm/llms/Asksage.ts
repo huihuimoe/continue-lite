@@ -4,13 +4,11 @@ import {
   CompletionOptions,
   LLMOptions,
   TextMessagePart,
-  Tool,
-  ToolCallDelta,
 } from "../../index.js";
+import type { ToolCallDelta } from "../tooling.js";
 import { BaseLLM } from "../index.js";
 import {
   AskSageTool,
-  AskSageToolChoice,
   AskSageToolCall,
   AskSageResponse,
   AskSageTokenResponse,
@@ -22,10 +20,6 @@ interface AskSageCompletionOptions extends CompletionOptions {
   limitReferences?: 0 | 1;
   persona?: number;
   systemPrompt?: string;
-  askSageTools?: AskSageTool[];
-  enabledMcpTools?: string[];
-  toolsToExecute?: string[];
-  askSageToolChoice?: AskSageToolChoice;
   reasoningEffort?: "low" | "medium" | "high";
   deepAgentId?: number;
   streaming?: boolean;
@@ -46,10 +40,6 @@ interface AskSageRequestArgs {
   limit_references?: 0 | 1;
   persona?: number;
   system_prompt?: string;
-  tools?: AskSageTool[];
-  enabled_mcp_tools?: string[];
-  tools_to_execute?: string[];
-  tool_choice?: AskSageToolChoice;
   reasoning_effort?: "low" | "medium" | "high";
   deep_agent_id?: number;
   streaming?: boolean;
@@ -160,17 +150,6 @@ class Asksage extends BaseLLM {
     };
   }
 
-  protected _convertToolToAskSageTool(tool: Tool): AskSageTool {
-    return {
-      type: tool.type,
-      function: {
-        name: tool.function.name,
-        description: tool.function.description,
-        parameters: tool.function.parameters,
-      },
-    };
-  }
-
   protected _convertArgs(
     options: AskSageCompletionOptions,
     messages: ChatMessage[],
@@ -181,14 +160,6 @@ class Asksage extends BaseLLM {
     } else {
       formattedMessage = messages.map(this._convertMessage);
     }
-
-    // Convert standard tools to AskSage format, or use askSageTools if provided
-    const tools =
-      options.tools?.map((tool) => this._convertToolToAskSageTool(tool)) ??
-      options.askSageTools;
-
-    // Map standard toolChoice to AskSage format, or use askSageToolChoice if provided
-    const toolChoice = options.toolChoice ?? options.askSageToolChoice;
 
     const args: AskSageRequestArgs = {
       message: formattedMessage,
@@ -201,8 +172,6 @@ class Asksage extends BaseLLM {
         options.systemPrompt ??
         process.env.ASKSAGE_SYSTEM_PROMPT ??
         "You are an expert software developer. You give helpful and concise responses.",
-      tools,
-      tool_choice: toolChoice,
       reasoning_effort: options.reasoningEffort as
         | "low"
         | "medium"

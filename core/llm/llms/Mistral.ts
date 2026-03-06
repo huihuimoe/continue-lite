@@ -13,7 +13,6 @@ class Mistral extends OpenAI {
     promptTemplates: {
       edit: codestralEditPrompt,
     },
-    maxEmbeddingBatchSize: 128,
   };
 
   private async autodetectApiKeyType(): Promise<MistralApiKeyType> {
@@ -55,7 +54,7 @@ class Mistral extends OpenAI {
 
           this.openaiAdapter = this.createOpenAiAdapter();
         })
-        .catch((err: any) => {});
+        .catch(() => {});
     }
   }
 

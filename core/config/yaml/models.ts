@@ -67,14 +67,7 @@ async function modelConfigToBaseLLM({
     baseAgentSystemMessage: model.chatOptions?.baseAgentSystemMessage,
     basePlanSystemMessage: model.chatOptions?.basePlanSystemMessage,
     baseChatSystemMessage: model.chatOptions?.baseSystemMessage,
-    toolOverrides: model.chatOptions?.toolOverrides
-      ? Object.entries(model.chatOptions.toolOverrides).map(([name, o]) => ({
-          name,
-          ...o,
-        }))
-      : undefined,
     capabilities: {
-      tools: model.capabilities?.includes("tool_use"),
       uploadImage: model.capabilities?.includes("image_input"),
       nextEdit: model.capabilities?.includes("next_edit"),
     },
@@ -85,13 +78,6 @@ async function modelConfigToBaseLLM({
 
   // Model capabilities - need to be undefined if not found
   // To fallback to our autodetection
-  if (capabilities?.find((c) => c === "tool_use")) {
-    options.capabilities = {
-      ...options.capabilities,
-      tools: true,
-    };
-  }
-
   if (capabilities?.find((c) => c === "image_input")) {
     options.capabilities = {
       ...options.capabilities,
@@ -99,24 +85,11 @@ async function modelConfigToBaseLLM({
     };
   }
 
-  if (model.embedOptions?.maxBatchSize) {
-    options.maxEmbeddingBatchSize = model.embedOptions.maxBatchSize;
-  }
-  if (model.embedOptions?.maxChunkSize) {
-    options.maxEmbeddingChunkSize = model.embedOptions.maxChunkSize;
-  }
-
   // These are params that are at model config level in JSON
   // But we decided to move to nested `env` in YAML
   // Since types vary and we don't want to blindly spread env for now,
   // Each one is handled individually here
   const env = model.env ?? {};
-  if (
-    "useLegacyCompletionsEndpoint" in env &&
-    typeof env.useLegacyCompletionsEndpoint === "boolean"
-  ) {
-    options.useLegacyCompletionsEndpoint = env.useLegacyCompletionsEndpoint;
-  }
   if ("apiType" in env && typeof env.apiType === "string") {
     options.apiType = env.apiType;
   }

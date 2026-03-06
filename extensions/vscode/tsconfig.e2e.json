@@ -13,6 +13,9 @@
     "node_modules",
     ".vscode-test",
     "e2e/resources/**",
+    "e2e/storage/**",
+    "e2e/_output/**",
+    "e2e/.test-extensions/**",
     ".test-extensions"
   ],
   "include": ["e2e"]

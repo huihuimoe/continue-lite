@@ -1,9 +1,13 @@
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as path from "path";
 import untildify from "untildify";
-import { IDE } from "..";
 import { resolveRelativePathInDir } from "./ideUtils";
 import { findUriInDirs } from "./uri";
+
+interface PathResolverIDE {
+  getWorkspaceDirs(): Promise<string[]>;
+  fileExists(filepath: string): Promise<boolean>;
+}
 
 export interface ResolvedPath {
   uri: string;
@@ -16,7 +20,10 @@ export interface ResolvedPath {
  * Checks if a URI is within any of the workspace directories
  * Also verifies the file actually exists, matching the behavior of resolveRelativePathInDir
  */
-async function isUriWithinWorkspace(ide: IDE, uri: string): Promise<boolean> {
+async function isUriWithinWorkspace(
+  ide: PathResolverIDE,
+  uri: string,
+): Promise<boolean> {
   const workspaceDirs = await ide.getWorkspaceDirs();
   const { foundInDir } = findUriInDirs(uri, workspaceDirs);
 
@@ -29,7 +36,7 @@ async function isUriWithinWorkspace(ide: IDE, uri: string): Promise<boolean> {
 }
 
 export async function resolveInputPath(
-  ide: IDE,
+  ide: PathResolverIDE,
   inputPath: string,
 ): Promise<ResolvedPath | null> {
   const trimmedPath = inputPath.trim();

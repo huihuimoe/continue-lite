@@ -8,8 +8,6 @@ import {
   Completion,
   CompletionCreateParamsNonStreaming,
   CompletionCreateParamsStreaming,
-  CreateEmbeddingResponse,
-  EmbeddingCreateParams,
   Model,
 } from "openai/resources/index";
 import {
@@ -21,12 +19,7 @@ import {
   AskSageTokenResponse,
 } from "../types.js";
 import { chatChunk, chatChunkFromDelta, customFetch } from "../util.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 
 const DEFAULT_API_URL = "https://api.asksage.ai/server";
 const DEFAULT_USER_API_URL = "https://api.asksage.ai/user";
@@ -483,14 +476,6 @@ export class AskSageApi implements BaseLlmApi {
     _signal: AbortSignal,
   ): AsyncGenerator<ChatCompletionChunk> {
     throw new Error("AskSage does not support FIM");
-  }
-
-  async embed(_body: EmbeddingCreateParams): Promise<CreateEmbeddingResponse> {
-    throw new Error("AskSage does not support embeddings");
-  }
-
-  async rerank(_body: RerankCreateParams): Promise<CreateRerankResponse> {
-    throw new Error("AskSage does not support reranking");
   }
 
   async list(): Promise<Model[]> {

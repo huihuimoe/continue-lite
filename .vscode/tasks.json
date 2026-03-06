@@ -269,7 +269,7 @@
       "dependsOn": [
         "refresh-dependencies:core",
         "refresh-dependencies:gui",
-        "refresh-dependencies:vscode"
+        "refresh-dependencies:vscode",
       ],
       "type": "shell",
       "problemMatcher": [],

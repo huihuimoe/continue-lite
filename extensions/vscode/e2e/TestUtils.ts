@@ -1,117 +1,43 @@
-import { expect } from "chai";
-import { Key } from "vscode-extension-tester";
-
-import { access, constants } from "fs/promises";
-import * as path from "path";
-import { DEFAULT_TIMEOUT } from "./constants";
-
 export class TestUtils {
-  public static CONTINUE_GLOBAL_DIR = process.env.CONTINUE_GLOBAL_DIR ?? "";
-
-  public static getGlobalContextFilePath(): string {
-    return path.join(
-      TestUtils.CONTINUE_GLOBAL_DIR,
-      "index",
-      "globalContext.json",
-    );
-  }
-
-  public static async fileExists(path: string): Promise<boolean> {
-    try {
-      await access(path, constants.F_OK);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * In many cases it might be more useful to use existing Selenium
-   * utilities. For example:
-   *
-   * await driver.wait(until.elementLocated(By.xpath(xpath)), 5000);
-   *
-   * There's also 'waitForAttributeValue'.
-   */
   public static async waitForSuccess<T>(
-    locatorFn: () => Promise<T>,
-    timeout: number = DEFAULT_TIMEOUT.MD,
-    interval: number = 500,
+    operation: () => Promise<T>,
+    timeoutMs = 15_000,
+    intervalMs = 100,
   ): Promise<T> {
-    const startTime = Date.now();
+    const startedAt = Date.now();
+    let lastError: unknown;
 
-    while (Date.now() - startTime < timeout) {
+    while (Date.now() - startedAt < timeoutMs) {
       try {
-        const result = await locatorFn();
-        return result;
-      } catch (e) {
-        if (Date.now() - startTime >= timeout) {
-          throw new Error(
-            `Element not found after ${timeout}ms timeout: ${locatorFn}`,
-          );
-        }
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        await TestUtils.waitForTimeout(intervalMs);
       }
-      await new Promise((resolve) => setTimeout(resolve, interval));
     }
 
-    throw new Error(
-      `Element not found after ${timeout}ms timeout: ${locatorFn}`,
-    );
-  }
-
-  public static async logFailure<T>(locatorFn: () => Promise<T>): Promise<T> {
-    try {
-      const result = await locatorFn();
-      return result;
-    } catch (e) {
-      throw new Error(`Element not found: ${locatorFn}`);
-    }
-  }
-
-  public static async expectNoElement<T>(
-    locatorFn: () => Promise<T>,
-    timeout: number = 1000,
-    interval: number = 200,
-  ): Promise<void> {
-    const startTime = Date.now();
-    let elementFound = false;
-
-    while (Date.now() - startTime < timeout) {
-      try {
-        const element = await locatorFn();
-        console.log("ELEMENT", element);
-        if (element) {
-          elementFound = true;
-          break;
-        }
-      } catch (e) {
-        // Continue if there's an error (element not found)
-      }
-      await new Promise((resolve) => setTimeout(resolve, interval));
+    if (lastError instanceof Error) {
+      throw new Error(
+        `Timed out after ${timeoutMs}ms waiting for success. Last error: ${lastError.message}`,
+      );
     }
 
-    expect(elementFound).to.be.false;
+    throw new Error(`Timed out after ${timeoutMs}ms waiting for success.`);
   }
 
-  public static generateTestMessagePair(id: number = 0): {
+  public static async waitForTimeout(timeoutMs: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, timeoutMs));
+  }
+
+  public static generateTestMessagePair(index: number): {
     userMessage: string;
     llmResponse: string;
   } {
+    const normalizedIndex = Math.max(0, Math.floor(index));
+
     return {
-      userMessage: `TEST_USER_MESSAGE_${id}`,
-      llmResponse: `TEST_LLM_RESPONSE_${id}`,
+      userMessage: `TEST_USER_MESSAGE_${normalizedIndex}`,
+      llmResponse: `TEST_LLM_RESPONSE_${normalizedIndex}`,
     };
-  }
-
-  public static waitForTimeout(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  public static get isMacOS(): boolean {
-    return process.platform === "darwin";
-  }
-
-  public static get osControlKey() {
-    return TestUtils.isMacOS ? Key.META : Key.CONTROL;
   }
 }

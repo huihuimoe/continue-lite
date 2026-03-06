@@ -1,9 +1,9 @@
-import { IDE } from "core";
+import type { IDE } from "core";
 import {
   AutocompleteCodeSnippet,
   AutocompleteSnippetType,
 } from "core/autocomplete/snippets/types";
-import { isSecurityConcern } from "core/indexing/ignore";
+import { isSecurityConcern } from "core/util/ignore";
 import { LRUCache } from "lru-cache";
 import * as vscode from "vscode";
 

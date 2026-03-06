@@ -1,9 +1,9 @@
 import fs from "node:fs";
 
-import { IDE, ILLM } from "..";
-import { CodeSnippetsCodebaseIndex } from "../indexing/CodeSnippetsIndex";
-import { walkDirs } from "../indexing/walkDir";
+import { IDE, ILLM, SymbolWithRange } from "..";
+import { walkDirs } from "./walkDir";
 import { pruneLinesFromTop } from "../llm/countTokens";
+import { getSymbolsForManyFiles } from "./treeSitter";
 
 import { getRepoMapFilePath } from "./paths";
 import { findUriInDirs } from "./uri";
@@ -23,9 +23,6 @@ class RepoMapGenerator {
   private dirs: string[] = [];
   private allUris: string[] = [];
   private pathsInDirsWithSnippets: Set<string> = new Set();
-
-  private SNIPPETS_BATCH_SIZE = 100;
-  private URI_BATCH_SIZE = 100;
   private REPO_MAX_CONTEXT_LENGTH_RATIO = 0.5;
   private PREAMBLE =
     "Below is a repository map. \n" +
@@ -49,6 +46,12 @@ class RepoMapGenerator {
     return uri;
   }
 
+  private formatSymbols(symbols: SymbolWithRange[]): string[] {
+    return symbols
+      .map((symbol) => symbol.content?.trim())
+      .filter((symbol): symbol is string => Boolean(symbol));
+  }
+
   async generate(): Promise<string> {
     this.dirs = this.options.dirUris ?? (await this.ide.getWorkspaceDirs());
     this.allUris = await walkDirs(
@@ -63,70 +66,33 @@ class RepoMapGenerator {
     await this.writeToStream(this.PREAMBLE);
 
     if (this.options.includeSignatures) {
-      // Process uris and signatures
-      let snippetOffset = 0;
-      let uriOffset = 0;
-      while (true) {
-        const { groupedByUri, hasMoreSnippets, hasMoreUris } =
-          await CodeSnippetsCodebaseIndex.getPathsAndSignatures(
-            this.allUris,
-            uriOffset,
-            this.URI_BATCH_SIZE,
-            snippetOffset,
-            this.SNIPPETS_BATCH_SIZE,
-          );
-        // process batch
-        for (const [uri, signatures] of Object.entries(groupedByUri)) {
-          let fileContent: string;
+      const symbolsByUri = await getSymbolsForManyFiles(this.allUris, this.ide);
 
-          try {
-            fileContent = await this.ide.readFile(uri);
-          } catch (err) {
-            console.error(
-              "Failed to read file:\n" +
-                `  Uri: ${uri}\n` +
-                `  Error: ${err instanceof Error ? err.message : String(err)}`,
-            );
-
-            continue;
-          }
-
-          const filteredSignatures = signatures.filter(
-            (signature) => signature.trim() !== fileContent.trim(),
-          );
-
-          if (filteredSignatures.length > 0) {
-            this.pathsInDirsWithSnippets.add(uri);
-          }
-
-          let content = `${this.getUriForWrite(uri)}:\n`;
-
-          for (const signature of signatures.slice(0, -1)) {
-            content += `${this.indentMultilineString(signature)}\n\t...\n`;
-          }
-
-          content += `${this.indentMultilineString(
-            signatures[signatures.length - 1],
-          )}\n\n`;
-
-          if (content) {
-            await this.writeToStream(content);
-          }
+      for (const uri of this.allUris) {
+        const signatures = this.formatSymbols(symbolsByUri[uri] ?? []);
+        if (signatures.length === 0) {
+          continue;
         }
+
+        this.pathsInDirsWithSnippets.add(uri);
+
+        let content = `${this.getUriForWrite(uri)}:\n`;
+
+        for (const signature of signatures.slice(0, -1)) {
+          content += `${this.indentMultilineString(signature)}\n\t...\n`;
+        }
+
+        content += `${this.indentMultilineString(
+          signatures[signatures.length - 1],
+        )}\n\n`;
+
+        await this.writeToStream(content);
+
         if (this.contentTokens >= this.maxRepoMapTokens) {
-          break;
-        }
-        if (hasMoreSnippets) {
-          snippetOffset += this.SNIPPETS_BATCH_SIZE;
-        } else if (hasMoreUris) {
-          snippetOffset = 0;
-          uriOffset += this.URI_BATCH_SIZE;
-        } else {
           break;
         }
       }
 
-      // Remaining Uris just so that written repo map isn't incomplete
       const urisWithoutSnippets = this.allUris.filter(
         (uri) => !this.pathsInDirsWithSnippets.has(uri),
       );

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { ConfigHandler } from "../config/ConfigHandler.js";
-import { ChatMessage, IDE, ILLM, Range, RangeInFile } from "../index.js";
+import { ChatMessage, IDE, ILLM } from "../index.js";
 import OpenAI from "../llm/llms/OpenAI.js";
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../util/parameters.js";
 
@@ -11,21 +11,19 @@ import { CompletionStreamer } from "../autocomplete/generation/CompletionStreame
 import { postprocessCompletion } from "../autocomplete/postprocessing/index.js";
 import { shouldPrefilter } from "../autocomplete/prefiltering/index.js";
 import { getAllSnippetsWithoutRace } from "../autocomplete/snippets/index.js";
-import { AutocompleteCodeSnippet } from "../autocomplete/snippets/types.js";
 import { GetLspDefinitionsFunction } from "../autocomplete/types.js";
 import { getAst } from "../autocomplete/util/ast.js";
 import { AutocompleteDebouncer } from "../autocomplete/util/AutocompleteDebouncer.js";
 import AutocompleteLruCache from "../autocomplete/util/AutocompleteLruCache.js";
 import { HelperVars } from "../autocomplete/util/HelperVars.js";
 import { AutocompleteInput } from "../autocomplete/util/types.js";
-import { isSecurityConcern } from "../indexing/ignore.js";
+import { isSecurityConcern } from "../util/ignore.js";
 import { modelSupportsNextEdit } from "../llm/autodetect.js";
 import { localPathOrUriToPath } from "../util/pathToUri.js";
 import { EditAggregator } from "./context/aggregateEdits.js";
 import { createDiff, DiffFormatType } from "./context/diffFormatting.js";
 import { DocumentHistoryTracker } from "./DocumentHistoryTracker.js";
 import { NextEditLoggingService } from "./NextEditLoggingService.js";
-import { PrefetchQueue } from "./NextEditPrefetchQueue.js";
 import { NextEditProviderFactory } from "./NextEditProviderFactory.js";
 import { BaseNextEditModelProvider } from "./providers/BaseNextEditProvider.js";
 import {
@@ -33,7 +31,6 @@ import {
   NextEditOutcome,
   Prompt,
   PromptMetadata,
-  RecentlyEditedRange,
 } from "./types.js";
 
 const autocompleteCache = AutocompleteLruCache.get();
@@ -153,9 +150,6 @@ export class NextEditProvider {
       llm.completionOptions.temperature = 0.01;
     }
 
-    if (llm instanceof OpenAI) {
-      llm.useLegacyCompletionsEndpoint = true;
-    }
     // TODO: Resolve import error with TRIAL_FIM_MODEL
     // else if (
     //   llm.providerName === "free-trial" &&
@@ -227,8 +221,6 @@ export class NextEditProvider {
   }
 
   public async deleteChain(): Promise<void> {
-    PrefetchQueue.getInstance().abort();
-
     this.currentEditChainId = null;
     this.previousCompletions = [];
 
@@ -527,7 +519,7 @@ export class NextEditProvider {
 
     // Handle based on diff type.
     const profileType =
-      this.configHandler.currentProfile?.profileDescription.profileType;
+      this.configHandler.getActiveProfile()?.profileDescription.profileType;
 
     if (opts?.usingFullFileDiff === false || !opts?.usingFullFileDiff) {
       outcome = await this.modelProvider.handlePartialFileDiff({
@@ -574,83 +566,5 @@ export class NextEditProvider {
     if (ideType === "jetbrains") {
       this.markDisplayed(completionId, outcome);
     }
-  }
-
-  /**
-   * This is a wrapper around provideInlineCompletionItems.
-   * This is invoked when we call the model in the background using prefetch.
-   * It's not currently used anywhere (references are not used either), but I decided to keep it in case we actually need to use prefetch.
-   * You will see that calls to this method is made from NextEditPrefetchQueue.proecss(), which is wrapped in `if (!this.usingFullFileDiff)`.
-   */
-  public async provideInlineCompletionItemsWithChain(
-    ctx: {
-      completionId: string;
-      manuallyPassFileContents?: string;
-      manuallyPassPrefix?: string;
-      selectedCompletionInfo?: {
-        text: string;
-        range: Range;
-      };
-      isUntitledFile: boolean;
-      recentlyVisitedRanges: AutocompleteCodeSnippet[];
-      recentlyEditedRanges: RecentlyEditedRange[];
-    },
-    nextEditLocation: RangeInFile,
-    token: AbortSignal | undefined,
-    usingFullFileDiff: boolean,
-  ) {
-    try {
-      const previousOutcome = this.getPreviousCompletion();
-      if (!previousOutcome) {
-        console.log("previousOutcome is undefined");
-        return undefined;
-      }
-
-      // Use the frontmost RangeInFile to build an input.
-      const input = this.buildAutocompleteInputFromChain(
-        previousOutcome,
-        nextEditLocation,
-        ctx,
-      );
-      if (!input) {
-        console.log("input is undefined");
-        return undefined;
-      }
-
-      return await this.provideInlineCompletionItems(input, token, {
-        withChain: true,
-        usingFullFileDiff,
-      });
-    } catch (e: any) {
-      this.onError(e);
-    }
-  }
-
-  private buildAutocompleteInputFromChain(
-    previousOutcome: NextEditOutcome,
-    nextEditableRegion: RangeInFile,
-    ctx: {
-      completionId: string;
-      manuallyPassFileContents?: string;
-      manuallyPassPrefix?: string;
-      selectedCompletionInfo?: {
-        text: string;
-        range: Range;
-      };
-      isUntitledFile: boolean;
-      recentlyVisitedRanges: AutocompleteCodeSnippet[];
-      recentlyEditedRanges: RecentlyEditedRange[];
-    },
-  ): AutocompleteInput | undefined {
-    const input: AutocompleteInput = {
-      pos: {
-        line: nextEditableRegion.range.start.line,
-        character: nextEditableRegion.range.start.character,
-      },
-      filepath: previousOutcome.fileUri,
-      ...ctx,
-    };
-
-    return input;
   }
 }

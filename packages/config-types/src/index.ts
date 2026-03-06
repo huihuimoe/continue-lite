@@ -103,34 +103,9 @@ export const modelDescriptionSchema = z.object({
 });
 export type ModelDescription = z.infer<typeof modelDescriptionSchema>;
 
-export const embeddingsProviderSchema = z.object({
-  provider: z.enum([
-    "transformers.js",
-    "ollama",
-    "openai",
-    "cohere",
-    "gemini",
-    "ovhcloud",
-    "continue-proxy",
-    "nebius",
-    "scaleway",
-    "watsonx",
-  ]),
-  apiBase: z.string().optional(),
-  apiKey: z.string().optional(),
-  model: z.string().optional(),
-  deployment: z.string().optional(),
-  apiType: z.string().optional(),
-  apiVersion: z.string().optional(),
-  requestOptions: requestOptionsSchema.optional(),
-});
-export type EmbeddingsProvider = z.infer<typeof embeddingsProviderSchema>;
-
 export const uiOptionsSchema = z.object({
-  codeBlockToolbarPosition: z.enum(["top", "bottom"]).optional(),
   fontSize: z.number().optional(),
   displayRawMarkdown: z.boolean().optional(),
-  showChatScrollbar: z.boolean().optional(),
   codeWrap: z.boolean().optional(),
 });
 export type UiOptions = z.infer<typeof uiOptionsSchema>;
@@ -144,8 +119,6 @@ export const tabAutocompleteOptionsSchema = z.object({
   transform: z.boolean().optional(),
   template: z.string().optional(),
   multilineCompletions: z.enum(["always", "never", "auto"]),
-  slidingWindowPrefixPercentage: z.number(),
-  slidingWindowSize: z.number(),
   useCache: z.boolean(),
   onlyMyCode: z.boolean(),
   useRecentlyEdited: z.boolean(),
@@ -166,31 +139,11 @@ export type TabAutocompleteOptions = z.infer<
   typeof tabAutocompleteOptionsSchema
 >;
 
-export const slashCommandSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  params: z.record(z.any()).optional(),
-});
-export type SlashCommand = z.infer<typeof slashCommandSchema>;
-
-export const customCommandSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  params: z.record(z.any()).optional(),
-});
-export type CustomCommand = z.infer<typeof customCommandSchema>;
-
 export const contextProviderSchema = z.object({
   name: z.string(),
   params: z.record(z.string(), z.any()),
 });
 export type ContextProvider = z.infer<typeof contextProviderSchema>;
-
-export const rerankerSchema = z.object({
-  name: z.enum(["cohere", "voyage", "watsonx", "llm", "continue-proxy"]),
-  params: z.record(z.any()).optional(),
-});
-export type Reranker = z.infer<typeof rerankerSchema>;
 
 export const analyticsSchema = z.object({
   provider: z.enum([
@@ -213,39 +166,33 @@ export const devDataSchema = z.object({
 });
 export type DevData = z.infer<typeof devDataSchema>;
 
-export const siteIndexingConfigSchema = z.object({
+export const customCommandSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  prompt: z.string(),
+});
+export type CustomCommand = z.infer<typeof customCommandSchema>;
+
+export const docDescriptionSchema = z.object({
+  title: z.string(),
   startUrl: z.string(),
   rootUrl: z.string().optional(),
-  title: z.string(),
-  maxDepth: z.number().optional(),
   faviconUrl: z.string().optional(),
-  useLocalCrawling: z.boolean().optional(),
-  sourceFile: z.string().optional(),
 });
-
-export const controlPlaneConfigSchema = z.object({
-  useContinueForTeamsProxy: z.boolean().optional(),
-  proxyUrl: z.string().optional(),
-});
+export type DocDescription = z.infer<typeof docDescriptionSchema>;
 
 export const configJsonSchema = z.object({
   models: z.array(modelDescriptionSchema),
   tabAutocompleteModel: modelDescriptionSchema.optional(),
-  embeddingsProvider: embeddingsProviderSchema.optional(),
-  reranker: rerankerSchema.optional(),
   analytics: analyticsSchema,
   devData: devDataSchema,
+  customCommands: z.array(customCommandSchema).optional(),
+  docs: z.array(docDescriptionSchema).optional(),
   allowAnonymousTelemetry: z.boolean().optional(),
   systemMessage: z.string().optional(),
   completionOptions: completionOptionsSchema.optional(),
   requestOptions: requestOptionsSchema.optional(),
-  slashCommands: z.array(slashCommandSchema).optional(),
-  customCommands: z.array(customCommandSchema).optional(),
-  contextProviders: z.array(contextProviderSchema).optional(),
-  disableIndexing: z.boolean().optional(),
   tabAutocompleteOptions: tabAutocompleteOptionsSchema.optional(),
   ui: uiOptionsSchema.optional(),
-  docs: z.array(siteIndexingConfigSchema).optional(),
-  controlPlane: controlPlaneConfigSchema.optional(),
 });
 export type ConfigJson = z.infer<typeof configJsonSchema>;

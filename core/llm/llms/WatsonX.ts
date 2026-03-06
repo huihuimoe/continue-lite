@@ -2,13 +2,12 @@ import { streamResponse, streamSse } from "@continuedev/fetch";
 import {
   AssistantChatMessage,
   ChatMessage,
-  Chunk,
   CompletionOptions,
   LLMOptions,
   TextMessagePart,
-  ToolCallDelta,
-  ToolResultChatMessage,
 } from "../../index.js";
+import type { ToolCallDelta } from "../tooling.js";
+import type { ToolResultChatMessage } from "../chatTypes.js";
 import { BaseLLM } from "../index.js";
 import { fromChatCompletionChunk } from "../openaiTypeConverters.js";
 
@@ -18,9 +17,7 @@ let watsonxToken = {
 };
 
 class WatsonX extends BaseLLM {
-  static defaultOptions: Partial<LLMOptions> | undefined = {
-    maxEmbeddingBatchSize: 1000,
-  };
+  static defaultOptions: Partial<LLMOptions> | undefined = {};
 
   constructor(options: LLMOptions) {
     super(options);
@@ -292,14 +289,6 @@ class WatsonX extends BaseLLM {
     if (!!options.topP) {
       payload.top_p = options.topP;
     }
-    if (!!options.tools) {
-      payload.tools = options.tools;
-      if (options.toolChoice) {
-        payload.tool_choice = options.toolChoice;
-      } else {
-        payload.tool_choice_option = "auto";
-      }
-    }
 
     const response = await this.fetch(url, {
       method: "POST",
@@ -356,103 +345,6 @@ class WatsonX extends BaseLLM {
           yield message;
         }
       }
-    }
-  }
-
-  protected async _embed(chunks: string[]): Promise<number[][]> {
-    await this.updateWatsonxToken();
-
-    const payload: any = {
-      inputs: chunks,
-      parameters: {
-        truncate_input_tokens: 500,
-        return_options: { input_text: false },
-      },
-      model_id: this.model,
-      project_id: this.projectId,
-    };
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `${
-        watsonxToken.expiration === -1 ? "ZenApiKey" : "Bearer"
-      } ${watsonxToken.token}`,
-    };
-    const resp = await this.fetch(
-      new URL(
-        `${this.apiBase}/ml/v1/text/embeddings?version=${this.apiVersion}`,
-      ),
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: headers,
-      },
-    );
-
-    if (!resp.ok) {
-      throw new Error(`Failed to embed chunk: ${await resp.text()}`);
-    }
-    const data = await resp.json();
-    const embeddings = data.results;
-
-    if (!embeddings || embeddings.length === 0) {
-      throw new Error("Watsonx generated empty embedding");
-    }
-    return embeddings.map((e: any) => e.embedding);
-  }
-
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    if (!query || !chunks.length) {
-      throw new Error("Query and chunks must not be empty");
-    }
-    try {
-      await this.updateWatsonxToken();
-
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `${
-          watsonxToken.expiration === -1 ? "ZenApiKey" : "Bearer"
-        } ${watsonxToken.token}`,
-      };
-
-      const payload: any = {
-        inputs: chunks.map((chunk) => ({ text: chunk.content })),
-        query: query,
-        parameters: {
-          truncate_input_tokens: 500,
-          return_options: {
-            top_n: chunks.length,
-          },
-        },
-        model_id: this.model,
-        project_id: this.projectId,
-      };
-
-      const resp = await this.fetch(
-        new URL(`${this.apiBase}/ml/v1/text/rerank?version=${this.apiVersion}`),
-        {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(payload),
-        },
-      );
-
-      if (!resp.ok) {
-        throw new Error(`Failed to rerank chunks: ${await resp.text()}`);
-      }
-      const data = await resp.json();
-      const ranking = data.results;
-
-      if (!ranking) {
-        throw new Error("Empty response received from Watsonx");
-      }
-
-      // Sort results by index to maintain original order
-      return ranking
-        .sort((a: any, b: any) => a.index - b.index)
-        .map((result: any) => result.score);
-    } catch (error) {
-      console.error("Error in WatsonxReranker.rerank:", error);
-      throw error;
     }
   }
 }

@@ -286,37 +286,6 @@ describe("AskSage Adapter Tests", () => {
     });
   });
 
-  test("embed should throw not supported error", async () => {
-    const { constructLlmApi } = await import("../index.js");
-    const api = constructLlmApi({
-      provider: "askSage",
-      apiKey: "test-api-key",
-    });
-
-    await expect(
-      api!.embed({
-        model: "text-embedding-ada-002",
-        input: ["Hello", "World"],
-      }),
-    ).rejects.toThrow("AskSage does not support embeddings");
-  });
-
-  test("rerank should throw not supported error", async () => {
-    const { constructLlmApi } = await import("../index.js");
-    const api = constructLlmApi({
-      provider: "askSage",
-      apiKey: "test-api-key",
-    });
-
-    await expect(
-      api!.rerank({
-        model: "rerank-model",
-        query: "test query",
-        documents: ["doc1", "doc2"],
-      }),
-    ).rejects.toThrow("AskSage does not support reranking");
-  });
-
   test("completionNonStream should throw not supported error", async () => {
     const { constructLlmApi } = await import("../index.js");
     const api = constructLlmApi({

@@ -4,7 +4,7 @@ import {
 } from "@continuedev/config-yaml";
 import z from "zod";
 import { IDE, Skill } from "../..";
-import { walkDir } from "../../indexing/walkDir";
+import { walkDir } from "../../util/walkDir";
 import { localPathToUri } from "../../util/pathToUri";
 import { getGlobalFolderWithName } from "../../util/paths";
 import { findUriInDirs, joinPathsToUri } from "../../util/uri";

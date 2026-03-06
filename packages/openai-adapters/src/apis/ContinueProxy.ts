@@ -1,4 +1,3 @@
-import { OpenAI } from "openai/index";
 import {
   ChatCompletionCreateParams,
   CompletionCreateParamsNonStreaming,
@@ -6,7 +5,7 @@ import {
 } from "openai/resources/index";
 import { z } from "zod";
 import { ContinueProxyConfigSchema } from "../types.js";
-import { FimCreateParamsStreaming, RerankCreateParams } from "./base.js";
+import { FimCreateParamsStreaming } from "./base.js";
 import { OpenAIApi } from "./OpenAI.js";
 
 export interface ContinueProperties {
@@ -102,19 +101,6 @@ export class ContinueProxyApi extends OpenAIApi {
       Accept: "application/json",
       "x-api-key": this.continueProxyConfig.apiKey ?? "",
       Authorization: `Bearer ${this.continueProxyConfig.apiKey}`,
-    };
-  }
-
-  modifyEmbedBody<T extends OpenAI.Embeddings.EmbeddingCreateParams>(
-    body: T,
-  ): T {
-    return this.modifyBodyWithContinueProperties(body);
-  }
-
-  modifyRerankBody<T extends RerankCreateParams>(body: T): T {
-    return {
-      ...body,
-      ...this.extraBodyProperties(),
     };
   }
 }

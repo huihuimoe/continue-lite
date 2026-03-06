@@ -10,45 +10,6 @@ export function getLlmApi(config: LLMConfig) {
   }
   return api;
 }
-export function testEmbed(api: BaseLlmApi, model: string) {
-  test("should successfully embed", async () => {
-    const response = await api.embed({
-      model,
-      input: ["This is a test", "Hello world!"],
-    });
-    expect(response.model).toBe(model);
-    expect(response.object).toBe("list");
-    expect(response.data.length).toEqual(2);
-    response.data.forEach((val, index) => {
-      expect(val.index).toBe(index);
-      expect(val.object).toBe("embedding");
-      expect(val.embedding.some((v) => typeof v !== "number")).toBe(false);
-    });
-  });
-}
-
-export function testRerank(api: BaseLlmApi, model: string) {
-  test("should successfully rerank", async () => {
-    const response = await api.rerank({
-      model: model,
-      query: "What is the capital of spain?",
-      documents: [
-        "The capital of spain is Madrid",
-        "The largest breed of dog is the Great Dane",
-      ],
-    });
-    expect(response.model).toBe(model);
-    expect(response.object).toBe("list");
-    expect(response.data.length).toEqual(2);
-    response.data.forEach((val, index) => {
-      expect(val.index).toBe(index);
-      expect(typeof val.relevance_score).toBe("number");
-    });
-    expect(response.data[0].relevance_score).toBeGreaterThan(
-      response.data[1].relevance_score,
-    );
-  });
-}
 
 export function testFim(api: BaseLlmApi, model: string) {
   test("should successfully fim", async () => {

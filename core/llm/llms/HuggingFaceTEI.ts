@@ -1,4 +1,4 @@
-import { Chunk, LLMOptions } from "../../index.js";
+import { LLMOptions } from "../../index.js";
 import { BaseLLM } from "../index.js";
 
 class HuggingFaceTEIEmbeddingsProvider extends BaseLLM {
@@ -15,7 +15,6 @@ class HuggingFaceTEIEmbeddingsProvider extends BaseLLM {
     this.doInfoRequest()
       .then((response) => {
         this.model = response.model_id;
-        this.maxEmbeddingBatchSize = response.max_client_batch_size;
       })
       .catch((error) => {
         console.error(
@@ -23,38 +22,6 @@ class HuggingFaceTEIEmbeddingsProvider extends BaseLLM {
           error,
         );
       });
-  }
-
-  async _embed(batch: string[]): Promise<number[][]> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (this.apiKey) {
-      headers["Authorization"] = `Bearer ${this.apiKey}`;
-    }
-
-    const resp = await this.fetch(new URL("embed", this.apiBase), {
-      method: "POST",
-      body: JSON.stringify({
-        inputs: batch,
-      }),
-      headers,
-    });
-    if (!resp.ok) {
-      const text = await resp.text();
-      let teiError: TEIEmbedErrorResponse | null = null;
-      try {
-        teiError = JSON.parse(text);
-      } catch (e) {
-        console.log(`Failed to parse TEI embed error response:\n${text}`, e);
-      }
-      if (teiError && (teiError.error_type || teiError.error)) {
-        throw new TEIEmbedError(teiError);
-      }
-      throw new Error(text);
-    }
-    return (await resp.json()) as number[][];
   }
 
   async doInfoRequest(): Promise<TEIInfoResponse> {
@@ -67,50 +34,7 @@ class HuggingFaceTEIEmbeddingsProvider extends BaseLLM {
     }
     return (await resp.json()) as TEIInfoResponse;
   }
-
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (this.apiKey) {
-      headers["Authorization"] = `Bearer ${this.apiKey}`;
-    }
-
-    const resp = await this.fetch(new URL("rerank", this.apiBase), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        query: query,
-        return_text: false,
-        raw_scores: false,
-        texts: chunks.map((chunk) => chunk.content),
-        truncation_direction: "Right",
-        truncate: true,
-      }),
-    });
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-
-    const data = (await resp.json()) as any;
-    // Resort into original order and extract scores
-    const results = data.sort((a: any, b: any) => a.index - b.index);
-    return results.map((result: any) => result.score);
-  }
 }
-
-class TEIEmbedError extends Error {
-  constructor(teiResponse: TEIEmbedErrorResponse) {
-    super(JSON.stringify(teiResponse));
-  }
-}
-
-type TEIEmbedErrorResponse = {
-  error: string;
-  error_type: string;
-};
 
 type TEIInfoResponse = {
   model_id: string;

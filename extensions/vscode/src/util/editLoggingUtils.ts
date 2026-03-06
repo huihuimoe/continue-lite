@@ -1,4 +1,4 @@
-import { IDE, Position, Range, RangeInFileWithNextEditInfo } from "core";
+import type { IDE, Position, Range, RangeInFileWithNextEditInfo } from "core";
 import { AutocompleteCodeSnippet } from "core/autocomplete/snippets/types";
 import { GetLspDefinitionsFunction } from "core/autocomplete/types";
 import { ConfigHandler } from "core/config/ConfigHandler";

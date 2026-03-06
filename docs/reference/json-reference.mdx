@@ -139,7 +139,7 @@ config.json
 
 ## `embeddingsProvider`
 
-Embeddings model settings - the model used for @Codebase and @docs.
+Embeddings model settings for retrieval and documentation-awareness workflows.
 
 **Properties:**
 
@@ -445,7 +445,7 @@ List of the pre-defined context providers that will show up as options while typ
 
 **Properties:**
 
-- `name`: Name of the context provider, e.g. `docs` or `web`
+- `name`: Name of the context provider, e.g. `web` or `open`
 - `params`: A context-provider-specific record of params to configure the context behavior
 
 Example
@@ -456,7 +456,7 @@ config.json
 {
   "contextProviders": [
     { "name": "code", "params": {} },
-    { "name": "docs", "params": {} },
+    { "name": "web", "params": {} },
     { "name": "diff", "params": {} },
     { "name": "open", "params": {} }
   ]

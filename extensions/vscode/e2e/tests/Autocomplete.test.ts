@@ -23,7 +23,7 @@ describe("Autocomplete", () => {
 
   afterEach(async function () {
     this.timeout(DEFAULT_TIMEOUT.XL);
-    await editor.clearText();
+    await AutocompleteActions.clearEditorContents(editor);
     await new EditorView().closeAllEditors();
   });
 

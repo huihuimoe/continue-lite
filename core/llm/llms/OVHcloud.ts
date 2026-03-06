@@ -8,7 +8,6 @@ export class OVHcloud extends OpenAI {
   static defaultOptions: Partial<LLMOptions> = {
     apiBase: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/",
     model: "Qwen2.5-Coder-32B-Instruct",
-    useLegacyCompletionsEndpoint: false,
   };
 
   private static MODEL_IDS: { [name: string]: string } = {

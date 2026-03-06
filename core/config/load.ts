@@ -6,7 +6,6 @@ import path from "path";
 import {
   ConfigResult,
   ConfigValidationError,
-  mergeConfigYamlRequestOptions,
   ModelRole,
 } from "@continuedev/config-yaml";
 import * as JSONC from "comment-json";
@@ -14,63 +13,38 @@ import * as JSONC from "comment-json";
 import {
   BrowserSerializedContinueConfig,
   Config,
-  ContextProviderWithParams,
   ContinueConfig,
   ContinueRcJson,
-  CustomContextProvider,
-  EmbeddingsProviderDescription,
   IDE,
   IdeInfo,
   IdeSettings,
   IdeType,
   ILLM,
   ILLMLogger,
-  InternalMcpOptions,
-  LLMOptions,
   ModelDescription,
-  RerankerDescription,
   SerializedContinueConfig,
-  SlashCommandWithSource,
 } from "..";
-import { getLegacyBuiltInSlashCommandFromDescription } from "../commands/slash/built-in-legacy";
-import { convertCustomCommandToSlashCommand } from "../commands/slash/customSlashCommand";
-import { slashCommandFromPromptFile } from "../commands/slash/promptFileSlashCommand";
-import { MCPManagerSingleton } from "../context/mcp/MCPManagerSingleton";
 import { useHub } from "../control-plane/env";
 import { BaseLLM } from "../llm";
-import { LLMClasses, llmFromDescription } from "../llm/llms";
+import { llmFromDescription } from "../llm/llms";
 import CustomLLMClass from "../llm/llms/CustomLLM";
-import { LLMReranker } from "../llm/llms/llm";
-import TransformersJsEmbeddingsProvider from "../llm/llms/TransformersJsEmbeddingsProvider";
-import { getAllPromptFiles } from "../promptFiles/getPromptFiles";
 import { copyOf } from "../util";
 import { GlobalContext } from "../util/GlobalContext";
 import mergeJson from "../util/merge";
 import {
   DEFAULT_CONFIG_TS_CONTENTS,
   getConfigJsonPath,
-  getConfigJsonPathForRemote,
   getConfigJsPath,
-  getConfigJsPathForRemote,
   getConfigTsPath,
   getContinueDotEnv,
   getEsbuildBinaryPath,
 } from "../util/paths";
 import { localPathToUri } from "../util/pathToUri";
 
-import { loadJsonMcpConfigs } from "../context/mcp/json/loadJsonMcpConfigs";
-import CustomContextProviderClass from "../context/providers/CustomContextProvider";
-import { PolicySingleton } from "../control-plane/PolicySingleton";
-import { getBaseToolDefinitions, serializeTool } from "../tools";
 import { resolveRelativePathInDir } from "../util/ideUtils";
 import { getWorkspaceRcConfigs } from "./json/loadRcConfigs";
-import { loadConfigContextProviders } from "./loadContextProviders";
 import { modifyAnyConfigWithSharedConfig } from "./sharedConfig";
-import {
-  getModelByRole,
-  isSupportedLanceDbCpuTargetForLinux,
-  serializePromptTemplates,
-} from "./util";
+import { serializePromptTemplates } from "./util";
 import { validateConfig } from "./validation.js";
 
 export function resolveSerializedConfig(
@@ -99,24 +73,12 @@ export function resolveSerializedConfig(
 
 const configMergeKeys = {
   models: (a: any, b: any) => a.title === b.title,
-  contextProviders: (a: any, b: any) => {
-    // If not HTTP providers, use the name only
-    if (a.name !== "http" || b.name !== "http") {
-      return a.name === b.name;
-    }
-    // For HTTP providers, consider them different if they have different URLs
-    return a.name === b.name && a.params?.url === b.params?.url;
-  },
-  slashCommands: (a: any, b: any) => a.name === b.name,
-  customCommands: (a: any, b: any) => a.name === b.name,
 };
 
 function loadSerializedConfig(
   workspaceConfigs: ContinueRcJson[],
-  ideSettings: IdeSettings,
-  ideType: IdeType,
+  _ideType: IdeType,
   overrideConfigJson: SerializedContinueConfig | undefined,
-  ide: IDE,
 ): ConfigResult<SerializedContinueConfig> {
   let config: SerializedContinueConfig = overrideConfigJson!;
   if (!config) {
@@ -141,17 +103,6 @@ function loadSerializedConfig(
     config.allowAnonymousTelemetry = true;
   }
 
-  if (ideSettings.remoteConfigServerUrl) {
-    try {
-      const remoteConfigJson = resolveSerializedConfig(
-        getConfigJsonPathForRemote(ideSettings.remoteConfigServerUrl),
-      );
-      config = mergeJson(config, remoteConfigJson, "merge", configMergeKeys);
-    } catch (e) {
-      console.warn("Error loading remote config: ", e);
-    }
-  }
-
   for (const workspaceConfig of workspaceConfigs) {
     config = mergeJson(
       config,
@@ -161,48 +112,14 @@ function loadSerializedConfig(
     );
   }
 
-  if (os.platform() === "linux" && !isSupportedLanceDbCpuTargetForLinux(ide)) {
-    config.disableIndexing = true;
-  }
-
   return { config, errors, configLoadInterrupted: false };
 }
 
 async function serializedToIntermediateConfig(
   initial: SerializedContinueConfig,
-  ide: IDE,
 ): Promise<Config> {
-  // DEPRECATED - load custom slash commands
-  const slashCommands: SlashCommandWithSource[] = [];
-  for (const command of initial.slashCommands || []) {
-    const newCommand = getLegacyBuiltInSlashCommandFromDescription(command);
-    if (newCommand) {
-      slashCommands.push(newCommand);
-    }
-  }
-  for (const command of initial.customCommands || []) {
-    slashCommands.push(convertCustomCommandToSlashCommand(command));
-  }
-
-  // DEPRECATED - load slash commands from v1 prompt files
-  // NOTE: still checking the v1 default .prompts folder for slash commands
-  const promptFiles = await getAllPromptFiles(
-    ide,
-    initial.experimental?.promptPath,
-    true,
-  );
-
-  for (const file of promptFiles) {
-    const slashCommand = slashCommandFromPromptFile(file.path, file.content);
-    if (slashCommand) {
-      slashCommands.push(slashCommand);
-    }
-  }
-
   const config: Config = {
     ...initial,
-    slashCommands,
-    contextProviders: initial.contextProviders || [],
   };
 
   return config;
@@ -226,31 +143,19 @@ function applyRequestOptionsToModels(
   }
 }
 
-export function isContextProviderWithParams(
-  contextProvider: CustomContextProvider | ContextProviderWithParams,
-): contextProvider is ContextProviderWithParams {
-  return "name" in contextProvider && !!contextProvider.name;
-}
-
 /** Only difference between intermediate and final configs is the `models` array */
 async function intermediateToFinalConfig({
   config,
   ide,
   ideSettings,
-  ideInfo,
   uniqueId,
   llmLogger,
-  workOsAccessToken,
-  loadPromptFiles = true,
 }: {
   config: Config;
   ide: IDE;
   ideSettings: IdeSettings;
-  ideInfo: IdeInfo;
   uniqueId: string;
   llmLogger: ILLMLogger;
-  workOsAccessToken: string | undefined;
-  loadPromptFiles?: boolean;
 }): Promise<{ config: ContinueConfig; errors: ConfigValidationError[] }> {
   const errors: ConfigValidationError[] = [];
   const workspaceDirs = await ide.getWorkspaceDirs();
@@ -339,12 +244,7 @@ async function intermediateToFinalConfig({
     }),
   );
 
-  applyRequestOptionsToModels(models, config, [
-    "chat",
-    "apply",
-    "edit",
-    "summarize",
-  ]); // Default to chat role if not specified
+  applyRequestOptionsToModels(models, config, ["autocomplete"]);
 
   // Free trial provider will be completely ignored
   let warnAboutFreeTrial = false;
@@ -388,110 +288,6 @@ async function intermediateToFinalConfig({
 
   applyRequestOptionsToModels(tabAutocompleteModels, config);
 
-  // Load context providers
-  const { providers: contextProviders, errors: contextErrors } =
-    loadConfigContextProviders(
-      config.contextProviders
-        ?.filter((cp) => isContextProviderWithParams(cp))
-        .map((cp) => ({
-          provider: (cp as ContextProviderWithParams).name,
-          params: (cp as ContextProviderWithParams).params,
-        })),
-      !!config.docs?.length,
-      ideInfo.ideType,
-    );
-
-  for (const cp of config.contextProviders ?? []) {
-    if (!isContextProviderWithParams(cp)) {
-      contextProviders.push(new CustomContextProviderClass(cp));
-    }
-  }
-  errors.push(...contextErrors);
-
-  // Embeddings Provider
-  function getEmbeddingsILLM(
-    embedConfig: EmbeddingsProviderDescription | ILLM | undefined,
-  ): ILLM | null {
-    if (embedConfig) {
-      // config.ts-injected ILLM
-      if ("providerName" in embedConfig) {
-        return embedConfig;
-      }
-      const { provider, ...options } = embedConfig;
-      if (provider === "transformers.js" || provider === "free-trial") {
-        if (provider === "free-trial") {
-          warnAboutFreeTrial = true;
-        }
-        return new TransformersJsEmbeddingsProvider();
-      } else {
-        const cls = LLMClasses.find((c) => c.providerName === provider);
-        if (cls) {
-          const llmOptions: LLMOptions = {
-            model: options.model ?? "UNSPECIFIED",
-            ...options,
-          };
-          return new cls(llmOptions);
-        } else {
-          errors.push({
-            fatal: false,
-            message: `Embeddings provider ${provider} not found`,
-          });
-        }
-      }
-    }
-    if (ideInfo.ideType === "vscode") {
-      return new TransformersJsEmbeddingsProvider();
-    }
-    return null;
-  }
-  const newEmbedder = getEmbeddingsILLM(config.embeddingsProvider);
-
-  // Reranker
-  function getRerankingILLM(
-    rerankingConfig: ILLM | RerankerDescription | undefined,
-  ): ILLM | null {
-    if (!rerankingConfig) {
-      return null;
-    }
-    // config.ts-injected ILLM
-    if ("providerName" in rerankingConfig) {
-      return rerankingConfig;
-    }
-    const { name, params } = config.reranker as RerankerDescription;
-    if (name === "free-trial") {
-      warnAboutFreeTrial = true;
-      return null;
-    }
-    if (name === "llm") {
-      const llm = models.find((model) => model.title === params?.modelTitle);
-      if (!llm) {
-        errors.push({
-          fatal: false,
-          message: `Unknown reranking model ${params?.modelTitle}`,
-        });
-        return null;
-      } else {
-        return new LLMReranker(llm);
-      }
-    } else {
-      const cls = LLMClasses.find((c) => c.providerName === name);
-      if (cls) {
-        const llmOptions: LLMOptions = {
-          model: params?.model ?? "UNSPECIFIED",
-          ...params,
-        };
-        return new cls(llmOptions);
-      } else {
-        errors.push({
-          fatal: false,
-          message: `Unknown reranking provider ${name}`,
-        });
-      }
-    }
-    return null;
-  }
-  const newReranker = getRerankingILLM(config.reranker);
-
   if (warnAboutFreeTrial) {
     errors.push({
       fatal: false,
@@ -502,127 +298,20 @@ async function intermediateToFinalConfig({
 
   const continueConfig: ContinueConfig = {
     ...config,
-    contextProviders,
-    tools: getBaseToolDefinitions(),
-    mcpServerStatuses: [],
-    slashCommands: [],
     modelsByRole: {
-      chat: models,
-      edit: models,
-      apply: models,
-      summarize: models,
       autocomplete: [...tabAutocompleteModels],
-      embed: newEmbedder ? [newEmbedder] : [],
-      rerank: newReranker ? [newReranker] : [],
-      subagent: [],
     },
     selectedModelByRole: {
-      chat: null, // Not implemented (uses GUI defaultModel)
-      edit: null,
-      apply: null,
-      embed: newEmbedder ?? null,
       autocomplete: null,
-      rerank: newReranker ?? null,
-      summarize: null, // Not implemented
-      subagent: null,
     },
     rules: [],
   };
-
-  for (const cmd of config.slashCommands ?? []) {
-    if ("source" in cmd) {
-      continueConfig.slashCommands.push(cmd);
-    } else {
-      continueConfig.slashCommands.push({
-        ...cmd,
-        source: "config-ts-slash-command",
-      });
-    }
-  }
 
   if (config.systemMessage) {
     continueConfig.rules.unshift({
       rule: config.systemMessage,
       source: "json-systemMessage",
     });
-  }
-
-  // Trigger MCP server refreshes (Config is reloaded again once connected!)
-  const mcpManager = MCPManagerSingleton.getInstance();
-
-  const orgPolicy = PolicySingleton.getInstance().policy;
-  if (orgPolicy?.policy?.allowMcpServers === false) {
-    await mcpManager.shutdown();
-  } else {
-    const mcpOptions: InternalMcpOptions[] = (
-      config.experimental?.modelContextProtocolServers ?? []
-    ).map((server, index) => ({
-      id: `continue-mcp-server-${index + 1}`,
-      name: `MCP Server`,
-      requestOptions: mergeConfigYamlRequestOptions(
-        server.transport.type !== "stdio"
-          ? server.transport.requestOptions
-          : undefined,
-        config.requestOptions,
-      ),
-      ...server.transport,
-    }));
-    const { errors: jsonMcpErrors, mcpServers } = await loadJsonMcpConfigs(
-      ide,
-      true,
-      config.requestOptions,
-    );
-    errors.push(...jsonMcpErrors);
-    mcpOptions.push(...mcpServers);
-    mcpManager.setConnections(mcpOptions, false);
-  }
-
-  // Handle experimental modelRole config values for apply and edit
-  const inlineEditModel = getModelByRole(continueConfig, "inlineEdit")?.title;
-  if (inlineEditModel) {
-    const match = continueConfig.modelsByRole.chat.find(
-      (m) => m.title === inlineEditModel,
-    );
-    if (match) {
-      continueConfig.selectedModelByRole.edit = match;
-      continueConfig.modelsByRole.edit = [match]; // The only option if inlineEdit role is set
-    } else {
-      errors.push({
-        fatal: false,
-        message: `experimental.modelRoles.inlineEdit model title ${inlineEditModel} not found in models array`,
-      });
-    }
-  }
-
-  const applyBlockModel = getModelByRole(
-    continueConfig,
-    "applyCodeBlock",
-  )?.title;
-  if (applyBlockModel) {
-    const match = continueConfig.modelsByRole.chat.find(
-      (m) => m.title === applyBlockModel,
-    );
-    if (match) {
-      continueConfig.selectedModelByRole.apply = match;
-      continueConfig.modelsByRole.apply = [match]; // The only option if applyCodeBlock role is set
-    } else {
-      errors.push({
-        fatal: false,
-        message: `experimental.modelRoles.applyCodeBlock model title ${inlineEditModel} not found in models array`,
-      });
-    }
-  }
-
-  // Add transformers JS to the embed models list if not already added
-  if (
-    ideInfo.ideType === "vscode" &&
-    !continueConfig.modelsByRole.embed.find(
-      (m) => m.providerName === "transformers.js",
-    )
-  ) {
-    continueConfig.modelsByRole.embed.push(
-      new TransformersJsEmbeddingsProvider(),
-    );
   }
 
   return { config: continueConfig, errors };
@@ -661,20 +350,9 @@ async function finalToBrowserConfig(
   return {
     allowAnonymousTelemetry: final.allowAnonymousTelemetry,
     completionOptions: final.completionOptions,
-    slashCommands: final.slashCommands?.map(({ run, ...rest }) => ({
-      ...rest,
-      isLegacy: !!run,
-    })),
-    contextProviders: final.contextProviders?.map((c) => c.description),
-    disableIndexing: final.disableIndexing,
-    disableSessionTitles: final.disableSessionTitles,
     userToken: final.userToken,
-    ui: final.ui,
     experimental: final.experimental,
     rules: final.rules,
-    docs: final.docs,
-    tools: final.tools.map(serializeTool),
-    mcpServerStatuses: final.mcpServerStatuses,
     tabAutocompleteOptions: final.tabAutocompleteOptions,
     usePlatform: await useHub(ide.getIdeSettings()),
     modelsByRole: Object.fromEntries(
@@ -737,17 +415,19 @@ async function handleEsbuildInstallation(
   }
 }
 
-async function tryBuildConfigTs() {
+async function tryBuildConfigTs(): Promise<boolean> {
   try {
     if (process.env.IS_BINARY === "true") {
       await buildConfigTsWithBinary();
     } else {
       await buildConfigTsWithNodeModule();
     }
+    return true;
   } catch (e) {
     console.log(
       `Build error. Please check your ~/.continue/config.ts file: ${e}`,
     );
+    return false;
   }
 }
 
@@ -815,7 +495,10 @@ async function buildConfigTsandReadConfigJs(ide: IDE, ideType: IdeType) {
       // esbuild not available → we already showed a friendly message; skip building
       return;
     }
-    await tryBuildConfigTs();
+    const buildSucceeded = await tryBuildConfigTs();
+    if (!buildSucceeded) {
+      return;
+    }
   }
 
   return readConfigJs();
@@ -827,7 +510,6 @@ async function loadContinueConfigFromJson(
   ideInfo: IdeInfo,
   uniqueId: string,
   llmLogger: ILLMLogger,
-  workOsAccessToken: string | undefined,
   overrideConfigJson: SerializedContinueConfig | undefined,
 ): Promise<ConfigResult<ContinueConfig>> {
   const workspaceConfigs = await getWorkspaceRcConfigs(ide);
@@ -838,10 +520,8 @@ async function loadContinueConfigFromJson(
     configLoadInterrupted,
   } = loadSerializedConfig(
     workspaceConfigs,
-    ideSettings,
     ideInfo.ideType,
     overrideConfigJson,
-    ide,
   );
 
   if (!serialized || configLoadInterrupted) {
@@ -854,7 +534,7 @@ async function loadContinueConfigFromJson(
   const withShared = modifyAnyConfigWithSharedConfig(serialized, sharedConfig);
 
   // Convert serialized to intermediate config
-  let intermediate = await serializedToIntermediateConfig(withShared, ide);
+  let intermediate = await serializedToIntermediateConfig(withShared);
 
   // Apply config.ts to modify intermediate config
   const configJsContents = await buildConfigTsandReadConfigJs(
@@ -895,35 +575,14 @@ async function loadContinueConfigFromJson(
     }
   }
 
-  // Apply remote config.js to modify intermediate config
-  if (ideSettings.remoteConfigServerUrl) {
-    try {
-      const configJsPathForRemote = getConfigJsPathForRemote(
-        ideSettings.remoteConfigServerUrl,
-      );
-      const module = await import(configJsPathForRemote);
-      if (typeof require !== "undefined") {
-        delete require.cache[require.resolve(configJsPathForRemote)];
-      }
-      if (!module.modifyConfig) {
-        throw new Error("config.ts does not export a modifyConfig function.");
-      }
-      intermediate = module.modifyConfig(intermediate);
-    } catch (e) {
-      console.log("Error loading remotely set config.js: ", e);
-    }
-  }
-
   // Convert to final config format
   const { config: finalConfig, errors: finalErrors } =
     await intermediateToFinalConfig({
       config: intermediate,
       ide,
       ideSettings,
-      ideInfo,
       uniqueId,
       llmLogger,
-      workOsAccessToken,
     });
   return {
     config: finalConfig,

@@ -1,15 +1,8 @@
 import * as path from "path";
-import { v4 as uuidv4 } from "uuid";
 
 import type { HelperVars } from "../../autocomplete/util/HelperVars.js";
 import { myersDiff } from "../../diff/myers.js";
-import type {
-  DiffLine,
-  IDE,
-  ILLM,
-  Position,
-  RangeInFile,
-} from "../../index.js";
+import type { DiffLine, IDE, ILLM, Position } from "../../index.js";
 import { countTokens } from "../../llm/countTokens.js";
 import {
   calculateFinalCursorPosition,
@@ -149,20 +142,10 @@ export abstract class BaseNextEditModelProvider {
       5,
     ).filter((group) => !isWhitespaceOnlyDeletion(group.lines));
     const currentLine = helper.pos.line;
-    const { PrefetchQueue } = await import("../NextEditPrefetchQueue.js");
-    const prefetchQueue = PrefetchQueue.getInstance();
-
-    const cursorLocalDiffGroup = await this.processDiffGroups({
+    const cursorLocalDiffGroup = this.findCursorLocalDiffGroup(
       diffGroups,
       currentLine,
-      helper,
-      startTime,
-      llm,
-      prefetchQueue,
-      promptMetadata,
-      ide,
-      profileType,
-    });
+    );
 
     if (cursorLocalDiffGroup) {
       return await this.createOutcomeFromDiffGroup({
@@ -184,129 +167,13 @@ export abstract class BaseNextEditModelProvider {
   /**
    * Process diff groups and find the one containing the cursor.
    */
-  private async processDiffGroups(params: {
-    diffGroups: DiffGroup[];
-    currentLine: number;
-    helper: HelperVars;
-    startTime: number;
-    llm: ILLM;
-    prefetchQueue: {
-      enqueueProcessed: (item: {
-        location: RangeInFile;
-        outcome: NextEditOutcome;
-      }) => void;
-    };
-    promptMetadata: PromptMetadata;
-    ide: IDE;
-    profileType?: "local" | "platform" | "control-plane";
-  }): Promise<DiffGroup | undefined> {
-    const {
-      diffGroups,
-      currentLine,
-      helper,
-      startTime,
-      llm,
-      prefetchQueue,
-      promptMetadata,
-      ide,
-      profileType,
-    } = params;
-    let cursorGroup: DiffGroup | undefined;
-
-    for (const group of diffGroups) {
-      if (currentLine >= group.startLine && currentLine <= group.endLine) {
-        cursorGroup = group;
-      } else {
-        await this.addDiffGroupToPrefetchQueue({
-          group,
-          helper,
-          startTime,
-          llm,
-          prefetchQueue,
-          promptMetadata,
-          ide,
-          profileType,
-        });
-      }
-    }
-
-    return cursorGroup;
-  }
-
-  private async addDiffGroupToPrefetchQueue(params: {
-    group: DiffGroup;
-    helper: HelperVars;
-    startTime: number;
-    llm: ILLM;
-    prefetchQueue: {
-      enqueueProcessed: (item: {
-        location: RangeInFile;
-        outcome: NextEditOutcome;
-      }) => void;
-    };
-    promptMetadata: PromptMetadata;
-    ide: IDE;
-    profileType?: "local" | "platform" | "control-plane";
-  }): Promise<void> {
-    const {
-      group,
-      helper,
-      startTime,
-      llm,
-      prefetchQueue,
-      promptMetadata,
-      ide,
-      profileType,
-    } = params;
-    // Extract lines that are not old.
-    const groupContent = group.lines
-      .filter((l) => l.type !== "old")
-      .map((l) => l.line)
-      .join("\n");
-
-    const rangeInFile: RangeInFile = {
-      filepath: helper.filepath,
-      range: {
-        start: { line: group.startLine, character: 0 },
-        end: {
-          line: group.endLine,
-          character: group.lines[group.lines.length - 1].line.length,
-        },
-      },
-    };
-
-    // Extract lines that are not new.
-    const originalContent = group.lines
-      .filter((l) => l.type !== "new")
-      .map((l) => l.line)
-      .join("\n");
-
-    const groupOutcome = await this.createNextEditOutcome({
-      helper,
-      startTime,
-      llm,
-      promptContent: promptMetadata.prompt.content,
-      completion: groupContent,
-      finalCursorPosition: {
-        line: group.endLine,
-        character: group.lines[group.lines.length - 1].line.length,
-      },
-      editableRegionStartLine: group.startLine,
-      editableRegionEndLine: group.endLine,
-      userEdits: promptMetadata.userEdits,
-      userExcerpts: promptMetadata.userExcerpts,
-      originalEditableRange: originalContent,
-      cursorPosition: { line: group.startLine, character: 0 },
-      completionId: uuidv4(), // Generate a new ID for this prefetched item.
-      diffLines: group.lines,
-      ide,
-      profileType,
-    });
-
-    prefetchQueue.enqueueProcessed({
-      location: rangeInFile,
-      outcome: groupOutcome,
-    });
+  private findCursorLocalDiffGroup(
+    diffGroups: DiffGroup[],
+    currentLine: number,
+  ): DiffGroup | undefined {
+    return diffGroups.find(
+      (group) => currentLine >= group.startLine && currentLine <= group.endLine,
+    );
   }
 
   private async createOutcomeFromDiffGroup(params: {

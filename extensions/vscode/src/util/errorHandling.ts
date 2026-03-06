@@ -1,4 +1,4 @@
-import { ILLM } from "core";
+import type { ILLM } from "core";
 import { isModelInstaller } from "core/llm";
 import * as vscode from "vscode";
 

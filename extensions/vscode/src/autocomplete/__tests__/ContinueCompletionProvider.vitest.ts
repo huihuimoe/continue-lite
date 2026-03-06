@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as vscode from "vscode";
@@ -5,12 +7,10 @@ import * as vscode from "vscode";
 import { ContinueCompletionProvider } from "../completionProvider";
 
 import * as NextEditLoggingServiceModule from "core/nextEdit/NextEditLoggingService";
-import * as PrefetchQueueModule from "core/nextEdit/NextEditPrefetchQueue";
 import * as NextEditProviderModule from "core/nextEdit/NextEditProvider";
 import * as JumpManagerModule from "../../activation/JumpManager";
 
 type MockNextEditProvider = ReturnType<typeof createMockNextEditProvider>;
-type MockPrefetchQueue = ReturnType<typeof createMockPrefetchQueue>;
 type MockJumpManager = ReturnType<typeof createMockJumpManager>;
 
 const mockOutcome = {
@@ -21,7 +21,6 @@ const mockOutcome = {
 } as any;
 
 let mockNextEditProvider: MockNextEditProvider;
-let mockPrefetchQueue: MockPrefetchQueue;
 let mockJumpManager: MockJumpManager;
 
 beforeEach(() => {
@@ -30,11 +29,6 @@ beforeEach(() => {
   mockNextEditProvider = createMockNextEditProvider();
   (NextEditProviderModule as any).__setMockNextEditProviderInstance(
     mockNextEditProvider,
-  );
-
-  mockPrefetchQueue = createMockPrefetchQueue();
-  (PrefetchQueueModule as any).__setMockPrefetchQueueInstance(
-    mockPrefetchQueue,
   );
 
   mockJumpManager = createMockJumpManager();
@@ -69,13 +63,11 @@ describe("ContinueCompletionProvider triggering logic", () => {
     expect(mockNextEditProvider.deleteChain).not.toHaveBeenCalled();
   });
 
-  it("clears an empty chain once in full file diff mode", async () => {
+  it("rebuilds a full-file-diff chain when stale chain state exists", async () => {
     const document = createDocument();
     setActiveEditor(document);
 
     mockNextEditProvider.chainExists.mockReturnValue(true);
-    mockPrefetchQueue.__setProcessed([]);
-    mockPrefetchQueue.__setUnprocessed([]);
 
     const provider = buildProvider();
 
@@ -93,13 +85,11 @@ describe("ContinueCompletionProvider triggering logic", () => {
     ).toHaveBeenCalledTimes(1);
   });
 
-  it("returns null after clearing empty chain when no outcome is available", async () => {
+  it("returns null after rebuilding a stale full-file-diff chain when no outcome is available", async () => {
     const document = createDocument();
     setActiveEditor(document);
 
     mockNextEditProvider.chainExists.mockReturnValue(true);
-    mockPrefetchQueue.__setProcessed([]);
-    mockPrefetchQueue.__setUnprocessed([]);
     mockNextEditProvider.provideInlineCompletionItems.mockResolvedValueOnce(
       undefined,
     );
@@ -121,23 +111,18 @@ describe("ContinueCompletionProvider triggering logic", () => {
     ).toHaveBeenCalledTimes(1);
   });
 
-  it("uses queued outcomes when processed items exist", async () => {
+  it("rebuilds the chain when a jump resumes without reading saved completion state", async () => {
     const document = createDocument();
     setActiveEditor(document);
 
     mockNextEditProvider.chainExists.mockReturnValue(true);
-    mockPrefetchQueue.__setProcessed([
-      {
-        location: {
-          range: {
-            start: { line: 0, character: 0 },
-            end: { line: 0, character: 0 },
-          },
-        },
-        outcome: mockOutcome,
+    mockJumpManager.isJumpInProgress.mockReturnValue(true);
+    Object.defineProperty(mockJumpManager, "completionAfterJump", {
+      configurable: true,
+      get() {
+        throw new Error("dead completionAfterJump read");
       },
-    ]);
-    mockJumpManager.suggestJump.mockResolvedValue(true);
+    });
 
     const provider = buildProvider();
 
@@ -148,13 +133,27 @@ describe("ContinueCompletionProvider triggering logic", () => {
       createToken(),
     );
 
-    expect(mockPrefetchQueue.dequeueProcessed).toHaveBeenCalledTimes(1);
-    expect(mockJumpManager.setCompletionAfterJump).toHaveBeenCalledTimes(1);
-    expect(mockNextEditProvider.startChain).not.toHaveBeenCalled();
-    expect(mockNextEditProvider.deleteChain).not.toHaveBeenCalled();
+    expect(mockJumpManager.setJumpInProgress).toHaveBeenCalledWith(false);
+    expect(mockNextEditProvider.deleteChain).toHaveBeenCalledTimes(1);
+    expect(mockNextEditProvider.startChain).toHaveBeenCalledTimes(1);
     expect(
       mockNextEditProvider.provideInlineCompletionItems,
-    ).not.toHaveBeenCalled();
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it("documents that the active extension path is full-file-diff based", () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "../../extension/VsCodeExtension.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("const usingFullFileDiff = true;");
+    expect(source).toMatch(
+      /selectionManager\.initialize\(this\.ide,\s*usingFullFileDiff\)/,
+    );
+    expect(source).toMatch(
+      /new ContinueCompletionProvider\([\s\S]*?usingFullFileDiff[\s\S]*?\)/,
+    );
   });
 });
 
@@ -167,12 +166,10 @@ function buildProvider(options: { usingFullFileDiff?: boolean } = {}) {
   } as any;
 
   const ide = { ideUtils: {} } as any;
-  const webviewProtocol = {} as any;
 
   const provider = new ContinueCompletionProvider(
     configHandler,
     ide,
-    webviewProtocol,
     usingFullFileDiff,
   );
   provider.activateNextEdit();
@@ -253,50 +250,15 @@ function createMockNextEditProvider() {
     startChain: vi.fn(),
     deleteChain: vi.fn(async () => {}),
     provideInlineCompletionItems: vi.fn(async () => mockOutcome),
-    provideInlineCompletionItemsWithChain: vi.fn(async () => mockOutcome),
     markDisplayed: vi.fn(),
     getChainLength: vi.fn(() => 0),
   };
-}
-
-function createMockPrefetchQueue() {
-  let processedItems: any[] = [];
-  let unprocessedItems: any[] = [];
-
-  const queue: any = {
-    initialize: vi.fn(),
-    process: vi.fn(),
-    peekThreeProcessed: vi.fn(),
-    dequeueProcessed: vi.fn(() => processedItems.shift()),
-    enqueueProcessed: vi.fn((item: any) => {
-      processedItems.push(item);
-    }),
-    __setProcessed(items: any[]) {
-      processedItems = [...items];
-    },
-    __setUnprocessed(items: any[]) {
-      unprocessedItems = [...items];
-    },
-  };
-
-  Object.defineProperty(queue, "processedCount", {
-    get: () => processedItems.length,
-  });
-
-  Object.defineProperty(queue, "unprocessedCount", {
-    get: () => unprocessedItems.length,
-  });
-
-  return queue;
 }
 
 function createMockJumpManager() {
   return {
     isJumpInProgress: vi.fn(() => false),
     setJumpInProgress: vi.fn(),
-    completionAfterJump: undefined,
-    clearCompletionAfterJump: vi.fn(),
-    setCompletionAfterJump: vi.fn(),
     suggestJump: vi.fn(async () => false),
     wasJumpJustAccepted: vi.fn(() => false),
   };
@@ -437,18 +399,6 @@ vi.mock("../../activation/JumpManager", () => {
       getInstance: () => instance,
     },
     __setMockJumpManagerInstance(value: any) {
-      instance = value;
-    },
-  };
-});
-
-vi.mock("core/nextEdit/NextEditPrefetchQueue", () => {
-  let instance: any = null;
-  return {
-    PrefetchQueue: {
-      getInstance: () => instance,
-    },
-    __setMockPrefetchQueueInstance(value: any) {
       instance = value;
     },
   };

@@ -14,7 +14,7 @@ import {
   AutocompleteCodeSnippet,
   AutocompleteSnippetType,
 } from "../../snippets/types";
-import { AutocompleteSnippetDeprecated } from "../../types";
+import { AutocompleteSnippet } from "../../types";
 import { AstPath } from "../../util/ast";
 import { ImportDefinitionsService } from "../ImportDefinitionsService";
 
@@ -34,7 +34,7 @@ import { ImportDefinitionsService } from "../ImportDefinitionsService";
 // }
 
 export class RootPathContextService {
-  private cache = new LRUCache<string, AutocompleteSnippetDeprecated[]>({
+  private cache = new LRUCache<string, AutocompleteSnippet[]>({
     max: 100,
   });
 
@@ -76,8 +76,8 @@ export class RootPathContextService {
   private async getSnippetsForNode(
     filepath: string,
     node: Parser.SyntaxNode,
-  ): Promise<AutocompleteSnippetDeprecated[]> {
-    const snippets: AutocompleteSnippetDeprecated[] = [];
+  ): Promise<AutocompleteSnippet[]> {
+    const snippets: AutocompleteSnippet[] = [];
     const language = getFullLanguageName(filepath);
 
     let query: Parser.Query | undefined;
@@ -125,7 +125,7 @@ export class RootPathContextService {
     filepath: string,
     endPosition: Parser.Point,
     language: LanguageName,
-  ): Promise<AutocompleteSnippetDeprecated[]> {
+  ): Promise<AutocompleteSnippet[]> {
     const definitions = await this.ide.gotoDefinition({
       filepath,
       position: {

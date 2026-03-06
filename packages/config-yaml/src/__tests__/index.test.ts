@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import {
+  parseConfigYaml,
   decodeSecretLocation,
   FQSN,
   PackageIdentifier,
@@ -14,6 +15,7 @@ import {
   SecretStore,
   SecretType,
   unrollAssistant,
+  validateConfigYaml,
 } from "../index.js";
 
 // Test e2e flows from raw yaml -> unroll -> client render -> resolve secrets on proxy
@@ -144,7 +146,7 @@ describe("E2E Scenarios", () => {
       },
     );
 
-    const config = unrolledConfig.config;
+    const config = unrolledConfig.config as any;
 
     // Test that packages were correctly unrolled and params replaced
     expect(config?.models?.length).toBe(4);
@@ -250,7 +252,7 @@ describe("E2E Scenarios", () => {
       },
     );
 
-    const config = unrolledConfig.config;
+    const config = unrolledConfig.config as any;
 
     // The original rules array should have two items
     expect(config?.rules?.length).toBe(3); // Now 3 with the injected block
@@ -298,7 +300,7 @@ describe("E2E Scenarios", () => {
       },
     );
 
-    const config = unrolledConfig.config;
+    const config = unrolledConfig.config as any;
     const errors = unrolledConfig.errors;
 
     // Check if all the duplicate blocks get removed
@@ -432,10 +434,12 @@ describe("E2E Scenarios", () => {
       },
     );
 
+    const config = result.config as any;
+
     // Should successfully unroll without errors for allowed blocks
-    expect(result.config?.models?.length).toBe(4);
-    expect(result.config?.rules?.length).toBe(2);
-    expect(result.config?.docs?.length).toBe(1);
+    expect(config?.models?.length).toBe(4);
+    expect(config?.rules?.length).toBe(2);
+    expect(config?.docs?.length).toBe(1);
   });
 
   it("should not affect file-based blocks with allow/blocklists", async () => {
@@ -466,11 +470,157 @@ describe("E2E Scenarios", () => {
       },
     );
 
+    const config = result.config as any;
+
     // File-based blocks should not be affected by blocklists
-    expect(result.config?.models?.length).toBe(1);
-    expect(result.config?.context?.length).toBe(1);
-    expect(result.config?.rules?.length).toBeGreaterThan(0);
+    expect(config?.models?.length).toBe(1);
+    expect(config?.context?.length).toBe(1);
+    expect(config?.rules?.length).toBeGreaterThan(0);
   });
 
   it.skip("should prioritize org over user / package secrets", () => {});
+});
+
+describe("legacy embed/rerank config compatibility", () => {
+  it("parses legacy embed and rerank model fields without runtime assertions", () => {
+    const config = parseConfigYaml(`
+name: legacy-compat
+version: 1.0.0
+models:
+  - name: legacy-embed
+    provider: openai
+    model: text-embedding-3-large
+    roles: [embed]
+    embedOptions:
+      maxChunkSize: 1024
+      maxBatchSize: 16
+      embeddingPrefixes:
+        chunk: "passage: "
+        query: "query: "
+  - name: legacy-rerank
+    provider: openai
+    model: gpt-4o-mini
+    roles: [rerank]
+`);
+
+    expect(validateConfigYaml(config)).toEqual([]);
+    expect(config.models).toMatchObject([
+      {
+        name: "legacy-embed",
+        roles: ["embed"],
+        embedOptions: {
+          maxChunkSize: 1024,
+          maxBatchSize: 16,
+          embeddingPrefixes: {
+            chunk: "passage: ",
+            query: "query: ",
+          },
+        },
+      },
+      {
+        name: "legacy-rerank",
+        roles: ["rerank"],
+      },
+    ]);
+  });
+
+  it("loads legacy embed/rerank compatibility fields through assistant unroll", async () => {
+    const configYaml = `
+name: legacy-unrolled-compat
+version: 1.0.0
+models:
+  - name: legacy-embed-rerank
+    provider: openai
+    model: text-embedding-3-large
+    roles: [embed, rerank]
+    embedOptions:
+      maxChunkSize: 2048
+      maxBatchSize: 64
+      embeddingPrefixes:
+        chunk: "passage: "
+        query: "query: "
+`;
+
+    const registry: Registry = {
+      getContent: async () => configYaml,
+    };
+
+    const result = await unrollAssistant(
+      {
+        uriType: "file",
+        fileUri: "./src/__tests__/local-files/legacy-embed-rerank.yaml",
+      },
+      registry,
+      {
+        renderSecrets: false,
+        injectBlocks: [],
+        allowlistedBlocks: undefined,
+        blocklistedBlocks: undefined,
+        injectRequestOptions: undefined,
+      },
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.config?.models).toMatchObject([
+      {
+        name: "legacy-embed-rerank",
+        roles: ["embed", "rerank"],
+        embedOptions: {
+          maxChunkSize: 2048,
+          maxBatchSize: 64,
+          embeddingPrefixes: {
+            chunk: "passage: ",
+            query: "query: ",
+          },
+        },
+      },
+    ]);
+  });
+
+  it("accepts opaque legacy embedOptions payloads without runtime coupling", () => {
+    const config = parseConfigYaml(`
+name: legacy-opaque-embed-options
+version: 1.0.0
+models:
+  - name: legacy-embed
+    provider: openai
+    model: text-embedding-3-large
+    roles: [embed]
+    embedOptions:
+      maxChunkSize: "legacy-large"
+      maxBatchSize: "legacy-batch"
+      legacyProviderPayload:
+        mode: compatibility-only
+        nested:
+          value: true
+`);
+
+    expect(validateConfigYaml(config)).toEqual([]);
+    expect((config.models?.[0] as any)?.embedOptions).toMatchObject({
+      maxChunkSize: "legacy-large",
+      maxBatchSize: "legacy-batch",
+      legacyProviderPayload: {
+        mode: "compatibility-only",
+        nested: {
+          value: true,
+        },
+      },
+    });
+  });
+
+  it("rejects retired legacy completions compatibility field", () => {
+    const retiredField = ["useLegacy", "CompletionsEndpoint"].join("");
+
+    expect(() =>
+      parseConfigYaml(`
+name: retired-legacy-completions-endpoint
+version: 1.0.0
+models:
+  - name: legacy-autocomplete
+    provider: openai
+    model: gpt-4o-mini
+    ${retiredField}: true
+`),
+    ).toThrow(/Failed to parse config: models\.0: Invalid input/);
+  });
 });

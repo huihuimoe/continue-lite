@@ -1,15 +1,21 @@
 import { Mutex } from "async-mutex";
-import { open } from "sqlite";
-import sqlite3 from "sqlite3";
 import {
-  DatabaseConnection,
-  truncateSqliteLikePattern,
-} from "../../indexing/refreshIndex.js";
+  createSqliteConnection,
+  type SqliteConnection,
+} from "../../data/nodeSqlite.js";
 import { getTabAutocompleteCacheSqlitePath } from "../../util/paths.js";
 
 interface CacheEntry {
   value: string;
   timestamp: number;
+}
+
+interface CacheRow extends CacheEntry {
+  key: string;
+}
+
+function truncateSqliteLikePattern(value: string): string {
+  return value.replaceAll("\0", "");
 }
 
 /**
@@ -30,7 +36,7 @@ export class AutocompleteLruCache {
   private dirty: Set<string> = new Set();
   private flushTimer?: NodeJS.Timeout;
 
-  constructor(private db: DatabaseConnection) {}
+  constructor(private db: SqliteConnection) {}
 
   /**
    * Singleton accessor that initializes the cache with SQLite persistence.
@@ -39,12 +45,8 @@ export class AutocompleteLruCache {
   static async get(): Promise<AutocompleteLruCache> {
     if (!AutocompleteLruCache.instancePromise) {
       AutocompleteLruCache.instancePromise = (async () => {
-        const db = await open({
-          filename: getTabAutocompleteCacheSqlitePath(),
-          driver: sqlite3.Database,
-        });
-        await db.exec("PRAGMA busy_timeout = 3000;");
-        await db.run(`
+        const db = createSqliteConnection(getTabAutocompleteCacheSqlitePath());
+        db.run(`
           CREATE TABLE IF NOT EXISTS cache (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL,
@@ -63,7 +65,9 @@ export class AutocompleteLruCache {
 
   /** Loads all cached entries from SQLite into memory on initialization. */
   private async loadFromDb() {
-    const rows = await this.db.all("SELECT key, value, timestamp FROM cache");
+    const rows = await this.db.all<CacheRow>(
+      "SELECT key, value, timestamp FROM cache",
+    );
     for (const row of rows) {
       this.cache.set(row.key, {
         value: row.value,

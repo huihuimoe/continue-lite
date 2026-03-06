@@ -80,45 +80,19 @@ export const cacheBehaviorSchema = z.object({
 });
 export type CacheBehavior = z.infer<typeof cacheBehaviorSchema>;
 
-export const embedOptionsSchema = z.object({
-  maxChunkSize: z.number().optional(),
-  maxBatchSize: z.number().optional(),
-  embeddingPrefixes: embeddingPrefixesSchema.optional(),
-});
+export const embedOptionsSchema = z
+  .object({
+    maxChunkSize: z.unknown().optional(),
+    maxBatchSize: z.unknown().optional(),
+    embeddingPrefixes: z.record(z.string(), z.unknown()).optional(),
+  })
+  .passthrough();
 export type EmbedOptions = z.infer<typeof embedOptionsSchema>;
-
-/**
- * Schema for overriding a tool's system message description.
- * Used for models that don't support native tool calling.
- */
-export const systemMessageDescriptionOverrideSchema = z.object({
-  prefix: z.string().optional(),
-  exampleArgs: z
-    .array(z.tuple([z.string(), z.union([z.string(), z.number()])]))
-    .optional(),
-});
-
-/**
- * Schema for overriding built-in tool prompts.
- * Allows customization of tool descriptions and behavior per model.
- */
-export const toolOverrideSchema = z.object({
-  description: z.string().optional(),
-  displayTitle: z.string().optional(),
-  wouldLikeTo: z.string().optional(),
-  isCurrently: z.string().optional(),
-  hasAlready: z.string().optional(),
-  systemMessageDescription: systemMessageDescriptionOverrideSchema.optional(),
-  disabled: z.boolean().optional(),
-});
-export type ToolOverrideConfig = z.infer<typeof toolOverrideSchema>;
 
 export const chatOptionsSchema = z.object({
   baseSystemMessage: z.string().optional(),
   baseAgentSystemMessage: z.string().optional(),
   basePlanSystemMessage: z.string().optional(),
-  /** Tool overrides keyed by tool name (e.g., "run_terminal_command") */
-  toolOverrides: z.record(z.string(), toolOverrideSchema).optional(),
 });
 export type ChatOptions = z.infer<typeof chatOptionsSchema>;
 
@@ -188,7 +162,7 @@ const baseModelFields = {
   embedOptions: embedOptionsSchema.optional(),
   chatOptions: chatOptionsSchema.optional(),
   promptTemplates: promptTemplatesSchema.optional(),
-  useLegacyCompletionsEndpoint: z.boolean().optional(),
+  useLegacyCompletionsEndpoint: z.never().optional(),
   env: z
     .record(z.string(), z.union([z.string(), z.boolean(), z.number()]))
     .optional(),

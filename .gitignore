@@ -179,3 +179,10 @@ keys
 .copy-log
 codemap.md
 .slim
+.worktrees/
+docs/plans
+AGENTS.md
+CLAUDE.md
+.claude
+.sisyphus
+

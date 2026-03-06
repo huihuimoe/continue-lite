@@ -1,6 +1,6 @@
 import OpenAI from "./OpenAI.js";
 
-import type { CompletionOptions, LLMOptions } from "../../index.js";
+import type { LLMOptions } from "../../index.js";
 
 class Novita extends OpenAI {
   static providerName = "novita";
@@ -26,20 +26,6 @@ class Novita extends OpenAI {
 
   protected _convertModelName(model: string) {
     return Novita.MODEL_IDS[model] || this.model;
-  }
-
-  protected async *_streamComplete(
-    prompt: string,
-    signal: AbortSignal,
-    options: CompletionOptions,
-  ): AsyncGenerator<string> {
-    for await (const chunk of this._legacystreamComplete(
-      prompt,
-      signal,
-      options,
-    )) {
-      yield chunk;
-    }
   }
 }
 

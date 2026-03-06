@@ -6,7 +6,6 @@ class Nebius extends OpenAI {
   static providerName = "nebius";
   static defaultOptions: Partial<LLMOptions> = {
     apiBase: "https://api.studio.nebius.ai/v1/",
-    useLegacyCompletionsEndpoint: false,
   };
 
   private static MODEL_IDS: { [name: string]: string } = {

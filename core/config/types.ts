@@ -103,11 +103,6 @@ declare global {
     region?: string;
     projectId?: string;
   
-    // Embedding options
-    embeddingId: string;
-    maxEmbeddingChunkSize: number;
-    maxEmbeddingBatchSize: number;
-  
     complete(
       prompt: string,
       signal: AbortSignal,
@@ -139,11 +134,7 @@ declare global {
       options?: LLMFullCompletionOptions,
     ): Promise<ChatMessage>;
   
-    embed(chunks: string[]): Promise<number[][]>;
-  
-    rerank(query: string, chunks: Chunk[]): Promise<number[]>;
-  
-    countTokens(text: string): number;
+  countTokens(text: string): number;
   
     supportsImages(): boolean;
   
@@ -179,8 +170,6 @@ declare global {
   export interface ContextProviderExtras {
     config: ContinueConfig;
     fullInput: string;
-    embeddingsProvider: ILLM;
-    reranker: ILLM | undefined;
     llm: ILLM;
     ide: IDE;
     selectedCode: RangeInFile[];
@@ -236,20 +225,6 @@ declare global {
     loadSubmenuItems(args: LoadSubmenuItemsArgs): Promise<ContextSubmenuItem[]>;
   }
   
-  export interface Session {
-    sessionId: string;
-    title: string;
-    workspaceDirectory: string;
-    history: ChatHistoryItem[];
-  }
-  
-  export interface SessionMetadata {
-    sessionId: string;
-    title: string;
-    dateCreated: string;
-    workspaceDirectory: string;
-  }
-  
   export interface RangeInFile {
     filepath: string;
     range: Range;
@@ -285,55 +260,16 @@ declare global {
     model: string;
   }
   
-  export type ChatMessageRole = "user" | "assistant" | "system" | "tool";
-  
-  export interface MessagePart {
-    type: "text" | "imageUrl";
-    text?: string;
-    imageUrl?: { url: string };
-  }
-  
-  export type MessageContent = string | MessagePart[];
-  
-  export interface ToolCall {
-    id: string;
-    type: "function";
-    function: {
-      name: string;
-      arguments: string;
-    };
-  }
-  
-  export interface ToolCallDelta {
-    id?: string;
-    type?: "function";
-    function?: {
-      name?: string;
-      arguments?: string;
-    };
-  }
-  
-  export interface ToolResultChatMessage {
-    role: "tool";
-    content: string;
-    toolCallId: string;
-  }
-  
-  export interface UserChatMessage {
-    role: "user";
-    content: MessageContent;
-  }
-  
-  export interface AssistantChatMessage {
-    role: "assistant";
-    content: MessageContent;
-    toolCalls?: ToolCallDelta[];
-  }
-  
-  export interface SystemChatMessage {
-    role: "system";
-    content: string;
-  }
+  export type ChatMessageRole = import("./llm/chatTypes").ChatMessageRole;
+  export type MessagePart = import("./llm/chatTypes").MessagePart;
+  export type MessageContent = import("./llm/chatTypes").MessageContent;
+  export type ToolCall = import("./llm/chatTypes").ToolCall;
+  export type ToolCallDelta = import("./llm/tooling").ToolCallDelta;
+  export type ToolResultChatMessage = import("./llm/chatTypes").ToolResultChatMessage;
+  export type UserChatMessage = import("./llm/chatTypes").UserChatMessage;
+  export type AssistantChatMessage = import("./llm/chatTypes").AssistantChatMessage;
+  export type SystemChatMessage = import("./llm/chatTypes").SystemChatMessage;
+  export type Usage = import("./llm/chatTypes").Usage;
   
   export type ChatMessage =
     | UserChatMessage
@@ -390,7 +326,7 @@ declare global {
   }
   
   type MessageModes = "chat" | "edit";
-  
+
   export type ToolStatus =
     | "generating"
     | "generated"
@@ -398,29 +334,57 @@ declare global {
     | "done"
     | "errored"
     | "canceled";
-  
-  // Will exist only on "assistant" messages with tool calls
-  interface ToolCallState {
+
+  export interface ToolCallState {
     toolCallId: string;
     toolCall: ToolCall;
     status: ToolStatus;
     parsedArgs: any;
     output?: ContextItem[];
   }
-  
+
   export interface ChatHistoryItem {
     message: ChatMessage;
     contextItems: ContextItemWithId[];
     editorState?: any;
     modifiers?: InputModifiers;
     promptLogs?: PromptLog[];
-    toolCallState?: ToolCallState;
+    toolCallStates?: ToolCallState[];
     isGatheringContext?: boolean;
   }
-  
+
+  export interface BaseSessionMetadata {
+    sessionId: string;
+    title: string;
+    dateCreated: string;
+    workspaceDirectory: string;
+    messageCount?: number;
+  }
+
+  export interface SessionMetadata extends BaseSessionMetadata {}
+
+  export interface Session {
+    sessionId: string;
+    title: string;
+    workspaceDirectory: string;
+    history: ChatHistoryItem[];
+    mode?: MessageModes;
+    chatModelTitle?: string;
+    usage?: Usage;
+  }
+
+  type ChatCompletionTool = import("openai/resources/index").ChatCompletionCreateParams["tools"] extends
+    | Array<infer T>
+    | undefined
+    ? T
+    : never;
+
   export interface LLMFullCompletionOptions extends BaseCompletionOptions {
     log?: boolean;
     model?: string;
+    tools?: Tool[];
+    toolChoice?: import("openai/resources/index").ChatCompletionCreateParams["tool_choice"];
+    tool_choice?: import("openai/resources/index").ChatCompletionCreateParams["tool_choice"];
   }
   
   export type ToastType = "info" | "error" | "warning";
@@ -532,13 +496,7 @@ declare global {
     aiGatewaySlug?: string;
     apiBase?: string;
     cacheBehavior?: CacheBehavior;
-  
     useLegacyCompletionsEndpoint?: boolean;
-  
-    // Embedding options
-    embeddingId?: string;
-    maxEmbeddingChunkSize?: number;
-    maxEmbeddingBatchSize?: number;
   
     // Cloudflare options
     accountId?: string;
@@ -646,12 +604,13 @@ declare global {
     SymbolicLink = 64,
   }
   
-  export interface IdeSettings {
-    remoteConfigServerUrl: string | undefined;
-    remoteConfigSyncPeriod: number;
-    userToken: string;
-    pauseCodebaseIndexOnStart: boolean;
-  }
+export interface IdeSettings {
+  remoteConfigServerUrl?: string;
+  remoteConfigSyncPeriod: number;
+  userToken: string;
+  continueTestEnvironment?: "none" | "production" | "staging" | "local";
+  pauseCodebaseIndexOnStart: boolean;
+}
   
   export interface IDE {
     getIdeInfo(): Promise<IdeInfo>;
@@ -716,8 +675,6 @@ declare global {
   
     getPinnedFiles(): Promise<string[]>;
   
-    getSearchResults(query: string, maxResults?: number): Promise<string>;
-  
     subprocess(command: string, cwd?: string): Promise<[string, string]>;
   
     getProblems(filepath?: string | undefined): Promise<Problem[]>;
@@ -772,6 +729,29 @@ declare global {
     params?: { [key: string]: any };
     run: (sdk: ContinueSDK) => AsyncGenerator<string | undefined>;
   }
+
+  export type SlashCommandSource =
+    | "built-in-legacy"
+    | "built-in"
+    | "json-custom-command"
+    | "config-ts-slash-command"
+    | "yaml-prompt-block"
+    | "invokable-rule";
+
+  export interface SlashCommandWithSource {
+    name: string;
+    description: string;
+    prompt?: string;
+    params?: { [key: string]: any };
+    run?: (sdk: ContinueSDK) => AsyncGenerator<string | undefined>;
+    source: SlashCommandSource;
+    sourceFile?: string;
+    slug?: string;
+    overrideSystemMessage?: string;
+    isLegacy?: boolean;
+  }
+
+  export interface SlashCommandDescWithSource extends SlashCommandWithSource {}
   
   // Config
   
@@ -796,24 +776,18 @@ declare global {
     | "search"
     | "tree"
     | "http"
-    | "codebase"
     | "problems"
-    | "folder"
-    | "jira"
     | "postgres"
     | "database"
     | "code"
-    | "docs"
     | "gitlab-mr"
     | "os"
     | "currentFile"
-    | "greptile"
     | "outline"
     | "continue-proxy"
     | "highlights"
     | "file"
     | "issue"
-    | "repo-map"
     | "url"
     | string;
   
@@ -863,18 +837,18 @@ declare global {
     name: StepName;
     params: { [key: string]: any };
   }
-  
+
   export interface ContextProviderWithParams {
     name: ContextProviderName;
     params: { [key: string]: any };
   }
-  
+
   export interface SlashCommandDescription {
     name: string;
     description: string;
     params?: { [key: string]: any };
   }
-  
+
   export interface CustomCommand {
     name: string;
     prompt: string;
@@ -890,13 +864,7 @@ declare global {
           text: string;
         }[];
   }
-  
-  export interface ToolExtras {
-    ide: IDE;
-    llm: ILLM;
-    fetch: FetchFunction;
-  }
-  
+
   export interface Tool {
     type: "function";
     function: {
@@ -905,11 +873,16 @@ declare global {
       parameters?: Record<string, any>;
       strict?: boolean | null;
     };
-  
     displayTitle: string;
-    wouldLikeTo: string;
+    wouldLikeTo?: string;
+    isCurrently?: string;
+    hasAlready?: string;
     readonly: boolean;
     uri?: string;
+    faviconUrl?: string;
+    group?: string;
+    originalFunctionName?: string;
+    mcpMeta?: Record<string, unknown>;
   }
   
   interface BaseCompletionOptions {
@@ -930,10 +903,13 @@ declare global {
     stream?: boolean;
     prediction?: Prediction;
     tools?: Tool[];
+    toolChoice?: import("openai/resources/index").ChatCompletionCreateParams["tool_choice"];
+    tool_choice?: import("openai/resources/index").ChatCompletionCreateParams["tool_choice"];
   }
   
   export interface ModelCapability {
     uploadImage?: boolean;
+    tools?: boolean;
   }
   
   export interface ModelDescription {
@@ -951,8 +927,9 @@ declare global {
     promptTemplates?: { [key: string]: string };
     capabilities?: ModelCapability;
     cacheBehavior?: CacheBehavior;
+    useLegacyCompletionsEndpoint?: boolean;
   }
-  
+
   export interface JSONEmbedOptions {
     apiBase?: string;
     apiKey?: string;
@@ -963,20 +940,15 @@ declare global {
     requestOptions?: RequestOptions;
     maxChunkSize?: number;
     maxBatchSize?: number;
-    // AWS options
     profile?: string;
-  
-    // AWS and GCP Options
     region?: string;
-  
-    // GCP and Watsonx Options
     projectId?: string;
   }
-  
-  export interface EmbeddingsProviderDescription extends EmbedOptions {
+
+  export interface EmbeddingsProviderDescription extends JSONEmbedOptions {
     provider: string;
   }
-  
+
   export interface RerankerDescription {
     name: string;
     params?: { [key: string]: any };
@@ -988,63 +960,17 @@ declare global {
     debounceDelay: number;
     maxSuffixPercentage: number;
     prefixPercentage: number;
+    slidingWindowPrefixPercentage: number;
+    slidingWindowSize: number;
     transform?: boolean;
     template?: string;
     multilineCompletions: "always" | "never" | "auto";
-    slidingWindowPrefixPercentage: number;
-    slidingWindowSize: number;
     useCache: boolean;
     onlyMyCode: boolean;
     useRecentlyEdited: boolean;
     disableInFiles?: string[];
     useImports?: boolean;
     showWhateverWeHaveAtXMs?: number;
-  }
-  
-  interface StdioOptions {
-    type: "stdio";
-    command: string;
-    args: string[];
-    env?: Record<string, string>;
-    cwd?: string;
-  }
-  
-  interface WebSocketOptions {
-    type: "websocket";
-    url: string;
-  }
-  
-  interface SSEOptions {
-    type: "sse";
-    url: string;
-  }
-  
-  type TransportOptions = StdioOptions | WebSocketOptions | SSEOptions;
-  
-  export interface MCPOptions {
-    transport: TransportOptions;
-  }
-  
-  export interface ContinueUIConfig {
-    codeBlockToolbarPosition?: "top" | "bottom";
-    fontSize?: number;
-    displayRawMarkdown?: boolean;
-    showChatScrollbar?: boolean;
-    codeWrap?: boolean;
-  }
-  
-  interface ContextMenuConfig {
-    comment?: string;
-    docstring?: string;
-    fix?: string;
-    optimize?: string;
-    fixGrammar?: string;
-  }
-  
-  interface ExperimentalModelRoles {
-    inlineEdit?: string;
-    applyCodeBlock?: string;
-    repoMapFileSelection?: string;
   }
   
   export type ApplyStateStatus =
@@ -1073,62 +999,35 @@ declare global {
   
   export type CodeToEdit = RangeInFileWithContents | FileWithContents;
   
-  /**
-   * Represents the configuration for a quick action in the Code Lens.
-   * Quick actions are custom commands that can be added to function and class declarations.
-   */
-  interface QuickActionConfig {
-    /**
-     * The title of the quick action that will display in the Code Lens.
-     */
-    title: string;
-  
-    /**
-     * The prompt that will be sent to the model when the quick action is invoked,
-     * with the function or class body concatenated.
-     */
-    prompt: string;
-  
-    /**
-     * If \`true\`, the result of the quick action will be sent to the chat panel.
-     * If \`false\`, the streamed result will be inserted into the document.
-     *
-     * Defaults to \`false\`.
-     */
-    sendToChat: boolean;
+  export interface ContinueUIConfig {
+    codeBlockToolbarPosition?: "top" | "bottom";
+    fontSize?: number;
+    displayRawMarkdown?: boolean;
+    showChatScrollbar?: boolean;
+    codeWrap?: boolean;
+    showSessionTabs?: boolean;
+    continueAfterToolRejection?: boolean;
   }
-  
-  export type DefaultContextProvider = ContextProviderWithParams & {
-    query?: string;
-  };
-  
-  interface ExperimentalConfig {
-    contextMenuPrompts?: ContextMenuConfig;
+
+  export interface ExperimentalModelRoles {
+    inlineEdit?: string;
+    applyCodeBlock?: string;
+    repoMapFileSelection?: string;
+  }
+
+  export interface ExperimentalConfig {
+    useCurrentFileAsContext?: boolean;
+    enableStaticContextualization?: boolean;
     modelRoles?: ExperimentalModelRoles;
-    defaultContext?: DefaultContextProvider[];
     promptPath?: string;
-  
-    /**
-     * Quick actions are a way to add custom commands to the Code Lens of
-     * function and class declarations.
-     */
-    quickActions?: QuickActionConfig[];
-  
-    /**
-     * Automatically read LLM chat responses aloud using system TTS models
-     */
     readResponseTTS?: boolean;
-  
-    /**
-     * If set to true, we will attempt to pull down and install an instance of Chromium
-     * that is compatible with the current version of Puppeteer.
-     * This is needed to crawl a large number of documentation sites that are dynamically rendered.
-     */
     useChromiumForDocsCrawling?: boolean;
-    modelContextProtocolServers?: MCPOptions[];
+    enableExperimentalTools?: boolean;
+    onlyUseSystemMessageTools?: boolean;
+    codebaseToolCallingOnly?: boolean;
   }
   
-  interface AnalyticsConfig {
+  export interface AnalyticsConfig {
     type: string;
     url?: string;
     clientKey?: string;
@@ -1175,39 +1074,24 @@ declare global {
     models: (CustomLLM | ModelDescription)[];
     /** A system message to be followed by all of your models */
     systemMessage?: string;
-    /** The default completion options for all models */
     completionOptions?: BaseCompletionOptions;
-    /** Request options that will be applied to all models and context providers */
     requestOptions?: RequestOptions;
-    /** The list of slash commands that will be available in the sidebar */
-    slashCommands?: SlashCommand[];
-    /** Each entry in this array will originally be a ContextProviderWithParams, the same object from your config.json, but you may add CustomContextProviders.
-     * A CustomContextProvider requires you only to define a title and getContextItems function. When you type '@title <query>', Continue will call \`getContextItems(query)\`.
-     */
+    slashCommands?: (SlashCommand | SlashCommandWithSource)[];
     contextProviders?: (CustomContextProvider | ContextProviderWithParams)[];
-    /** If set to true, Continue will not index your codebase for retrieval */
     disableIndexing?: boolean;
-    /** If set to true, Continue will not make extra requests to the LLM to generate a summary title of each session. */
     disableSessionTitles?: boolean;
-    /** An optional token to identify a user. Not used by Continue unless you write custom coniguration that requires such a token */
     userToken?: string;
-    /** The provider used to calculate embeddings. If left empty, Continue will use transformers.js to calculate the embeddings with all-MiniLM-L6-v2 */
     embeddingsProvider?: EmbeddingsProviderDescription | ILLM;
-    /** The model that Continue will use for tab autocompletions. */
     tabAutocompleteModel?:
       | CustomLLM
       | ModelDescription
       | (CustomLLM | ModelDescription)[];
-    /** Options for tab autocomplete */
     tabAutocompleteOptions?: Partial<TabAutocompleteOptions>;
-    /** UI styles customization */
     ui?: ContinueUIConfig;
-    /** Options for the reranker */
     reranker?: RerankerDescription | ILLM;
-    /** Experimental configuration */
     experimental?: ExperimentalConfig;
-    /** Analytics configuration */
     analytics?: AnalyticsConfig;
+    docs?: SiteIndexingConfig[];
   }
   
   // in the actual Continue source code
@@ -1217,20 +1101,18 @@ declare global {
     systemMessage?: string;
     completionOptions?: BaseCompletionOptions;
     requestOptions?: RequestOptions;
-    slashCommands?: SlashCommand[];
+    slashCommands?: (SlashCommandWithSource | SlashCommandDescWithSource)[];
     contextProviders?: IContextProvider[];
     disableSessionTitles?: boolean;
     disableIndexing?: boolean;
     userToken?: string;
-    embeddingsProvider: ILLM;
     tabAutocompleteModels?: ILLM[];
     tabAutocompleteOptions?: Partial<TabAutocompleteOptions>;
     ui?: ContinueUIConfig;
-    reranker?: ILLM;
     experimental?: ExperimentalConfig;
     analytics?: AnalyticsConfig;
     docs?: SiteIndexingConfig[];
-    tools: Tool[];
+    tools?: Tool[];
   }
   
   export interface BrowserSerializedContinueConfig {
@@ -1239,18 +1121,16 @@ declare global {
     systemMessage?: string;
     completionOptions?: BaseCompletionOptions;
     requestOptions?: RequestOptions;
-    slashCommands?: SlashCommandDescription[];
+    slashCommands?: SlashCommandDescWithSource[];
     contextProviders?: ContextProviderDescription[];
     disableIndexing?: boolean;
     disableSessionTitles?: boolean;
     userToken?: string;
-    embeddingsProvider?: string;
     ui?: ContinueUIConfig;
-    reranker?: RerankerDescription;
     experimental?: ExperimentalConfig;
     analytics?: AnalyticsConfig;
     docs?: SiteIndexingConfig[];
-    tools: Tool[];
+    tools?: Tool[];
   }
   
   // DOCS SUGGESTIONS AND PACKAGE INFO
@@ -1289,6 +1169,12 @@ declare global {
     | { error: string; details?: never }
     | { details: PackageDetailsSuccess; error?: never }
   );
+}
+
+declare module "./llm/index.js" {
+  interface BaseLLM {
+    useLegacyCompletionsEndpoint?: boolean;
+  }
 }
 
 export {};

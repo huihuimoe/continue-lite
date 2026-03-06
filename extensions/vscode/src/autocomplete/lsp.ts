@@ -1,14 +1,10 @@
-import { AutocompleteLanguageInfo } from "core/autocomplete/constants/AutocompleteLanguageInfo";
+import type { AutocompleteLanguageInfo } from "core/autocomplete/constants/AutocompleteLanguageInfo";
 import {
   AutocompleteCodeSnippet,
   AutocompleteSnippetType,
 } from "core/autocomplete/snippets/types";
-import { GetLspDefinitionsFunction } from "core/autocomplete/types";
+import type { GetLspDefinitionsFunction } from "core/autocomplete/types";
 import { getAst, getTreePathAtCursor } from "core/autocomplete/util/ast";
-import {
-  FUNCTION_BLOCK_NODE_TYPES,
-  FUNCTION_DECLARATION_NODE_TYPEs,
-} from "core/indexing/chunk/code";
 import { intersection } from "core/util/ranges";
 import * as URI from "uri-js";
 import * as vscode from "vscode";
@@ -22,6 +18,26 @@ import type {
   SignatureHelp,
 } from "core";
 import type Parser from "web-tree-sitter";
+
+const FUNCTION_DECLARATION_NODE_TYPEs = [
+  "function_declaration",
+  "function_definition",
+  "method_definition",
+  "method_declaration",
+  "arrow_function",
+  "function_item",
+  "func_literal",
+  "function",
+];
+
+const FUNCTION_BLOCK_NODE_TYPES = [
+  "statement_block",
+  "block",
+  "body",
+  "function_body",
+  "class_body",
+  "declaration_list",
+];
 
 type GotoProviderName =
   | "vscode.executeDefinitionProvider"

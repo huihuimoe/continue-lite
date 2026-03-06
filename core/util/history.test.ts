@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { Session } from "..";
+import type { HistorySession } from "./history";
 import { NEW_SESSION_TITLE } from "./constants";
 import historyManager from "./history";
 import { getSessionFilePath } from "./paths";
 
 const sessionId = uuidv4();
-const testSession: Session = {
+const testSession: HistorySession = {
   history: [],
   title: `${sessionId} title`,
   workspaceDirectory: "workspaceDir",

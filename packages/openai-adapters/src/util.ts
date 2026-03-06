@@ -3,12 +3,10 @@ import { fetchwithRequestOptions, patchedFetch } from "@continuedev/fetch";
 import {
   ChatCompletionChunk,
   CompletionUsage,
-  CreateEmbeddingResponse,
   Model,
 } from "openai/resources/index";
 
 import { ChatCompletion } from "openai/resources/index.js";
-import { CreateRerankResponse } from "./apis/base.js";
 
 export function chatChunk(options: {
   content: string | null | undefined;
@@ -102,44 +100,6 @@ export function chatCompletion(options: {
     id: options.id ?? "",
     model: options.model,
     object: "chat.completion",
-  };
-}
-
-export function embedding(options: {
-  data: number[][];
-  model: string;
-  usage?: CreateEmbeddingResponse.Usage;
-}): CreateEmbeddingResponse {
-  return {
-    data: options.data.map((embedding, i) => ({
-      index: i,
-      embedding: embedding,
-      object: "embedding" as const,
-    })),
-    model: options.model,
-    object: "list" as const,
-    usage: options.usage ?? {
-      prompt_tokens: 0,
-      total_tokens: 0,
-    },
-  };
-}
-
-export function rerank(options: {
-  model: string;
-  data: number[];
-  usage?: CreateRerankResponse["usage"];
-}): CreateRerankResponse {
-  return {
-    data: options.data.map((score, index) => ({
-      index,
-      relevance_score: score,
-    })),
-    model: options.model,
-    object: "list" as const,
-    usage: options.usage ?? {
-      total_tokens: 0,
-    },
   };
 }
 

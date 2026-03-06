@@ -12,7 +12,6 @@ class LlamaStack extends OpenAI {
     promptTemplates: {
       edit: osModelsEditPrompt,
     },
-    useLegacyCompletionsEndpoint: false,
   };
   maxStopWords: number | undefined = 16;
 

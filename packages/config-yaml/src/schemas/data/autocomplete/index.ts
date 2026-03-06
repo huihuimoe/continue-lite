@@ -13,8 +13,6 @@ export const autocompleteEventAllSchema = baseDevDataAllSchema.extend({
   transform: z.boolean().optional(),
   template: z.string().optional(),
   multilineCompletions: z.enum(["always", "never", "auto"]),
-  slidingWindowPrefixPercentage: z.number(),
-  slidingWindowSize: z.number(),
   useCache: z.boolean(),
   onlyMyCode: z.boolean(),
   useRecentlyEdited: z.boolean(),

@@ -47,12 +47,6 @@ export const Gemini: ModelProvider = {
       regex: /gemini-1\.5-pro/i,
       recommendedFor: ["chat"],
     },
-    // embed
-    {
-      model: "text-embedding-005",
-      displayName: "Vertex Text Embedding",
-      recommendedFor: ["embed"],
-    },
     //autocomplete
     {
       model: "code-gecko",

@@ -2,31 +2,21 @@ import fs from "fs";
 import os from "os";
 
 import { ModelConfig } from "@continuedev/config-yaml";
-import {
-  ContinueConfig,
-  ExperimentalModelRoles,
-  IDE,
-  ILLM,
-  JSONModelDescription,
-  PromptTemplate,
-} from "../";
+import { ContinueConfig, IDE, JSONModelDescription, PromptTemplate } from "../";
 import { GlobalContext } from "../util/GlobalContext";
 import { editConfigFile } from "../util/paths";
 
 function stringify(obj: any, indentation?: number): string {
   return JSON.stringify(
     obj,
-    (key, value) => {
+    (_key, value) => {
       return value === null ? undefined : value;
     },
     indentation,
   );
 }
 
-export function addModel(
-  model: JSONModelDescription,
-  role?: keyof ExperimentalModelRoles,
-) {
+export function addModel(model: JSONModelDescription) {
   editConfigFile(
     (config) => {
       if (config.models?.some((m) => stringify(m) === stringify(model))) {
@@ -42,17 +32,6 @@ export function addModel(
       }
 
       config.models.push(model);
-
-      // Set the role for the model
-      if (role) {
-        if (!config.experimental) {
-          config.experimental = {};
-        }
-        if (!config.experimental.modelRoles) {
-          config.experimental.modelRoles = {};
-        }
-        config.experimental.modelRoles[role] = model.title;
-      }
 
       return config;
     },
@@ -96,23 +75,6 @@ export function deleteModel(title: string) {
       return config;
     },
   );
-}
-
-export function getModelByRole<T extends keyof ExperimentalModelRoles>(
-  config: ContinueConfig,
-  role: T,
-): ILLM | undefined {
-  const roleTitle = config.experimental?.modelRoles?.[role];
-
-  if (!roleTitle) {
-    return undefined;
-  }
-
-  const matchingModel = config.modelsByRole.chat.find(
-    (model) => model.title === roleTitle,
-  );
-
-  return matchingModel;
 }
 
 /**

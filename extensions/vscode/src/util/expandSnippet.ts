@@ -1,6 +1,6 @@
-import { Chunk, IDE } from "core";
+import type { Chunk, IDE } from "core";
 import { languageForFilepath } from "core/autocomplete/constants/AutocompleteLanguageInfo";
-import { DEFAULT_IGNORE_DIRS } from "core/indexing/ignore";
+import { DEFAULT_IGNORE_DIRS } from "core/util/ignore";
 import { deduplicateArray } from "core/util";
 import { getParserForFile } from "core/util/treeSitter";
 import * as vscode from "vscode";

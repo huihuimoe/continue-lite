@@ -24,23 +24,16 @@ import {
   Completion,
   CompletionCreateParamsNonStreaming,
   CompletionCreateParamsStreaming,
-  CreateEmbeddingResponse,
-  EmbeddingCreateParams,
   Model,
 } from "openai/resources/index";
 
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { fromStatic } from "@aws-sdk/token-providers";
 import { BedrockConfig } from "../types.js";
-import { chatChunk, chatChunkFromDelta, embedding, rerank } from "../util.js";
+import { chatChunk, chatChunkFromDelta } from "../util.js";
 import { safeParseArgs } from "../util/parseArgs.js";
 import { parseDataUrl } from "../util/url.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 
 // Utility function to get or generate UUID for prompt caching
 function getSecureID(): string {
@@ -587,130 +580,6 @@ export class BedrockApi implements BaseLlmApi {
     body: FimCreateParamsStreaming,
   ): AsyncGenerator<ChatCompletionChunk> {
     throw new Error("Bedrock does not support FIM directly");
-  }
-
-  private async getInvokeModelResponseBody(model: string, jsonBody: object) {
-    const payload = {
-      body: JSON.stringify(jsonBody),
-      modelId: model,
-      accept: "*/*",
-      contentType: "application/json",
-    };
-    const command = new InvokeModelCommand(payload);
-    const client = await this.getClient();
-    const response = await client.send(command);
-    if (!response.body) {
-      throw new Error("No response body");
-    }
-    const decoder = new TextDecoder();
-    const decoded = decoder.decode(response.body);
-    return JSON.parse(decoded);
-  }
-
-  private getEmbedTexts(body: EmbeddingCreateParams): string[] {
-    const texts: string[] = [];
-    if (typeof body.input === "string") {
-      texts.push(body.input);
-    } else if (body.input.length > 0) {
-      const firstVal = body.input[0];
-      if (Array.isArray(firstVal)) {
-        throw new Error("Unsupported embeddings type received: number[][]");
-      }
-      if (typeof firstVal === "string") {
-        texts.push(...(body.input as string[]));
-      } else {
-        throw new Error("Unsupported embeddings type received: number[]");
-      }
-    }
-    return texts;
-  }
-
-  async embed(body: EmbeddingCreateParams): Promise<CreateEmbeddingResponse> {
-    const texts = this.getEmbedTexts(body);
-
-    let embeddings: number[][];
-    if (body.model.startsWith("cohere")) {
-      const payload = {
-        texts,
-        input_type: "search_document",
-        truncate: "END",
-      };
-      const output = await this.getInvokeModelResponseBody(body.model, payload);
-      embeddings = [output.embedding];
-    } else if (body.model.startsWith("amazon.titan-embed")) {
-      embeddings = await Promise.all(
-        texts.map(async (text) => {
-          const payload = {
-            inputText: text,
-          };
-          const output = await this.getInvokeModelResponseBody(
-            body.model,
-            payload,
-          );
-          return output.embeddings || [];
-        }),
-      );
-    } else {
-      throw new Error(`Unsupported model: ${body.model}`);
-    }
-
-    return embedding({
-      data: embeddings,
-      model: body.model,
-      usage: {
-        prompt_tokens: 0,
-        total_tokens: 0,
-      },
-    });
-  }
-
-  async rerank(body: RerankCreateParams): Promise<CreateRerankResponse> {
-    if (!body.query || !body.documents.length) {
-      throw new Error("Query and chunks must not be empty");
-    }
-
-    // Base payload for both models
-    const payload: any = {
-      query: body.query,
-      documents: body.documents,
-      top_n: body.top_k ?? body.documents.length,
-    };
-
-    // Add api_version for Cohere model
-    if (body.model.startsWith("cohere.rerank")) {
-      payload.api_version = 2;
-    }
-
-    try {
-      const responseBody = await this.getInvokeModelResponseBody(
-        body.model,
-        payload,
-      );
-      const scores = responseBody.results
-        .sort((a: any, b: any) => a.index - b.index)
-        .map((result: any) => result.relevance_score);
-
-      return rerank({
-        model: body.model,
-        usage: {
-          total_tokens: 0,
-        },
-        data: scores,
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        if ("code" in error) {
-          // AWS SDK specific errors
-          throw new Error(
-            `AWS Bedrock rerank error (${(error as any).code}): ${error.message}`,
-          );
-        }
-        throw new Error(`Error in BedrockReranker.rerank: ${error.message}`);
-      }
-      throw new Error(
-        "Error in BedrockReranker.rerank: Unknown error occurred",
-      );
-    }
   }
 
   list(): Promise<Model[]> {

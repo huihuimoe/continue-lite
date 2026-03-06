@@ -3,9 +3,8 @@ import {
   ContextItemWithId,
   RuleMetadata,
   RuleWithSource,
-  ToolResultChatMessage,
-  UserChatMessage,
 } from "../..";
+import type { ToolResultChatMessage, UserChatMessage } from "../chatTypes";
 import { renderChatMessage } from "../../util/messageContent";
 import { getCleanUriPath } from "../../util/uri";
 import { extractContentFromCodeBlock } from "../utils/extractContentFromCodeBlocks";

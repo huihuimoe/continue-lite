@@ -11,7 +11,7 @@ import {
 } from "../../autocomplete/util/types";
 import { ConfigHandler } from "../../config/ConfigHandler";
 import { IDE, ILLM } from "../../index";
-import { isSecurityConcern } from "../../indexing/ignore";
+import { isSecurityConcern } from "../../util/ignore";
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../util/parameters";
 
 /**
@@ -73,7 +73,7 @@ export const getAutocompleteContext = async (
   if (autocompleteModel) {
     if (typeof autocompleteModel === "string") {
       // Try to find the model in config first
-      const foundModel = config.modelsByRole.autocomplete.find(
+      const foundModel = (config.modelsByRole.autocomplete ?? []).find(
         (m) => m.title === autocompleteModel,
       );
       if (foundModel) {

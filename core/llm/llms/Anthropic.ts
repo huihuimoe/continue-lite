@@ -1,5 +1,4 @@
 import {
-  Tool as AnthropicTool,
   ContentBlockParam,
   MessageCreateParams,
   MessageParam,
@@ -22,11 +21,9 @@ import {
   CompletionOptions,
   LLMOptions,
   MessageContent,
-  Tool,
-  ToolCallDelta,
   Usage,
 } from "../../index.js";
-import { safeParseToolCallArgs } from "../../tools/parseArgs.js";
+import { safeParseToolCallArgs, type ToolCallDelta } from "../tooling.js";
 import { renderChatMessage, stripImages } from "../../util/messageContent.js";
 import { extractBase64FromDataUrl } from "../../util/url.js";
 import { DEFAULT_REASONING_TOKENS } from "../constants.js";
@@ -43,21 +40,21 @@ class Anthropic extends BaseLLM {
     apiBase: "https://api.anthropic.com/v1/",
   };
 
-  private convertToolToAnthropicTool(tool: Tool): AnthropicTool {
-    return {
-      name: tool.function.name,
-      description: tool.function.description,
-      input_schema: (tool.function.parameters as AnthropicTool.InputSchema) ?? {
-        // TODO unsafe tool.function.parameters casting
-        type: "object",
-      },
-    };
-  }
-
   // Public for use within VertexAI
   public convertArgs(
     options: CompletionOptions,
   ): Omit<MessageCreateParams, "messages"> {
+    const tools = ((options as any).tools ?? [])
+      .filter((tool: any) => tool?.type === "function" && tool.function?.name)
+      .map((tool: any) => ({
+        name: tool.function.name,
+        description: tool.function.description,
+        input_schema: tool.function.parameters ?? {
+          type: "object",
+          properties: {},
+        },
+      }));
+
     const finalOptions = {
       top_k: options.topK,
       top_p: options.topP,
@@ -66,7 +63,6 @@ class Anthropic extends BaseLLM {
       model: options.model === "claude-2" ? "claude-2.1" : options.model,
       stop_sequences: options.stop?.filter((x) => x.trim() !== ""),
       stream: options.stream ?? true,
-      tools: options.tools?.map(this.convertToolToAnthropicTool),
       thinking: options.reasoning
         ? {
             type: "enabled" as const,
@@ -74,12 +70,7 @@ class Anthropic extends BaseLLM {
               options.reasoningBudgetTokens ?? DEFAULT_REASONING_TOKENS,
           }
         : undefined,
-      tool_choice: options.toolChoice
-        ? {
-            type: "tool" as const,
-            name: options.toolChoice.function.name,
-          }
-        : undefined,
+      ...(tools.length > 0 ? { tools } : {}),
     };
 
     return finalOptions;

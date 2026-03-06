@@ -5,9 +5,8 @@ import {
   Prediction,
   RuleWithSource,
   StreamDiffLinesPayload,
-  ToolResultChatMessage,
-  UserChatMessage,
 } from "../";
+import type { ToolResultChatMessage, UserChatMessage } from "../llm/chatTypes";
 import {
   filterCodeBlockLines,
   filterEnglishLinesAtEnd,

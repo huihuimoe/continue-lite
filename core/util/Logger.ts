@@ -1,11 +1,12 @@
 import winston from "winston";
-import { captureException } from "./sentry/SentryLogger";
 
 class LoggerClass {
   private static instance: LoggerClass;
   private winston: winston.Logger;
 
   private constructor() {
+    const isBinaryRuntime = process.env.IS_BINARY === "true";
+
     this.winston = winston.createLogger({
       level: "info",
       format: winston.format.combine(
@@ -28,8 +29,7 @@ class LoggerClass {
               }),
             ]
           : []),
-        // Normal console.log behavior
-        new winston.transports.Console(),
+        ...(!isBinaryRuntime ? [new winston.transports.Console()] : []),
       ],
     });
   }
@@ -76,10 +76,6 @@ class LoggerClass {
     }
 
     this.winston.error(errorMessage, context);
-
-    if (this.shouldSendToSentry() && error instanceof Error) {
-      captureException(error, context);
-    }
   }
 }
 

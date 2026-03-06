@@ -2,6 +2,7 @@ import { ModelConfig } from "@continuedev/config-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ContinueConfig, ILLMLogger } from "../..";
+import { controlPlaneSettingsSchema } from "../../control-plane/schema";
 import { llmsFromModelConfig } from "./models";
 
 // Mock the LLM classes
@@ -56,8 +57,6 @@ describe("llmsFromModelConfig requestOptions merging", () => {
         },
         proxy: "global-proxy",
       },
-      contextProviders: [],
-      mcpServerStatuses: [],
       rules: [],
       selectedModelByRole: {
         apply: null,
@@ -79,8 +78,6 @@ describe("llmsFromModelConfig requestOptions merging", () => {
         summarize: [],
         subagent: [],
       },
-      slashCommands: [],
-      tools: [],
       allowAnonymousTelemetry: false,
     } as ContinueConfig;
     vi.clearAllMocks();
@@ -273,7 +270,7 @@ describe("llmsFromModelConfig requestOptions merging", () => {
       provider: "anthropic",
       model: "claude-3-5-sonnet-20241022",
       roles: ["chat", "summarize"],
-      capabilities: ["tool_use", "image_input"],
+      capabilities: ["image_input"],
       defaultCompletionOptions: {
         temperature: 0.7,
         maxTokens: 1000,
@@ -297,7 +294,6 @@ describe("llmsFromModelConfig requestOptions merging", () => {
     expect(llm.title).toBe("test-anthropic");
     expect(llm.completionOptions?.temperature).toBe(0.7);
     expect(llm.completionOptions?.maxTokens).toBe(1000);
-    expect(llm.capabilities?.tools).toBe(true);
     expect(llm.capabilities?.uploadImage).toBe(true);
 
     // Should have merged requestOptions
@@ -353,5 +349,98 @@ describe("llmsFromModelConfig requestOptions merging", () => {
       Accept: "application/json", // from model (overrides config)
       "X-Model-Specific": "true", // from model
     });
+  });
+
+  it("loads legacy embed and rerank config without runtime embed bridge fields", async () => {
+    const model: ModelConfig = {
+      name: "legacy-embed-rerank",
+      provider: "openai",
+      model: "text-embedding-3-large",
+      roles: ["embed", "rerank"],
+      embedOptions: {
+        maxBatchSize: 64,
+        maxChunkSize: 2048,
+      },
+    };
+
+    const result = await llmsFromModelConfig({
+      model,
+      uniqueId: "legacy-compat-id",
+      llmLogger: mockLLMLogger,
+      config: mockConfig,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      title: "legacy-embed-rerank",
+    });
+    expect((result[0] as any).maxEmbeddingBatchSize).toBeUndefined();
+    expect((result[0] as any).maxEmbeddingChunkSize).toBeUndefined();
+  });
+
+  it("accepts legacy control-plane embeddings and reranker settings", () => {
+    const result = controlPlaneSettingsSchema.safeParse({
+      models: [
+        {
+          title: "chat",
+          provider: "openai",
+          model: "gpt-4o-mini",
+        },
+      ],
+      tabAutocompleteModel: {
+        title: "autocomplete",
+        provider: "openai",
+        model: "gpt-4o-mini",
+      },
+      embeddingsModel: {
+        provider: "openai",
+        model: "text-embedding-3-large",
+        apiKey: "legacy-key",
+      },
+      reranker: {
+        name: "cohere",
+        params: {
+          model: "rerank-english-v3.0",
+        },
+      },
+      analytics: {},
+      devData: {},
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts opaque compatibility payloads for control-plane embeddingsModel and reranker", () => {
+    const result = controlPlaneSettingsSchema.safeParse({
+      models: [
+        {
+          title: "chat",
+          provider: "openai",
+          model: "gpt-4o-mini",
+        },
+      ],
+      tabAutocompleteModel: {
+        title: "autocomplete",
+        provider: "openai",
+        model: "gpt-4o-mini",
+      },
+      embeddingsModel: {
+        legacyProvider: "custom-legacy-provider",
+        requestOptions: {
+          timeout: "not-a-number-anymore",
+        },
+      },
+      reranker: {
+        legacyName: "custom-legacy-reranker",
+        params: {
+          threshold: "0.25",
+          fallback: true,
+        },
+      },
+      analytics: {},
+      devData: {},
+    });
+
+    expect(result.success).toBe(true);
   });
 });

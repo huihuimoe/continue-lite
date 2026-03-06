@@ -9,7 +9,7 @@ import { ControlPlaneProxyInfo } from "../../../control-plane/analytics/IAnalyti
 import { Telemetry } from "../../../util/posthog.js";
 import OpenAI from "../OpenAI.js";
 
-import type { Chunk, LLMOptions } from "../../../index.js";
+import type { LLMOptions } from "../../../index.js";
 import { LLMConfigurationStatuses } from "../../constants.js";
 import { LlmApiRequestType } from "../../openaiTypeConverters.js";
 
@@ -52,9 +52,7 @@ class ContinueProxy extends OpenAI {
   }
 
   static providerName = "continue-proxy";
-  static defaultOptions: Partial<LLMOptions> = {
-    useLegacyCompletionsEndpoint: false,
-  };
+  static defaultOptions: Partial<LLMOptions> = {};
 
   get underlyingProviderName(): string {
     const { provider } = parseProxyModelName(this.model);
@@ -129,27 +127,6 @@ class ContinueProxy extends OpenAI {
       return false;
     }
     return true;
-  }
-
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    const url = new URL("rerank", this.apiBase);
-    const resp = await this.fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-        "user-agent": this._getUserAgent(),
-      },
-      body: JSON.stringify({
-        query,
-        documents: chunks.map((chunk) => chunk.content),
-        model: this.model,
-        ...this.extraBodyProperties(),
-      }),
-    });
-    const data: any = await resp.json();
-    const results = data.data.sort((a: any, b: any) => a.index - b.index);
-    return results.map((result: any) => result.relevance_score);
   }
 }
 

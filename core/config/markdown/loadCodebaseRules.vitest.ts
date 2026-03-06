@@ -1,11 +1,11 @@
 import { markdownToRule } from "@continuedev/config-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IDE } from "../..";
-import { walkDirs } from "../../indexing/walkDir";
+import { walkDirs } from "../../util/walkDir";
 import { loadCodebaseRules } from "./loadCodebaseRules";
 
 // Mock dependencies
-vi.mock("../../indexing/walkDir", () => ({
+vi.mock("../../util/walkDir", () => ({
   walkDirs: vi.fn(),
 }));
 

@@ -71,7 +71,6 @@ class FileSystemIde implements IDE {
 
   async getIdeSettings(): Promise<IdeSettings> {
     return {
-      remoteConfigServerUrl: undefined,
       remoteConfigSyncPeriod: 60,
       userToken: "",
       continueTestEnvironment: "none",
@@ -262,17 +261,6 @@ class FileSystemIde implements IDE {
 
   getPinnedFiles(): Promise<string[]> {
     return Promise.resolve([]);
-  }
-
-  async getSearchResults(query: string, maxResults?: number): Promise<string> {
-    return "";
-  }
-
-  async getFileResults(
-    pattern: string,
-    maxResults?: number,
-  ): Promise<string[]> {
-    return [];
   }
 
   async getProblems(fileUri?: string | undefined): Promise<Problem[]> {

@@ -5,7 +5,6 @@ import {
   CompiledMessagesResult,
   MessageContent,
   MessagePart,
-  Tool,
 } from "../index.js";
 import { autodetectTemplateType } from "./autodetect.js";
 import {
@@ -129,51 +128,6 @@ function countTokens(
     baseTokens = encoding.encode(content ?? "", "all", []).length;
   }
   return getAdjustedTokenCountFromModel(baseTokens, modelName);
-}
-
-// https://community.openai.com/t/how-to-calculate-the-tokens-when-using-function-call/266573/10
-function countToolsTokens(tools: Tool[], modelName: string): number {
-  const count = (value: string) =>
-    encodingForModel(modelName).encode(value).length;
-
-  let numTokens = 12;
-
-  for (const tool of tools) {
-    let functionTokens = count(tool.function.name);
-    if (tool.function.description) {
-      functionTokens += count(tool.function.description);
-    }
-    const props = tool.function.parameters?.properties;
-    if (props) {
-      for (const key in props) {
-        functionTokens += count(key);
-        const fields = props[key];
-        if (fields) {
-          const fieldType = fields["type"];
-          const fieldDesc = fields["description"];
-          const fieldEnum = fields["enum"];
-          if (fieldType && typeof fieldType === "string") {
-            functionTokens += 2;
-            functionTokens += count(fieldType);
-          }
-          if (fieldDesc && typeof fieldDesc === "string") {
-            functionTokens += 2;
-            functionTokens += count(fieldDesc);
-          }
-          if (fieldEnum && Array.isArray(fieldEnum)) {
-            functionTokens -= 3;
-            for (const e of fieldEnum) {
-              functionTokens += 3;
-              functionTokens += typeof e === "string" ? count(e) : 5;
-            }
-          }
-        }
-      }
-    }
-    numTokens += functionTokens;
-  }
-
-  return numTokens + 12;
 }
 
 function countChatMessageTokens(
@@ -386,7 +340,7 @@ function pruneRawPromptFromTop(
  *
  * Core Guidelines:
  * - Always preserve the last user/tool message sequence (including any associated assistant message with tool calls)
- * - Always preserve the system message and tools
+ * - Always preserve the system message
  * - Never allow orphaned tool responses without their corresponding tool calls
  * - Remove older messages first when pruning is necessary
  * - Maintain conversation coherence by flattening adjacent similar messages
@@ -396,7 +350,7 @@ function pruneRawPromptFromTop(
  * 2. Extract and preserve system message
  * 3. Filter out empty messages and trailing non-user/tool messages
  * 4. Extract the complete tool sequence from the end (user message or assistant + tool responses)
- * 5. Calculate token requirements for non-negotiable elements (system, tools, last sequence)
+ * 5. Calculate token requirements for non-negotiable elements (system, last sequence)
  * 6. Prune older messages until within available token budget
  * 7. Reassemble with proper ordering and flatten adjacent similar messages
  *
@@ -406,7 +360,6 @@ function pruneRawPromptFromTop(
  *   - contextLength: Maximum context length supported by the model
  *   - maxTokens: Maximum tokens to reserve for the response
  *   - supportsImages: Whether the model supports image content
- *   - tools: Optional array of available tools
  * @returns Processed array of chat messages that fit within context constraints
  * @throws Error if non-negotiable elements exceed available context
  */
@@ -416,14 +369,12 @@ function compileChatMessages({
   knownContextLength,
   maxTokens,
   supportsImages,
-  tools,
 }: {
   modelName: string;
   msgs: ChatMessage[];
   knownContextLength: number | undefined;
   maxTokens: number;
   supportsImages: boolean;
-  tools?: Tool[];
 }): CompiledMessagesResult {
   let didPrune = false;
 
@@ -463,12 +414,6 @@ function compileChatMessages({
     systemMsgTokens = countChatMessageTokens(modelName, systemMsg);
   }
 
-  // Tools
-  let toolTokens = 0;
-  if (tools) {
-    toolTokens = countToolsTokens(tools, modelName);
-  }
-
   const contextLength = knownContextLength ?? DEFAULT_PRUNING_LENGTH;
   const countingSafetyBuffer = getTokenCountingBufferSafety(contextLength);
   const minOutputTokens = Math.min(MIN_RESPONSE_TOKENS, maxTokens);
@@ -480,19 +425,17 @@ function compileChatMessages({
   inputTokensAvailable -= minOutputTokens;
 
   // Non-negotiable messages
-  inputTokensAvailable -= toolTokens;
   inputTokensAvailable -= systemMsgTokens;
   inputTokensAvailable -= lastMessagesTokens;
 
   // Make sure there's enough context for the non-excludable items
   if (knownContextLength !== undefined && inputTokensAvailable < 0) {
     throw new Error(
-      `Not enough context available to include the system message, last user message, and tools.
+      `Not enough context available to include the system message and last user message.
         There must be at least ${minOutputTokens} tokens remaining for output.
         Request had the following token counts:
         - contextLength: ${knownContextLength}
         - counting safety buffer: ${countingSafetyBuffer}
-        - tools: ~${toolTokens}
         - system message: ~${systemMsgTokens}
         - max output tokens: ${maxTokens}`,
     );
@@ -529,8 +472,7 @@ function compileChatMessages({
   reassembled.push(...historyWithTokens.map(({ tokens, ...rest }) => rest));
   reassembled.push(...toolSequence);
 
-  const inputTokens =
-    currentTotal + systemMsgTokens + toolTokens + lastMessagesTokens;
+  const inputTokens = currentTotal + systemMsgTokens + lastMessagesTokens;
   const availableTokens =
     contextLength - countingSafetyBuffer - minOutputTokens;
   const contextPercentage = inputTokens / availableTokens;

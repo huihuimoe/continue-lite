@@ -46,12 +46,7 @@ import {
   openAiToolChoiceToAnthropicToolChoice,
   openaiToolToAnthropicTool,
 } from "./AnthropicUtils.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 
 export class AnthropicApi implements BaseLlmApi {
   apiBase: string = "https://api.anthropic.com/v1/";
@@ -484,16 +479,6 @@ export class AnthropicApi implements BaseLlmApi {
     body: FimCreateParamsStreaming,
     signal: AbortSignal,
   ): AsyncGenerator<ChatCompletionChunk> {
-    throw new Error("Method not implemented.");
-  }
-
-  async embed(
-    body: OpenAI.Embeddings.EmbeddingCreateParams,
-  ): Promise<OpenAI.Embeddings.CreateEmbeddingResponse> {
-    throw new Error("Method not implemented.");
-  }
-
-  async rerank(body: RerankCreateParams): Promise<CreateRerankResponse> {
     throw new Error("Method not implemented.");
   }
 

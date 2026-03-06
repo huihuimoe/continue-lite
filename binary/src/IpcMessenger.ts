@@ -18,8 +18,13 @@ class IPCMessengerBase<
   idListeners = new Map<string, (message: Message) => any>();
 
   private _handleLine(line: string) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine.startsWith("{")) {
+      return;
+    }
+
     try {
-      const msg: Message = JSON.parse(line);
+      const msg: Message = JSON.parse(trimmedLine);
       if (msg.messageType === undefined || msg.messageId === undefined) {
         throw new Error("Invalid message sent: " + JSON.stringify(msg));
       }
@@ -82,13 +87,7 @@ class IPCMessengerBase<
 
       // Call handler which is waiting for the response, nothing to return
       this.idListeners.get(msg.messageId)?.(msg);
-    } catch (e) {
-      let truncatedLine = line;
-      if (line.length > 200) {
-        truncatedLine =
-          line.substring(0, 100) + "..." + line.substring(line.length - 100);
-      }
-      console.error("Error parsing line: ", truncatedLine, e);
+    } catch (_e) {
       return;
     }
   }
@@ -97,7 +96,7 @@ class IPCMessengerBase<
 
   protected _handleData(data: Buffer) {
     const d = data.toString();
-    const lines = d.split(/\r\n/).filter((line) => line.trim() !== "");
+    const lines = d.split(/\r?\n/).filter((line) => line.trim() !== "");
     if (lines.length === 0) {
       return;
     }
@@ -225,21 +224,14 @@ export class CoreBinaryMessenger<
 
   constructor(private readonly subprocess: ChildProcessWithoutNullStreams) {
     super();
-    console.log("Setup");
     this.subprocess.stdout.on("data", (data) => {
-      console.log("[info] Received data from core:", data.toString() + "\n");
       this._handleData(data);
     });
-    this.subprocess.stdout.on("close", () => {
-      console.log("[info] Continue core exited");
-    });
-    this.subprocess.stdin.on("close", () => {
-      console.log("[info] Continue core exited");
-    });
+    this.subprocess.stdout.on("close", () => {});
+    this.subprocess.stdin.on("close", () => {});
   }
 
   _sendMsg(msg: Message) {
-    console.log("[info] Sending message to core:", msg);
     const d = JSON.stringify(msg);
     this.subprocess.stdin.write(d + "\r\n");
   }

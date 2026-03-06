@@ -1,5 +1,4 @@
 import { NextEditProvider } from "core/nextEdit/NextEditProvider";
-import { NextEditOutcome } from "core/nextEdit/types";
 // @ts-ignore
 import svgBuilder from "svg-builder";
 import * as vscode from "vscode";
@@ -60,12 +59,6 @@ const SVG_CONFIG = {
   },
 } as const;
 
-export interface CompletionDataForAfterJump {
-  completionId: string;
-  outcome: NextEditOutcome;
-  currentPosition: vscode.Position;
-}
-
 /**
  * This is how we handle jumps and manage decoration object lifetime.
  * There are mainly three states the user can be in: not jumping, jumping in progress, and just jumped.
@@ -84,7 +77,6 @@ export class JumpManager {
 
   private _jumpInProgress: boolean = false;
   private _jumpAccepted: boolean = false;
-  private _completionAfterJump: CompletionDataForAfterJump | null = null;
   private _oldCursorPosition: vscode.Position | undefined;
 
   private constructor() {
@@ -297,7 +289,7 @@ export class JumpManager {
     jumpPosition: vscode.Position,
   ) {
     // Clean up any existing decoration beforehand.
-    await this.clearJumpDecoration();
+    await this.clearJumpDecoration(false);
 
     // Create a decoration for jump.
     if (!this._jumpDecoration) {
@@ -327,7 +319,7 @@ export class JumpManager {
     await this.registerKeyListeners(editor, jumpPosition);
   }
 
-  private async clearJumpDecoration() {
+  private async clearJumpDecoration(resetJumpState: boolean = true) {
     if (this._jumpDecoration) {
       this._jumpDecoration.dispose();
       this._jumpDecoration = undefined;
@@ -343,6 +335,10 @@ export class JumpManager {
       false,
     );
     this._jumpDecorationVisible = false;
+
+    if (resetJumpState) {
+      this._jumpInProgress = false;
+    }
   }
 
   private async registerKeyListeners(
@@ -428,24 +424,12 @@ export class JumpManager {
     return this._jumpAccepted;
   }
 
-  setCompletionAfterJump(completionData: CompletionDataForAfterJump): void {
-    this._completionAfterJump = completionData;
-  }
-
-  clearCompletionAfterJump(): void {
-    this._completionAfterJump = null;
-  }
-
-  get completionAfterJump() {
-    return this._completionAfterJump;
-  }
-
   public registerSelectionChangeHandler(): void {
     const manager = SelectionChangeManager.getInstance();
 
     manager.registerListener(
       "jumpManager",
-      async (e, state) => {
+      async (_e, state) => {
         if (state.jumpInProgress || state.jumpJustAccepted) {
           console.debug(
             "JumpManager: jump in progress or just accepted, preserving chain",

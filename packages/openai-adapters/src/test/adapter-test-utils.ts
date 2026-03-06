@@ -292,51 +292,5 @@ export const createAdapterTests = (testConfig: AdapterTestConfig) => {
         ],
       });
     });
-
-    test("embed should send a valid request", async () => {
-      await runAdapterTest({
-        config: testConfig.config,
-        methodToTest: "embed",
-        params: [
-          {
-            model: "text-embedding-ada-002",
-            input: ["Hello", "World"],
-          },
-        ],
-        expectedRequest: {
-          url: `${testConfig.expectedApiBase}embeddings`,
-          method: "POST",
-          headers: {
-            ...testConfig.customHeaders,
-          },
-          body: {
-            model: "text-embedding-ada-002",
-            input: ["Hello", "World"],
-            encoding_format: "base64",
-            ...testConfig.customBodyOptions,
-          },
-        },
-        mockResponse: {
-          object: "list",
-          data: [
-            {
-              object: "embedding",
-              embedding: [0.1, 0.2, 0.3],
-              index: 0,
-            },
-            {
-              object: "embedding",
-              embedding: [0.4, 0.5, 0.6],
-              index: 1,
-            },
-          ],
-          model: "text-embedding-ada-002",
-          usage: {
-            prompt_tokens: 6,
-            total_tokens: 6,
-          },
-        },
-      });
-    });
   });
 };

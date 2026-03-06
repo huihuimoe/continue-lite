@@ -3,21 +3,24 @@ import os from "os";
 import path from "path";
 import { localPathOrUriToPath, localPathToUri } from "../util/pathToUri";
 
-// Want this outside of the git repository so we can change branches in tests
-export const TEST_DIR_PATH = path.join(os.tmpdir(), "testWorkspaceDir");
+const TEST_WORKER_ID =
+  process.env.VITEST_POOL_ID ??
+  process.env.VITEST_WORKER_ID ??
+  process.env.JEST_WORKER_ID ??
+  "main";
+export const TEST_DIR_PATH = path.join(
+  os.tmpdir(),
+  `testWorkspaceDir-${TEST_WORKER_ID}-${process.pid}`,
+);
 export const TEST_DIR = localPathToUri(TEST_DIR_PATH); // URI
 
 export function setUpTestDir() {
-  if (fs.existsSync(TEST_DIR_PATH)) {
-    fs.rmSync(TEST_DIR_PATH, { recursive: true });
-  }
-  fs.mkdirSync(TEST_DIR_PATH);
+  fs.rmSync(TEST_DIR_PATH, { recursive: true, force: true });
+  fs.mkdirSync(TEST_DIR_PATH, { recursive: true });
 }
 
 export function tearDownTestDir() {
-  if (fs.existsSync(TEST_DIR_PATH)) {
-    fs.rmSync(TEST_DIR_PATH, { recursive: true });
-  }
+  fs.rmSync(TEST_DIR_PATH, { recursive: true, force: true });
 }
 
 /*

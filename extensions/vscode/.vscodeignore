@@ -4,7 +4,15 @@ build/**
 src/**
 .gitignore
 .yarnrc
+.npmrc
 vsc-extension-quickstart.md
+CONTRIBUTING.md
+codemap.md
+rules.md
+e2e.log
+entitlements.plist
+settings.json
+tsconfig.e2e.json
 **/tsconfig.json
 **/.eslintrc.json
 **/*.map
@@ -17,15 +25,40 @@ node_modules/**
 **/__pycache__
 
 manual-testing-sandbox
+.continueignore
 esbuild.js
 importMetaUrl.js
 scripts
 e2e
 
+gui/**
+media/**
+!media/icon.png
+models/**
+textmate-syntaxes/**
+continue_tutorial.py
+config_schema.json
+config-yaml-schema.json
+continue_rc_schema.json
+
 server/exe/**
+
 !out/node_modules/**
+!out/node_modules/@vscode/ripgrep/**
+!out/node_modules/workerpool/**
 !node_modules/@vscode/ripgrep/bin/rg
+!node_modules/@vscode/ripgrep/bin/rg.exe
 
 # Do not ship esbuild in VSIX
 out/node_modules/esbuild/**
 out/node_modules/@esbuild/**
+out/node_modules/workerpool/dist/**
+out/node_modules/workerpool/types/**
+out/node_modules/workerpool/HISTORY.md
+out/node_modules/workerpool/README.md
+out/node_modules/@vscode/ripgrep/.vscode/**
+out/node_modules/@vscode/ripgrep/build/**
+out/node_modules/@vscode/ripgrep/jsconfig.json
+out/node_modules/@vscode/ripgrep/lib/**
+out/node_modules/@vscode/ripgrep/README.md
+out/node_modules/@vscode/ripgrep/SECURITY.md

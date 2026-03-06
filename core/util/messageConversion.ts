@@ -6,16 +6,14 @@
  */
 
 import type { ChatCompletionMessageParam } from "openai/resources.mjs";
+import type { ChatHistoryItem } from "../index.js";
 import type {
   AssistantChatMessage,
-  ChatHistoryItem,
   ChatMessage,
-  ContextItemWithId,
   MessageContent,
   ToolCall,
-  ToolCallState,
-  ToolStatus,
-} from "../index.js";
+} from "../llm/chatTypes.js";
+import type { ContextItemWithId } from "../index.js";
 
 /**
  * Convert ChatCompletionMessageParam to ChatMessage
@@ -201,50 +199,11 @@ function convertFromMessageContent(
 export function createHistoryItem(
   message: ChatMessage,
   contextItems: ContextItemWithId[] = [],
-  toolCallStates?: ToolCallState[],
 ): ChatHistoryItem {
   return {
     message,
     contextItems,
-    ...(toolCallStates && { toolCallStates }),
   };
-}
-
-/**
- * Handle tool result message by updating the corresponding tool call state
- */
-function handleToolResult(
-  unifiedMessage: ChatMessage & { role: "tool" },
-  pendingToolCalls: Map<string, ToolCall>,
-  historyItems: ChatHistoryItem[],
-): void {
-  const toolCall = pendingToolCalls.get(unifiedMessage.toolCallId);
-  if (!toolCall) return;
-
-  // Add tool result as context to the previous assistant message
-  let lastAssistantIndex = -1;
-  for (let i = historyItems.length - 1; i >= 0; i--) {
-    if (historyItems[i].message.role === "assistant") {
-      lastAssistantIndex = i;
-      break;
-    }
-  }
-  if (lastAssistantIndex < 0) return;
-  if (!historyItems[lastAssistantIndex].toolCallStates) return;
-
-  const toolState = historyItems[lastAssistantIndex].toolCallStates?.find(
-    (ts: ToolCallState) => ts.toolCallId === unifiedMessage.toolCallId,
-  );
-
-  if (toolState) {
-    toolState.output = [
-      {
-        content: unifiedMessage.content as string,
-        name: `Tool Result: ${toolCall.function.name}`,
-        description: "Tool execution result",
-      },
-    ];
-  }
 }
 
 /**
@@ -254,42 +213,15 @@ export function convertToUnifiedHistory(
   messages: ChatCompletionMessageParam[],
 ): ChatHistoryItem[] {
   const historyItems: ChatHistoryItem[] = [];
-  const pendingToolCalls: Map<string, ToolCall> = new Map();
 
   for (const message of messages) {
     const unifiedMessage = convertToUnifiedMessage(message);
 
-    if (unifiedMessage.role === "assistant" && unifiedMessage.toolCalls) {
-      // Store tool calls for matching with results
-      const toolCallStates: ToolCallState[] = unifiedMessage.toolCalls.map(
-        (tc: any) => {
-          const toolCall: ToolCall = {
-            id: tc.id || "",
-            type: "function",
-            function: {
-              name: tc.function?.name || "",
-              arguments: tc.function?.arguments || "",
-            },
-          };
-          pendingToolCalls.set(toolCall.id, toolCall);
-
-          return {
-            toolCallId: toolCall.id,
-            toolCall,
-            status: "done" as ToolStatus, // Historical calls are complete
-            parsedArgs: tryParseJson(toolCall.function.arguments),
-          };
-        },
-      );
-
-      historyItems.push(createHistoryItem(unifiedMessage, [], toolCallStates));
-    } else if (unifiedMessage.role === "tool") {
-      // Tool result - handle separately to reduce nesting
-      handleToolResult(unifiedMessage, pendingToolCalls, historyItems);
-      // Don't add tool messages as separate history items
-    } else {
-      historyItems.push(createHistoryItem(unifiedMessage));
+    if (unifiedMessage.role === "tool") {
+      continue;
     }
+
+    historyItems.push(createHistoryItem(unifiedMessage));
   }
 
   return historyItems;
@@ -326,25 +258,6 @@ export function convertFromUnifiedHistory(
     }
 
     messages.push(baseMessage);
-
-    // Add tool result messages if there are completed tool calls, and fallback when tool output is missing
-    if (item.toolCallStates) {
-      for (const toolState of item.toolCallStates) {
-        if (toolState.output && toolState.output.length > 0) {
-          messages.push({
-            role: "tool",
-            content: toolState.output.map((o: any) => o.content).join("\n"),
-            tool_call_id: toolState.toolCallId,
-          });
-        } else {
-          messages.push({
-            role: "tool",
-            content: "Tool cancelled",
-            tool_call_id: toolState.toolCallId,
-          });
-        }
-      }
-    }
   }
 
   return messages;
@@ -380,26 +293,27 @@ export function convertFromUnifiedHistoryWithSystemMessage(
 export function extractToolCallInfo(historyItem: ChatHistoryItem): {
   hasToolCalls: boolean;
   toolCalls?: ToolCall[];
-  toolStates?: ToolCallState[];
 } {
-  const hasToolCalls = !!(
-    historyItem.toolCallStates && historyItem.toolCallStates.length > 0
-  );
+  const toolCalls =
+    historyItem.message.role === "assistant"
+      ? historyItem.message.toolCalls?.map(normalizeToolCall)
+      : undefined;
 
   return {
-    hasToolCalls,
-    toolCalls: historyItem.toolCallStates?.map((ts: any) => ts.toolCall),
-    toolStates: historyItem.toolCallStates,
+    hasToolCalls: !!(toolCalls && toolCalls.length > 0),
+    toolCalls,
   };
 }
 
-/**
- * Helper to safely parse JSON
- */
-function tryParseJson(str: string): any {
-  try {
-    return JSON.parse(str);
-  } catch {
-    return str;
-  }
+function normalizeToolCall(
+  toolCall: NonNullable<AssistantChatMessage["toolCalls"]>[number],
+): ToolCall {
+  return {
+    id: toolCall.id ?? "",
+    type: "function",
+    function: {
+      name: toolCall.function?.name ?? "",
+      arguments: toolCall.function?.arguments ?? "",
+    },
+  };
 }

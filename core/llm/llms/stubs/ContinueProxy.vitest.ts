@@ -144,46 +144,6 @@ describe("ContinueProxy", () => {
     vi.clearAllMocks();
   });
 
-  test("rerank should send a valid request", async () => {
-    const proxy = new ContinueProxy({
-      apiKey: "test-api-key",
-      model: "test-model",
-      apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-    });
-
-    await runLlmTest({
-      llm: proxy,
-      methodToTest: "rerank",
-      params: [
-        "test query",
-        [{ content: "document1" }, { content: "document2" }],
-      ],
-      expectedRequest: {
-        url: "https://proxy.continue.dev/model-proxy/v1/rerank",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer test-api-key",
-        },
-        body: {
-          query: "test query",
-          documents: ["document1", "document2"],
-          model: "test-model",
-          continueProperties: {
-            apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-            orgScopeId: null,
-          },
-        },
-      },
-      mockResponse: {
-        data: [
-          { index: 0, relevance_score: 0.9 },
-          { index: 1, relevance_score: 0.1 },
-        ],
-      },
-    });
-  });
-
   test("streamChat should send a valid request", async () => {
     const proxy = new ContinueProxy({
       apiKey: "test-api-key",
@@ -375,40 +335,6 @@ describe("ContinueProxy", () => {
     });
   });
 
-  test("embed should send a valid request", async () => {
-    const proxy = new ContinueProxy({
-      apiKey: "test-api-key",
-      model: "test-model",
-      apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-    });
-
-    await runLlmTest({
-      llm: proxy,
-      methodToTest: "embed",
-      params: [["text to embed", "another text"]],
-      expectedRequest: {
-        url: "https://proxy.continue.dev/model-proxy/v1/embeddings",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer test-api-key",
-          "api-key": "test-api-key",
-        },
-        body: {
-          input: ["text to embed", "another text"],
-          model: "test-model",
-          continueProperties: {
-            apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-            orgScopeId: null,
-          },
-        },
-      },
-      mockResponse: {
-        data: [{ embedding: [0.1, 0.2, 0.3] }, { embedding: [0.4, 0.5, 0.6] }],
-      },
-    });
-  });
-
   test("listModels should send a valid request", async () => {
     const proxy = new ContinueProxy({
       apiKey: "test-api-key",
@@ -445,22 +371,22 @@ describe("ContinueProxy", () => {
 
       await runLlmTest({
         llm: proxy,
-        methodToTest: "rerank",
-        params: [
-          "test query",
-          [{ content: "document1" }, { content: "document2" }],
-        ],
+        methodToTest: "streamChat",
+        params: [[{ role: "user", content: "hello" }]],
         expectedRequest: {
-          url: "https://my-proxy.company.com/model-proxy/v1/rerank",
+          url: "https://my-proxy.company.com/model-proxy/v1/chat/completions",
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer test-api-key",
+            "api-key": "test-api-key",
+            "x-continue-unique-id": "NOT_UNIQUE",
           },
           body: {
-            query: "test query",
-            documents: ["document1", "document2"],
             model: "test-model",
+            messages: [{ role: "user", content: "hello" }],
+            max_tokens: 4096,
+            stream: true,
             continueProperties: {
               apiBase: undefined,
               apiKeyLocation: undefined,
@@ -470,12 +396,10 @@ describe("ContinueProxy", () => {
             },
           },
         },
-        mockResponse: {
-          data: [
-            { index: 0, relevance_score: 0.9 },
-            { index: 1, relevance_score: 0.1 },
-          ],
-        },
+        mockStream: [
+          '{"choices": [{"delta": {"content": "response"}}]}',
+          "[DONE]",
+        ],
       });
     });
 
@@ -535,19 +459,22 @@ describe("ContinueProxy", () => {
 
       await runLlmTest({
         llm: proxy,
-        methodToTest: "embed",
-        params: [["test text"]],
+        methodToTest: "streamChat",
+        params: [[{ role: "user", content: "hello" }]],
         expectedRequest: {
-          url: "https://proxy.continue.dev/model-proxy/v1/embeddings",
+          url: "https://proxy.continue.dev/model-proxy/v1/chat/completions",
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer test-api-key",
             "api-key": "test-api-key",
+            "x-continue-unique-id": "NOT_UNIQUE",
           },
           body: {
-            input: ["test text"],
             model: "test-model",
+            messages: [{ role: "user", content: "hello" }],
+            max_tokens: 4096,
+            stream: true,
             continueProperties: {
               apiBase: "https://proxy.continue.dev/model-proxy/v1/",
               apiKeyLocation: "env:OPENAI_API_KEY",
@@ -557,9 +484,10 @@ describe("ContinueProxy", () => {
             },
           },
         },
-        mockResponse: {
-          data: [{ embedding: [0.1, 0.2, 0.3] }],
-        },
+        mockStream: [
+          '{"choices": [{"delta": {"content": "response"}}]}',
+          "[DONE]",
+        ],
       });
     });
 
@@ -636,43 +564,6 @@ describe("ContinueProxy", () => {
   });
 
   describe("Edge cases", () => {
-    test("should handle empty chunks array for rerank", async () => {
-      const proxy = new ContinueProxy({
-        apiKey: "test-api-key",
-        model: "test-model",
-        apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-      });
-
-      await runLlmTest({
-        llm: proxy,
-        methodToTest: "rerank",
-        params: ["test query", []],
-        expectedRequest: {
-          url: "https://proxy.continue.dev/model-proxy/v1/rerank",
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer test-api-key",
-          },
-          body: {
-            query: "test query",
-            documents: [],
-            model: "test-model",
-            continueProperties: {
-              apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-              apiKeyLocation: undefined,
-              env: undefined,
-              envSecretLocations: undefined,
-              orgScopeId: null,
-            },
-          },
-        },
-        mockResponse: {
-          data: [],
-        },
-      });
-    });
-
     test("should handle complex chat messages", async () => {
       const proxy = new ContinueProxy({
         apiKey: "test-api-key",
@@ -718,41 +609,15 @@ describe("ContinueProxy", () => {
       });
     });
 
-    test("should handle single embedding chunk", async () => {
+    test("should not expose runtime embed/rerank methods", () => {
       const proxy = new ContinueProxy({
         apiKey: "test-api-key",
         model: "test-model",
         apiBase: "https://proxy.continue.dev/model-proxy/v1/",
       });
 
-      await runLlmTest({
-        llm: proxy,
-        methodToTest: "embed",
-        params: [["single text"]],
-        expectedRequest: {
-          url: "https://proxy.continue.dev/model-proxy/v1/embeddings",
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer test-api-key",
-            "api-key": "test-api-key",
-          },
-          body: {
-            input: ["single text"],
-            model: "test-model",
-            continueProperties: {
-              apiBase: "https://proxy.continue.dev/model-proxy/v1/",
-              apiKeyLocation: undefined,
-              env: undefined,
-              envSecretLocations: undefined,
-              orgScopeId: null,
-            },
-          },
-        },
-        mockResponse: {
-          data: [{ embedding: [0.1, 0.2, 0.3] }],
-        },
-      });
+      expect("embed" in (proxy as any)).toBe(false);
+      expect("rerank" in (proxy as any)).toBe(false);
     });
   });
 });

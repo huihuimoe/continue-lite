@@ -100,7 +100,7 @@ export class AutocompleteLoggingService {
       name: "autocomplete",
       data: {
         ...outcome,
-        useFileSuffix: true, // from outdated schema
+        useFileSuffix: true,
       },
     });
 

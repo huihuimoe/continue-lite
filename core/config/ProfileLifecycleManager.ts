@@ -8,7 +8,6 @@ import {
 import {
   BrowserSerializedContinueConfig,
   ContinueConfig,
-  IContextProvider,
   IDE,
 } from "../index.js";
 
@@ -66,18 +65,15 @@ export class ProfileLifecycleManager {
   }
 
   // Clear saved config and reload
-  async reloadConfig(
-    additionalContextProviders: IContextProvider[] = [],
-  ): Promise<ConfigResult<ContinueConfig>> {
+  async reloadConfig(): Promise<ConfigResult<ContinueConfig>> {
     this.savedConfigResult = undefined;
     this.savedBrowserConfigResult = undefined;
     this.pendingConfigPromise = undefined;
 
-    return this.loadConfig(additionalContextProviders, true);
+    return this.loadConfig(true);
   }
 
   async loadConfig(
-    additionalContextProviders: IContextProvider[],
     forceReload: boolean = false,
   ): Promise<ConfigResult<ContinueConfig>> {
     // If we already have a config, return it
@@ -120,13 +116,6 @@ export class ProfileLifecycleManager {
           };
         }
 
-        if (result.config) {
-          // Add registered context providers
-          result.config.contextProviders = (
-            result.config.contextProviders ?? []
-          ).concat(additionalContextProviders);
-        }
-
         resolve(result);
       })();
     });
@@ -138,12 +127,11 @@ export class ProfileLifecycleManager {
   }
 
   async getSerializedConfig(
-    additionalContextProviders: IContextProvider[],
   ): Promise<ConfigResult<BrowserSerializedContinueConfig>> {
     if (this.savedBrowserConfigResult) {
       return this.savedBrowserConfigResult;
     } else {
-      const result = await this.loadConfig(additionalContextProviders);
+      const result = await this.loadConfig();
       if (!result.config) {
         return {
           ...result,

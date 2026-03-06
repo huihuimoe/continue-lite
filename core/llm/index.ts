@@ -13,7 +13,6 @@ import { DataLogger } from "../data/log.js";
 import {
   CacheBehavior,
   ChatMessage,
-  Chunk,
   CompletionOptions,
   ILLM,
   ILLMInteractionLog,
@@ -28,7 +27,6 @@ import {
   RequestOptions,
   TabAutocompleteOptions,
   TemplateType,
-  ToolOverride,
   Usage,
 } from "../index.js";
 import { isLemonadeInstalled } from "../util/lemonadeHelper.js";
@@ -48,8 +46,6 @@ import {
 import {
   DEFAULT_ARGS,
   DEFAULT_CONTEXT_LENGTH,
-  DEFAULT_MAX_BATCH_SIZE,
-  DEFAULT_MAX_CHUNK_SIZE,
   DEFAULT_MAX_TOKENS,
   LLMConfigurationStatuses,
 } from "./constants.js";
@@ -66,7 +62,6 @@ import {
   toCompleteBody,
   toFimBody,
 } from "./openaiTypeConverters.js";
-import { applyToolOverrides } from "../tools/applyToolOverrides.js";
 
 export class LLMError extends Error {
   constructor(
@@ -128,8 +123,7 @@ export abstract class BaseLLM implements ILLM {
         this.apiBase?.includes("api.groq.com") ||
         this.apiBase?.includes("api.mistral.ai") ||
         this.apiBase?.includes(":1337") ||
-        this.apiBase?.includes("integrate.api.nvidia.com") ||
-        this._llmOptions.useLegacyCompletionsEndpoint?.valueOf() === false
+        this.apiBase?.includes("integrate.api.nvidia.com")
       ) {
         // Jan + Groq + Mistral don't support completions : (
         // Seems to be going out of style...
@@ -190,18 +184,10 @@ export abstract class BaseLLM implements ILLM {
   // For IBM watsonx
   deploymentId?: string;
 
-  // Embedding options
-  embeddingId: string;
-  maxEmbeddingChunkSize: number;
-  maxEmbeddingBatchSize: number;
-
   //URI to local block defining this LLM
   sourceFile?: string;
 
   isFromAutoDetect?: boolean;
-
-  /** Tool overrides for this model */
-  toolOverrides?: ToolOverride[];
 
   lastRequestId: string | undefined;
 
@@ -301,16 +287,9 @@ export abstract class BaseLLM implements ILLM {
 
     this.openaiAdapter = this.createOpenAiAdapter();
 
-    this.maxEmbeddingBatchSize =
-      options.maxEmbeddingBatchSize ?? DEFAULT_MAX_BATCH_SIZE;
-    this.maxEmbeddingChunkSize =
-      options.maxEmbeddingChunkSize ?? DEFAULT_MAX_CHUNK_SIZE;
-    this.embeddingId = `${this.constructor.name}::${this.model}::${this.maxEmbeddingChunkSize}`;
-
     this.autocompleteOptions = options.autocompleteOptions;
     this.sourceFile = options.sourceFile;
     this.isFromAutoDetect = options.isFromAutoDetect;
-    this.toolOverrides = options.toolOverrides;
   }
 
   get contextLength() {
@@ -980,7 +959,6 @@ export abstract class BaseLLM implements ILLM {
       knownContextLength: this._contextLength,
       maxTokens: completionOptions.maxTokens ?? DEFAULT_MAX_TOKENS,
       supportsImages: this.supportsImages(),
-      tools: options.tools,
     });
   }
 
@@ -1120,27 +1098,8 @@ export abstract class BaseLLM implements ILLM {
   ): AsyncGenerator<ChatMessage, PromptLog> {
     this.lastRequestId = undefined;
 
-    // Apply per-model tool overrides if configured
-    let effectiveTools = options.tools;
-    if (this.toolOverrides?.length && options.tools?.length) {
-      const { tools: overriddenTools, errors } = applyToolOverrides(
-        options.tools,
-        this.toolOverrides,
-      );
-      effectiveTools = overriddenTools;
-      // Log any warnings for unknown tool names
-      for (const error of errors) {
-        if (!error.fatal) {
-          console.warn(`Tool override warning: ${error.message}`);
-        }
-      }
-    }
-
-    // Use effectiveTools for the rest of this method
-    const optionsWithOverrides = { ...options, tools: effectiveTools };
-
     let { completionOptions, logEnabled } =
-      this._parseCompletionOptions(optionsWithOverrides);
+      this._parseCompletionOptions(options);
     const interaction = logEnabled
       ? this.logger?.createInteractionLog()
       : undefined;
@@ -1158,7 +1117,6 @@ export abstract class BaseLLM implements ILLM {
         knownContextLength: this._contextLength,
         maxTokens: completionOptions.maxTokens ?? DEFAULT_MAX_TOKENS,
         supportsImages: this.supportsImages(),
-        tools: optionsWithOverrides.tools,
       });
 
       messages = compiledChatMessages;
@@ -1356,72 +1314,6 @@ export abstract class BaseLLM implements ILLM {
     };
   }
 
-  getBatchedChunks(chunks: string[]): string[][] {
-    const batchedChunks = [];
-
-    for (let i = 0; i < chunks.length; i += this.maxEmbeddingBatchSize) {
-      batchedChunks.push(chunks.slice(i, i + this.maxEmbeddingBatchSize));
-    }
-
-    return batchedChunks;
-  }
-
-  async embed(chunks: string[]): Promise<number[][]> {
-    const batches = this.getBatchedChunks(chunks);
-
-    return (
-      await Promise.all(
-        batches.map(async (batch) => {
-          if (batch.length === 0) {
-            return [];
-          }
-
-          const embeddings = await withExponentialBackoff<number[][]>(
-            async () => {
-              if (this.shouldUseOpenAIAdapter("embed") && this.openaiAdapter) {
-                const result = await this.openaiAdapter.embed({
-                  model: this.model,
-                  input: batch,
-                });
-                return result.data.map((chunk) => chunk.embedding);
-              }
-
-              return await this._embed(batch);
-            },
-          );
-
-          return embeddings;
-        }),
-      )
-    ).flat();
-  }
-
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    if (this.shouldUseOpenAIAdapter("rerank") && this.openaiAdapter) {
-      const results = await this.openaiAdapter.rerank({
-        model: this.model,
-        query,
-        documents: chunks.map((chunk) => chunk.content),
-      });
-
-      // Standard OpenAI format
-      if (results.data && Array.isArray(results.data)) {
-        return results.data
-          .sort((a, b) => a.index - b.index)
-          .map((result) => result.relevance_score);
-      }
-
-      throw new Error(
-        `Unexpected rerank response format from ${this.providerName}. ` +
-          `Expected 'data' array but got: ${JSON.stringify(Object.keys(results))}`,
-      );
-    }
-
-    throw new Error(
-      `Reranking is not supported for provider type ${this.providerName}`,
-    );
-  }
-
   protected async *_streamComplete(
     prompt: string,
     signal: AbortSignal,
@@ -1460,12 +1352,6 @@ export abstract class BaseLLM implements ILLM {
       completion += chunk;
     }
     return completion;
-  }
-
-  protected async _embed(chunks: string[]): Promise<number[][]> {
-    throw new Error(
-      `Embedding is not supported for provider type ${this.providerName}`,
-    );
   }
 
   countTokens(text: string): number {

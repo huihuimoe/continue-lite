@@ -81,13 +81,13 @@ async function main() {
     console.log("🚀 Starting package builds...\n");
 
     // Phase 1: Build foundation packages (no local dependencies)
-    await buildPackagesInParallel(["config-types", "terminal-security"]);
+    await buildPackagesInParallel(["config-types"]);
 
     // Phase 2: Build packages that depend on config-types
     await buildPackagesInParallel(["fetch", "config-yaml", "llm-info"]);
 
     // Phase 3: Build packages that depend on other local packages
-    await buildPackagesInParallel(["openai-adapters", "continue-sdk"]);
+    await buildPackagesInParallel(["openai-adapters"]);
 
     console.log("🎉 All packages built successfully!");
   } catch (error) {

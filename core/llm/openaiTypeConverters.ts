@@ -29,13 +29,13 @@ import type {
 import {
   AssistantChatMessage,
   ChatMessage,
-  CompletionOptions,
   MessageContent,
   MessagePart,
   TextMessagePart,
   ThinkingChatMessage,
-  ToolCallDelta,
-} from "..";
+} from "./chatTypes.js";
+import type { ToolCallDelta } from "./tooling.js";
+import { CompletionOptions } from "..";
 
 function appendReasoningFieldsIfSupported(
   msg: ChatCompletionAssistantMessageParam & {
@@ -203,6 +203,10 @@ export function toChatBody(
     includeReasoningContentField?: boolean;
   },
 ): ChatCompletionCreateParams {
+  const tools = (options as any).tools;
+  const toolChoice =
+    (options as any).toolChoice ?? (options as any).tool_choice;
+
   const params: ChatCompletionCreateParams = {
     messages: messages
       .map((m, index) =>
@@ -218,22 +222,9 @@ export function toChatBody(
     stream: options.stream ?? true,
     stop: options.stop,
     prediction: options.prediction,
-    tool_choice: options.toolChoice,
+    ...(Array.isArray(tools) && tools.length > 0 ? { tools } : {}),
+    ...(toolChoice !== undefined ? { tool_choice: toolChoice } : {}),
   };
-
-  if (options.tools?.length) {
-    params.tools = options.tools
-      .filter((tool) => !tool.type || tool.type === "function")
-      .map((tool) => ({
-        type: tool.type,
-        function: {
-          name: tool.function.name,
-          description: tool.function.description,
-          parameters: tool.function.parameters,
-          strict: tool.function.strict,
-        },
-      }));
-  }
 
   return params;
 }
@@ -987,6 +978,4 @@ export type LlmApiRequestType =
   | "complete"
   | "streamComplete"
   | "streamFim"
-  | "embed"
-  | "rerank"
   | "list";

@@ -229,7 +229,6 @@ function extractToolResultContent(
 
 function convertTools(
   tools?: ChatCompletionTool[] | null,
-  legacyFunctions?: ChatCompletionCreateParams["functions"],
 ): ResponseCreateParams["tools"] | undefined {
   if (tools?.length) {
     return tools.map((tool) => {
@@ -247,16 +246,6 @@ function convertTools(
     });
   }
 
-  if (legacyFunctions?.length) {
-    return legacyFunctions.map((fn) => ({
-      type: "function" as const,
-      name: fn.name,
-      description: fn.description ?? null,
-      parameters: fn.parameters ?? null,
-      strict: null,
-    }));
-  }
-
   return undefined;
 }
 
@@ -265,21 +254,6 @@ function resolveToolChoice(
 ): ResponseCreateParams["tool_choice"] | undefined {
   if (params.tool_choice) {
     return params.tool_choice as any;
-  }
-  if (params.function_call) {
-    if (typeof params.function_call === "string") {
-      if (params.function_call === "none") {
-        return "none";
-      }
-      if (params.function_call === "auto") {
-        return "auto";
-      }
-    } else if (params.function_call?.name) {
-      return {
-        type: "function",
-        name: params.function_call.name,
-      };
-    }
   }
   return undefined;
 }
@@ -390,7 +364,7 @@ export function toResponsesParams(
         ? true
         : false,
     tool_choice: resolveToolChoice(params),
-    tools: convertTools(params.tools, params.functions),
+    tools: convertTools(params.tools),
   };
 
   if (params.temperature !== undefined && params.temperature !== null) {

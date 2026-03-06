@@ -8,7 +8,6 @@
       "node_modules/axios/**/*"
     ],
     "assets": [
-      "../../../core/node_modules/sqlite3/**/*",
       "../../out/tree-sitter.wasm",
       "../../out/tree-sitter-wasms/*",
       "../../tree-sitter/**/*",

@@ -1,7 +1,10 @@
 import { RangeInFileWithContents } from "../../../";
 import { countTokens } from "../../../llm/countTokens";
-import { AutocompleteSnippetDeprecated } from "../../types";
+import { AutocompleteSnippet } from "../../types";
 import { HelperVars } from "../../util/HelperVars";
+
+const SNIPPET_WINDOW_PREFIX_PERCENTAGE = 0.75;
+const SNIPPET_WINDOW_SIZE = 500;
 
 const rx = /[\s.,\/#!$%\^&\*;:{}=\-_`~()\[\]]/g;
 export function getSymbolsForSnippet(snippet: string): Set<string> {
@@ -39,27 +42,22 @@ function jaccardSimilarity(a: string, b: string): number {
  * Rank code snippets to be used in tab-autocomplete prompt. Returns a sorted version of the snippet array.
  */
 export function rankAndOrderSnippets(
-  ranges: AutocompleteSnippetDeprecated[],
+  ranges: AutocompleteSnippet[],
   helper: HelperVars,
-): Required<AutocompleteSnippetDeprecated>[] {
+): Required<AutocompleteSnippet>[] {
   const windowAroundCursor =
     helper.fullPrefix.slice(
-      -helper.options.slidingWindowSize *
-        helper.options.slidingWindowPrefixPercentage,
+      -SNIPPET_WINDOW_SIZE * SNIPPET_WINDOW_PREFIX_PERCENTAGE,
     ) +
     helper.fullSuffix.slice(
-      helper.options.slidingWindowSize *
-        (1 - helper.options.slidingWindowPrefixPercentage),
+      SNIPPET_WINDOW_SIZE * (1 - SNIPPET_WINDOW_PREFIX_PERCENTAGE),
     );
 
-  const snippets: Required<AutocompleteSnippetDeprecated>[] = ranges.map(
-    (snippet) => ({
-      score:
-        snippet.score ??
-        jaccardSimilarity(snippet.contents, windowAroundCursor),
-      ...snippet,
-    }),
-  );
+  const snippets: Required<AutocompleteSnippet>[] = ranges.map((snippet) => ({
+    score:
+      snippet.score ?? jaccardSimilarity(snippet.contents, windowAroundCursor),
+    ...snippet,
+  }));
   const uniqueSnippets = deduplicateSnippets(snippets);
   return uniqueSnippets.sort((a, b) => a.score - b.score);
 }
@@ -68,11 +66,11 @@ export function rankAndOrderSnippets(
  * Deduplicate code snippets by merging overlapping ranges into a single range.
  */
 function deduplicateSnippets(
-  snippets: Required<AutocompleteSnippetDeprecated>[],
-): Required<AutocompleteSnippetDeprecated>[] {
+  snippets: Required<AutocompleteSnippet>[],
+): Required<AutocompleteSnippet>[] {
   // Group by file
   const fileGroups: {
-    [key: string]: Required<AutocompleteSnippetDeprecated>[];
+    [key: string]: Required<AutocompleteSnippet>[];
   } = {};
   for (const snippet of snippets) {
     if (!fileGroups[snippet.filepath]) {
@@ -90,8 +88,8 @@ function deduplicateSnippets(
 }
 
 function mergeSnippetsByRange(
-  snippets: Required<AutocompleteSnippetDeprecated>[],
-): Required<AutocompleteSnippetDeprecated>[] {
+  snippets: Required<AutocompleteSnippet>[],
+): Required<AutocompleteSnippet>[] {
   if (snippets.length <= 1) {
     return snippets;
   }
@@ -99,7 +97,7 @@ function mergeSnippetsByRange(
   const sorted = snippets.sort(
     (a, b) => a.range.start.line - b.range.start.line,
   );
-  const merged: Required<AutocompleteSnippetDeprecated>[] = [];
+  const merged: Required<AutocompleteSnippet>[] = [];
 
   while (sorted.length > 0) {
     const next = sorted.shift()!;
@@ -135,12 +133,12 @@ function mergeOverlappingRangeContents(
  * It is assumed that the snippets are sorted by score.
  */
 export function fillPromptWithSnippets(
-  snippets: Required<AutocompleteSnippetDeprecated>[],
+  snippets: Required<AutocompleteSnippet>[],
   maxSnippetTokens: number,
   modelName: string,
-): Required<AutocompleteSnippetDeprecated>[] {
+): Required<AutocompleteSnippet>[] {
   let tokensRemaining = maxSnippetTokens;
-  const keptSnippets: Required<AutocompleteSnippetDeprecated>[] = [];
+  const keptSnippets: Required<AutocompleteSnippet>[] = [];
   for (let i = 0; i < snippets.length; i++) {
     const snippet = snippets[i];
     const tokenCount = countTokens(snippet.contents, modelName);

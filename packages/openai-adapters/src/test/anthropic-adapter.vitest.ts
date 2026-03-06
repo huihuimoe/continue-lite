@@ -216,19 +216,4 @@ describe("Anthropic Adapter Tests", () => {
       ],
     });
   });
-
-  test("embed should throw not implemented error", async () => {
-    const { constructLlmApi } = await import("../index.js");
-    const api = constructLlmApi({
-      provider: "anthropic",
-      apiKey: "test-api-key",
-    });
-
-    await expect(
-      api!.embed({
-        model: "text-embedding-ada-002",
-        input: ["Hello", "World"],
-      }),
-    ).rejects.toThrow("Method not implemented.");
-  });
 });

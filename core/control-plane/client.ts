@@ -11,17 +11,11 @@ import {
 import fetch, { RequestInit, Response } from "node-fetch";
 
 import { OrganizationDescription } from "../config/ProfileLifecycleManager.js";
-import {
-  BaseSessionMetadata,
-  IDE,
-  ModelDescription,
-  Session,
-} from "../index.js";
+import { ChatHistoryItem, IDE, ModelDescription } from "../index.js";
 import { Logger } from "../util/Logger.js";
 
 import {
   ControlPlaneSessionInfo,
-  HubSessionInfo,
   isOnPremSession,
 } from "./AuthTypes.js";
 import { getControlPlaneEnv } from "./env.js";
@@ -49,7 +43,48 @@ export interface CreditStatus {
 export const TRIAL_PROXY_URL =
   "https://proxy-server-blue-l6vsfbzhba-uw.a.run.app";
 
-export interface RemoteSessionMetadata extends BaseSessionMetadata {
+export type ControlPlaneMessageMode =
+  | "chat"
+  | "agent"
+  | "plan"
+  | "background";
+
+export interface ControlPlaneSessionUsage {
+  completionTokens: number;
+  promptTokens: number;
+  promptTokensDetails?: {
+    cachedTokens?: number;
+    cacheWriteTokens?: number;
+    audioTokens?: number;
+  };
+  completionTokensDetails?: {
+    acceptedPredictionTokens?: number;
+    reasoningTokens?: number;
+    rejectedPredictionTokens?: number;
+    audioTokens?: number;
+  };
+  totalCost: number;
+}
+
+export interface ControlPlaneSessionMetadata {
+  sessionId: string;
+  title: string;
+  dateCreated: string;
+  workspaceDirectory: string;
+  messageCount?: number;
+}
+
+export interface ControlPlaneSession {
+  sessionId: string;
+  title: string;
+  workspaceDirectory: string;
+  history: ChatHistoryItem[];
+  mode?: ControlPlaneMessageMode;
+  chatModelTitle?: string | null;
+  usage?: ControlPlaneSessionUsage;
+}
+
+export interface RemoteSessionMetadata extends ControlPlaneSessionMetadata {
   isRemote: true;
   remoteId: string;
 }
@@ -415,7 +450,9 @@ export class ControlPlaneClient {
     }
   }
 
-  public async loadRemoteSession(remoteId: string): Promise<Session> {
+  public async loadRemoteSession(
+    remoteId: string,
+  ): Promise<ControlPlaneSession> {
     if (!(await this.isSignedIn())) {
       throw new Error("Not signed in to load remote session");
     }
@@ -444,7 +481,9 @@ export class ControlPlaneClient {
         );
       }
 
-      const remoteState = (await stateResponse.json()) as { session?: Session };
+      const remoteState = (await stateResponse.json()) as {
+        session?: ControlPlaneSession;
+      };
 
       // The remote state contains a session property with the full session data
       if (!remoteState.session) {
@@ -631,7 +670,7 @@ export class ControlPlaneClient {
    * @returns The agent's session state including history, workspace, and branch
    */
   public async getAgentState(agentSessionId: string): Promise<{
-    session: Session;
+    session: ControlPlaneSession;
     isProcessing: boolean;
     messageQueueLength: number;
     pendingPermission: any;
@@ -649,7 +688,7 @@ export class ControlPlaneClient {
       );
 
       const result = (await resp.json()) as {
-        session: Session;
+        session: ControlPlaneSession;
         isProcessing: boolean;
         messageQueueLength: number;
         pendingPermission: any;

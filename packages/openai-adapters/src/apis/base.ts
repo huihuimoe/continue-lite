@@ -6,8 +6,6 @@ import {
   Completion,
   CompletionCreateParamsNonStreaming,
   CompletionCreateParamsStreaming,
-  CreateEmbeddingResponse,
-  EmbeddingCreateParams,
   Model,
 } from "openai/resources/index";
 import type { Response } from "openai/resources/responses/responses.js";
@@ -15,27 +13,6 @@ import type { Response } from "openai/resources/responses/responses.js";
 export interface FimCreateParamsStreaming
   extends CompletionCreateParamsStreaming {
   suffix: string;
-}
-
-export interface RerankCreateParams {
-  query: string;
-  documents: string[];
-  model: string;
-  top_k?: number;
-}
-
-export interface CreateRerankItem {
-  relevance_score: number;
-  index: number;
-}
-
-export interface CreateRerankResponse {
-  object: "list";
-  data: CreateRerankItem[];
-  model: string;
-  usage: {
-    total_tokens: number;
-  };
 }
 
 export interface BaseLlmApi {
@@ -78,12 +55,6 @@ export interface BaseLlmApi {
     body: FimCreateParamsStreaming,
     signal: AbortSignal,
   ): AsyncGenerator<ChatCompletionChunk>;
-
-  // Embeddings
-  embed(body: EmbeddingCreateParams): Promise<CreateEmbeddingResponse>;
-
-  // Reranking
-  rerank(body: RerankCreateParams): Promise<CreateRerankResponse>;
 
   // List Models
   list(): Promise<Model[]>;

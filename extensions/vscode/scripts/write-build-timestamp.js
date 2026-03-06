@@ -1,3 +1,15 @@
-const { writeBuildTimestamp } = require("./utils");
+const fs = require("fs");
+const path = require("path");
 
-writeBuildTimestamp();
+function writeBuildTimestamp() {
+  fs.writeFileSync(
+    path.join(__dirname, "..", "src", ".buildTimestamp.ts"),
+    `export default "${new Date().toISOString()}";\n`,
+  );
+}
+
+module.exports = { writeBuildTimestamp };
+
+if (require.main === module) {
+  writeBuildTimestamp();
+}

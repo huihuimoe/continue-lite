@@ -5,8 +5,8 @@ import { IDE } from "..";
 import {
   DEFAULT_IGNORE_DIRS,
   DEFAULT_IGNORE_FILETYPES,
-} from "../indexing/ignore";
-import { walkDir } from "../indexing/walkDir";
+} from "../util/ignore";
+import { walkDir } from "../util/walkDir";
 import { RULES_MARKDOWN_FILENAME } from "../llm/rules/constants";
 import { getGlobalFolderWithName } from "../util/paths";
 import { localPathToUri } from "../util/pathToUri";

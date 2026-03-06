@@ -153,6 +153,12 @@ describe("BaseLLM", () => {
       expect(prefillLLM.supportsPrefill()).toBe(true);
     });
   });
+
+  test("should not expose runtime embed/rerank methods", () => {
+    expect("embed" in (baseLLM as any)).toBe(false);
+    expect("rerank" in (baseLLM as any)).toBe(false);
+  });
+
   describe("fetch", () => {
     // TODO: Implement tests for fetch method
   });

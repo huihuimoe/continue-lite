@@ -3,7 +3,7 @@ import {
   markdownToRule,
 } from "@continuedev/config-yaml";
 import { IDE, RuleWithSource } from "../..";
-import { walkDirs } from "../../indexing/walkDir";
+import { walkDirs } from "../../util/walkDir";
 import { RULES_MARKDOWN_FILENAME } from "../../llm/rules/constants";
 import { findUriInDirs, getUriPathBasename } from "../../util/uri";
 

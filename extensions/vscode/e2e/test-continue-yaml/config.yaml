@@ -71,8 +71,8 @@ models:
       - apply
 
 context:
-  - provider: docs
+  - provider: open
   - provider: diff
   - provider: url
-  - provider: folder
+  - provider: code
   - provider: terminal

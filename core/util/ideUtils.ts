@@ -1,5 +1,15 @@
-import { IDE } from "..";
-
+interface PathResolutionIDE {
+  getWorkspaceDirs(): Promise<string[]>;
+  fileExists(filepath: string): Promise<boolean>;
+  getCurrentFile?(): Promise<
+    | undefined
+    | {
+        isUntitled: boolean;
+        path: string;
+        contents: string;
+      }
+  >;
+}
 import {
   joinEncodedUriPathSegmentToUri,
   joinPathsToUri,
@@ -13,7 +23,7 @@ import {
 */
 export async function resolveRelativePathInDir(
   path: string,
-  ide: IDE,
+  ide: PathResolutionIDE,
   dirUriCandidates?: string[],
 ): Promise<string | undefined> {
   const dirs = dirUriCandidates ?? (await ide.getWorkspaceDirs());
@@ -35,7 +45,7 @@ export async function resolveRelativePathInDir(
 */
 export async function inferResolvedUriFromRelativePath(
   _relativePath: string,
-  ide: IDE,
+  ide: PathResolutionIDE,
   dirCandidates?: string[],
 ): Promise<string> {
   const relativePath = _relativePath.trim().replaceAll("\\", "/");
@@ -81,7 +91,7 @@ export async function inferResolvedUriFromRelativePath(
 
   // Sometimes the model will decide to only output the base name or small number of path parts
   // in which case we shouldn't create a new file if it matches the current file
-  const activeFile = await ide.getCurrentFile();
+  const activeFile = await ide.getCurrentFile?.();
   if (activeFile && activeFile.path.endsWith(relativePath)) {
     return activeFile.path;
   }

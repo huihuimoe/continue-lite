@@ -6,7 +6,6 @@ class zAI extends OpenAI {
   static providerName = "zAI";
   static defaultOptions: Partial<LLMOptions> = {
     apiBase: "https://api.z.ai/api/paas/v4/",
-    useLegacyCompletionsEndpoint: false,
   };
 }
 

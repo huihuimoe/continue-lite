@@ -77,76 +77,10 @@ export function validateConfig(config: SerializedContinueConfig) {
     }
   }
 
-  // Validate slashCommands
-  if (config.slashCommands) {
-    if (!Array.isArray(config.slashCommands)) {
-      errors.push({
-        fatal: true,
-        message: "The 'slashCommands' field should be an array if defined.",
-      });
-    } else {
-      config.slashCommands.forEach((command, index) => {
-        if (typeof command.name !== "string" || command.name.trim() === "") {
-          errors.push({
-            fatal: true,
-            message: `Slash command at index ${index} has an invalid or missing 'name'.`,
-          });
-        }
-        if (typeof command.description !== "string") {
-          errors.push({
-            fatal: true,
-            message: `Slash command at index ${index} has an invalid or missing 'description'.`,
-          });
-        }
-      });
-    }
-  }
-
-  // Validate contextProviders
-  if (config.contextProviders) {
-    if (!Array.isArray(config.contextProviders)) {
-      errors.push({
-        fatal: true,
-        message: "The 'contextProviders' field should be an array if defined.",
-      });
-    } else {
-      config.contextProviders.forEach((provider, index) => {
-        if (typeof provider.name !== "string" || provider.name.trim() === "") {
-          errors.push({
-            fatal: true,
-            message: `Context provider at index ${index} has an invalid or missing 'name'.`,
-          });
-        }
-      });
-    }
-  }
-
-  // Validate embeddingsProvider
-  if (
-    config.embeddingsProvider &&
-    typeof config.embeddingsProvider !== "object"
-  ) {
-    errors.push({
-      fatal: true,
-      message: "The 'embeddingsProvider' field should be an object if defined.",
-    });
-  }
-
-  // Validate reranker
-  if (config.reranker && typeof config.reranker !== "object") {
-    errors.push({
-      fatal: true,
-      message: "The 'reranker' field should be an object if defined.",
-    });
-  }
-
   // Validate other boolean flags
   const booleanFlags: Array<
-    keyof Pick<
-      SerializedContinueConfig,
-      "allowAnonymousTelemetry" | "disableIndexing" | "disableSessionTitles"
-    >
-  > = ["allowAnonymousTelemetry", "disableIndexing", "disableSessionTitles"];
+    keyof Pick<SerializedContinueConfig, "allowAnonymousTelemetry">
+  > = ["allowAnonymousTelemetry"];
 
   booleanFlags.forEach((flag) => {
     if (config[flag] !== undefined && typeof config[flag] !== "boolean") {

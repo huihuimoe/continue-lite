@@ -10,18 +10,11 @@ import {
   Completion,
   CompletionCreateParamsNonStreaming,
   CompletionCreateParamsStreaming,
-  CreateEmbeddingResponse,
-  EmbeddingCreateParams,
   Model,
 } from "openai/resources/index";
 import { AiSdkConfig } from "../types.js";
-import { customFetch, embedding } from "../util.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { customFetch } from "../util.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 
 type AiSdkProviderCreator = (options: {
   apiKey?: string;
@@ -253,53 +246,6 @@ export class AiSdkApi implements BaseLlmApi {
     throw new Error(
       "AI SDK provider does not support fill-in-the-middle (FIM) completions.",
     );
-  }
-
-  async embed(body: EmbeddingCreateParams): Promise<CreateEmbeddingResponse> {
-    this.initializeProvider();
-
-    const { embed: aiEmbed, embedMany } = await import("ai");
-
-    const modelId = typeof body.model === "string" ? body.model : body.model;
-    const model = this.provider!(modelId);
-
-    const inputs = Array.isArray(body.input) ? body.input : [body.input];
-    const stringInputs = inputs.map((input) =>
-      typeof input === "string" ? input : String(input),
-    );
-
-    if (stringInputs.length === 1) {
-      const result = await aiEmbed({
-        model,
-        value: stringInputs[0],
-      });
-      return embedding({
-        data: [result.embedding],
-        model: modelId,
-        usage: {
-          prompt_tokens: result.usage?.tokens ?? 0,
-          total_tokens: result.usage?.tokens ?? 0,
-        },
-      });
-    }
-
-    const result = await embedMany({
-      model,
-      values: stringInputs,
-    });
-
-    return embedding({
-      data: result.embeddings,
-      model: modelId,
-      usage: {
-        prompt_tokens: result.usage?.tokens ?? 0,
-        total_tokens: result.usage?.tokens ?? 0,
-      },
-    });
-  }
-
-  async rerank(_body: RerankCreateParams): Promise<CreateRerankResponse> {
-    throw new Error("AI SDK provider does not support reranking.");
   }
 
   async list(): Promise<Model[]> {

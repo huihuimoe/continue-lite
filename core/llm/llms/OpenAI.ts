@@ -8,14 +8,8 @@ import {
   ResponseCreateParamsBase,
   ResponseInputItem,
   ResponseInputMessageContentList,
-  Tool as ResponsesTool,
 } from "openai/resources/responses/responses.mjs";
-import {
-  ChatMessage,
-  CompletionOptions,
-  LLMOptions,
-  Tool,
-} from "../../index.js";
+import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js";
 import { renderChatMessage } from "../../util/messageContent.js";
 import { BaseLLM } from "../index.js";
 import {
@@ -23,21 +17,9 @@ import {
   fromResponsesChunk,
   LlmApiRequestType,
   toChatBody,
+  toCompleteBody,
   toResponsesInput,
 } from "../openaiTypeConverters.js";
-
-const NON_CHAT_MODELS = [
-  "text-davinci-002",
-  "text-davinci-003",
-  "code-davinci-002",
-  "text-ada-001",
-  "text-babbage-001",
-  "text-curie-001",
-  "davinci",
-  "curie",
-  "babbage",
-  "ada",
-];
 
 function isChatOnlyModel(model: string): boolean {
   // gpt and o-series models
@@ -191,25 +173,19 @@ const formatMessageForO1OrGpt5ForResponses = (
 };
 
 class OpenAI extends BaseLLM {
-  public useLegacyCompletionsEndpoint: boolean | undefined = undefined;
-
   constructor(options: LLMOptions) {
     super(options);
-    this.useLegacyCompletionsEndpoint = options.useLegacyCompletionsEndpoint;
     this.apiVersion = options.apiVersion ?? "2023-07-01-preview";
   }
 
   static providerName = "openai";
   static defaultOptions: Partial<LLMOptions> | undefined = {
     apiBase: "https://api.openai.com/v1/",
-    maxEmbeddingBatchSize: 128,
   };
 
   protected useOpenAIAdapterFor: (LlmApiRequestType | "*")[] = [
     "chat",
-    "embed",
     "list",
-    "rerank",
     "streamChat",
     "streamFim",
   ];
@@ -234,18 +210,6 @@ class OpenAI extends BaseLLM {
       "Fast-Apply",
     ];
     return SUPPORTED_MODELS.some((m) => model.includes(m));
-  }
-
-  private convertTool(tool: Tool): any {
-    return {
-      type: tool.type,
-      function: {
-        name: tool.function.name,
-        description: tool.function.description,
-        parameters: tool.function.parameters,
-        strict: tool.function.strict,
-      },
-    };
   }
 
   protected extraBodyProperties(): Record<string, any> {
@@ -337,28 +301,6 @@ class OpenAI extends BaseLLM {
       include: ["reasoning.encrypted_content"],
     };
 
-    // Tools support for Responses API (schema differs from Chat Completions)
-    if (options.tools?.length) {
-      body.tools = options.tools
-        .filter((t) => !t.type || t.type === "function")
-        .map(
-          (t) =>
-            ({
-              type: "function",
-              name: t.function.name,
-              description: t.function.description ?? undefined,
-              parameters: t.function.parameters ?? undefined,
-              strict: t.function.strict ?? undefined,
-            }) as ResponsesTool,
-        );
-    }
-    if (options.toolChoice) {
-      body.tool_choice = {
-        type: "function",
-        name: options.toolChoice.function.name,
-      } as ResponseCreateParamsBase["tool_choice"];
-    }
-
     if (typeof options.maxTokens === "number") {
       body.max_output_tokens = options.maxTokens;
     }
@@ -425,6 +367,41 @@ class OpenAI extends BaseLLM {
     signal: AbortSignal,
     options: CompletionOptions,
   ): AsyncGenerator<string> {
+    if (["together", "novita"].includes(this.providerName)) {
+      const response = await this.fetch(this._getEndpoint("completions"), {
+        method: "POST",
+        headers: this._getHeaders(),
+        body: JSON.stringify({
+          ...toCompleteBody(prompt, options),
+          ...this.extraBodyProperties(),
+        }),
+        signal,
+      });
+
+      if ((options.stream ?? true) === false) {
+        if (response.status === 499) {
+          return;
+        }
+
+        const data = await response.json();
+        const content = data?.choices?.[0]?.text ?? "";
+        if (content) {
+          yield content;
+        }
+        return;
+      }
+
+      for await (const chunk of streamSse(response)) {
+        const content =
+          chunk?.choices?.[0]?.text ?? chunk?.choices?.[0]?.delta?.content;
+        if (content) {
+          yield content;
+        }
+      }
+
+      return;
+    }
+
     for await (const chunk of this._streamChat(
       [{ role: "user", content: prompt }],
       signal,
@@ -485,58 +462,11 @@ class OpenAI extends BaseLLM {
     return body;
   }
 
-  protected async *_legacystreamComplete(
-    prompt: string,
-    signal: AbortSignal,
-    options: CompletionOptions,
-  ): AsyncGenerator<string> {
-    const args: any = this._convertArgs(options, []);
-    args.prompt = prompt;
-    args.messages = undefined;
-
-    const response = await this.fetch(this._getEndpoint("completions"), {
-      method: "POST",
-      headers: this._getHeaders(),
-      body: JSON.stringify({
-        ...args,
-        stream: true,
-        ...this.extraBodyProperties(),
-      }),
-      signal,
-    });
-
-    for await (const value of streamSse(response)) {
-      if (value.choices?.[0]?.text && value.finish_reason !== "eos") {
-        yield value.choices[0].text;
-      }
-    }
-  }
-
   protected async *_streamChat(
     messages: ChatMessage[],
     signal: AbortSignal,
     options: CompletionOptions,
   ): AsyncGenerator<ChatMessage> {
-    if (
-      !isChatOnlyModel(options.model) &&
-      this.supportsCompletions() &&
-      (NON_CHAT_MODELS.includes(options.model) ||
-        this.useLegacyCompletionsEndpoint ||
-        options.raw)
-    ) {
-      for await (const content of this._legacystreamComplete(
-        renderChatMessage(messages[messages.length - 1]),
-        signal,
-        options,
-      )) {
-        yield {
-          role: "assistant",
-          content,
-        };
-      }
-      return;
-    }
-
     const body = this._convertArgs(options, messages);
 
     const response = await this.fetch(this._getEndpoint("chat/completions"), {
@@ -695,45 +625,6 @@ class OpenAI extends BaseLLM {
 
     const data = await response.json();
     return data.data.map((m: any) => m.id);
-  }
-
-  private _getEmbedEndpoint() {
-    if (!this.apiBase) {
-      throw new Error(
-        "No API base URL provided. Please set the 'apiBase' option in config.json",
-      );
-    }
-
-    if (this.apiType === "azure") {
-      return new URL(
-        `openai/deployments/${this.deployment}/embeddings?api-version=${this.apiVersion}`,
-        this.apiBase,
-      );
-    }
-    return new URL("embeddings", this.apiBase);
-  }
-
-  protected async _embed(chunks: string[]): Promise<number[][]> {
-    const resp = await this.fetch(this._getEmbedEndpoint(), {
-      method: "POST",
-      body: JSON.stringify({
-        input: chunks,
-        model: this.model,
-        ...this.extraBodyProperties(),
-      }),
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "api-key": this.apiKey ?? "", // For Azure
-      },
-    });
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-
-    const data = (await resp.json()) as any;
-    return data.data.map((result: { embedding: number[] }) => result.embedding);
   }
 }
 

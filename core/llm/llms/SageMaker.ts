@@ -1,5 +1,4 @@
 import {
-  InvokeEndpointCommand,
   InvokeEndpointWithResponseStreamCommand,
   SageMakerRuntimeClient,
 } from "@aws-sdk/client-sagemaker-runtime";
@@ -19,7 +18,6 @@ class SageMaker extends BaseLLM {
   static defaultOptions: Partial<LLMOptions> = {
     region: "us-west-2",
     contextLength: 200_000,
-    maxEmbeddingBatchSize: 1,
   };
 
   constructor(options: LLMOptions) {
@@ -140,61 +138,6 @@ class SageMaker extends BaseLLM {
       return await fromNodeProviderChain()();
     }
   }
-
-  async _embed(chunks: string[]) {
-    const credentials = await this._getCredentials();
-    const client = new SageMakerRuntimeClient({
-      region: this.region,
-      credentials: {
-        accessKeyId: credentials.accessKeyId,
-        secretAccessKey: credentials.secretAccessKey,
-        sessionToken: credentials.sessionToken || "",
-      },
-    });
-
-    const input = this._generateInvokeModelCommandInput(chunks);
-    const command = new InvokeEndpointCommand(input);
-    const response = await client.send(command);
-
-    if (response.Body) {
-      const decoder = new TextDecoder();
-      const decoded = decoder.decode(response.Body);
-      try {
-        const responseBody = JSON.parse(decoded);
-        // If the body contains a key called "embedding" or "embeddings", return the value, otherwise return the whole body
-        if (responseBody.embedding) {
-          return responseBody.embedding;
-        } else if (responseBody.embeddings) {
-          return responseBody.embeddings;
-        } else {
-          return responseBody;
-        }
-      } catch (e) {
-        let message = e instanceof Error ? e.message : String(e);
-        throw new Error(
-          `Failed to parse response from SageMaker:\n${decoded}\nError: ${message}`,
-        );
-      }
-    }
-  }
-  private _generateInvokeModelCommandInput(prompts: string | string[]): any {
-    const payload = {
-      inputs: prompts,
-      normalize: true,
-      // ...(options.requestOptions?.extraBodyProperties || {}),
-    };
-
-    if (this.requestOptions?.extraBodyProperties) {
-      Object.assign(payload, this.requestOptions.extraBodyProperties);
-    }
-
-    return {
-      EndpointName: this.model,
-      Body: JSON.stringify(payload),
-      ContentType: "application/json",
-      CustomAttributes: "accept_eula=false",
-    };
-  }
 }
 
 interface SageMakerModelToolkit {
@@ -209,7 +152,7 @@ class MessageAPIToolkit implements SageMakerModelToolkit {
   constructor(private sagemaker: SageMaker) {}
   generateCommand(
     messages: ChatMessage[],
-    prompt: string,
+    _prompt: string,
     options: CompletionOptions,
   ): InvokeEndpointWithResponseStreamCommand {
     if ("chat_template" in this.sagemaker.completionOptions) {
@@ -257,7 +200,7 @@ class MessageAPIToolkit implements SageMakerModelToolkit {
 class CompletionAPIToolkit implements SageMakerModelToolkit {
   constructor(private sagemaker: SageMaker) {}
   generateCommand(
-    messages: ChatMessage[],
+    _messages: ChatMessage[],
     prompt: string,
     options: CompletionOptions,
   ): InvokeEndpointWithResponseStreamCommand {

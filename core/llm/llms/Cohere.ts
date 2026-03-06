@@ -1,10 +1,5 @@
 import { streamSse } from "@continuedev/fetch";
-import {
-  ChatMessage,
-  Chunk,
-  CompletionOptions,
-  LLMOptions,
-} from "../../index.js";
+import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js";
 import { renderChatMessage, stripImages } from "../../util/messageContent.js";
 import { BaseLLM } from "../index.js";
 import { DEFAULT_REASONING_TOKENS } from "../constants.js";
@@ -13,7 +8,6 @@ class Cohere extends BaseLLM {
   static providerName = "cohere";
   static defaultOptions: Partial<LLMOptions> = {
     apiBase: "https://api.cohere.ai/v2",
-    maxEmbeddingBatchSize: 96,
   };
   static maxStopSequences = 5;
 
@@ -111,6 +105,8 @@ class Cohere extends BaseLLM {
   }
 
   private _convertArgs(options: CompletionOptions) {
+    const tools = (options as any).tools;
+
     return {
       model: options.model,
       stream: options.stream ?? true,
@@ -130,14 +126,7 @@ class Cohere extends BaseLLM {
         : // Reasoning is enabled by default for models that support it.
           // https://docs.cohere.com/reference/chat-stream#request.body.thinking
           { type: "disabled" as const },
-      tools: options.tools?.map((tool) => ({
-        type: "function",
-        function: {
-          name: tool.function.name,
-          parameters: tool.function.parameters,
-          description: tool.function.description,
-        },
-      })),
+      ...(Array.isArray(tools) && tools.length > 0 ? { tools } : {}),
     };
   }
 
@@ -278,53 +267,6 @@ class Cohere extends BaseLLM {
           break;
       }
     }
-  }
-
-  protected async _embed(chunks: string[]): Promise<number[][]> {
-    const resp = await this.fetch(new URL("embed", this.apiBase), {
-      method: "POST",
-      body: JSON.stringify({
-        texts: chunks,
-        model: this.model,
-        input_type: "search_document",
-        embedding_types: ["float"],
-        truncate: "END",
-      }),
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-
-    const data = (await resp.json()) as any;
-    return data.embeddings.float;
-  }
-
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    const resp = await this.fetch(new URL("rerank", this.apiBase), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: this.model,
-        query,
-        documents: chunks.map((chunk) => chunk.content),
-      }),
-    });
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-
-    const data = (await resp.json()) as any;
-    const results = data.results.sort((a: any, b: any) => a.index - b.index);
-    return results.map((result: any) => result.relevance_score);
   }
 }
 

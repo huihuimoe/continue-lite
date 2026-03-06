@@ -14,8 +14,35 @@ export class GlobalActions {
   static defaultFolder = "e2e/test-continue";
   public static defaultNewFilename = "test.py";
 
+  private static untitledEditorTitlePattern = /^Untitled(?:-\d+)?$/;
+
+  private static async closeWelcomeEditorIfPresent() {
+    const editorView = new EditorView();
+
+    try {
+      await editorView.closeEditor("Welcome");
+    } catch {}
+  }
+
+  private static async openAndFocusEditor(title: string): Promise<TextEditor> {
+    const editorView = new EditorView();
+    const editor = (await editorView.openEditor(title)) as TextEditor;
+
+    await TestUtils.waitForSuccess(async () => {
+      const activeTab = await editorView.getActiveTab();
+      const activeTitle = activeTab ? await activeTab.getTitle() : undefined;
+      if (activeTitle !== title) {
+        await editorView.openEditor(title);
+        throw new Error(`Editor ${title} is not active yet`);
+      }
+    }, DEFAULT_TIMEOUT.MD);
+
+    return editor;
+  }
+
   public static async openTestWorkspace() {
     await VSBrowser.instance.openResources(GlobalActions.defaultFolder);
+    await GlobalActions.closeWelcomeEditorIfPresent();
     await new Workbench().executeCommand(
       "Notifications: Clear All Notifications",
     );
@@ -30,13 +57,32 @@ export class GlobalActions {
   public static async createAndOpenNewTextFile(): Promise<{
     editor: TextEditor;
   }> {
+    const editorView = new EditorView();
+    const titlesBefore = await editorView.getOpenEditorTitles();
+
     await new Workbench().executeCommand("Create: New File...");
     await (
       await InputBox.create(DEFAULT_TIMEOUT.MD)
     ).selectQuickPick("Text File");
-    const editor = (await new EditorView().openEditor(
-      "Untitled-1",
-    )) as TextEditor;
+
+    const untitledTitle = await TestUtils.waitForSuccess(async () => {
+      const titles = await editorView.getOpenEditorTitles();
+      const untitledTitles = titles.filter((title) =>
+        GlobalActions.untitledEditorTitlePattern.test(title),
+      );
+
+      if (untitledTitles.length === 0) {
+        throw new Error("No Untitled editor tab found yet");
+      }
+
+      const newUntitledTitle = untitledTitles.find(
+        (title) => !titlesBefore.includes(title),
+      );
+
+      return newUntitledTitle ?? untitledTitles[untitledTitles.length - 1];
+    }, DEFAULT_TIMEOUT.MD);
+
+    const editor = await GlobalActions.openAndFocusEditor(untitledTitle);
 
     return { editor };
   }
@@ -62,7 +108,7 @@ export class GlobalActions {
     await inputBox.confirm();
     await TestUtils.waitForTimeout(DEFAULT_TIMEOUT.XS);
 
-    editor = (await new EditorView().openEditor(filename)) as TextEditor;
+    editor = await GlobalActions.openAndFocusEditor(filename);
 
     return { editor };
   }
@@ -94,7 +140,7 @@ export class GlobalActions {
     await TestUtils.waitForTimeout(1000);
     await GlobalActions.clearAllNotifications();
 
-    const statusBar = await workbench.getStatusBar();
+    const statusBar = workbench.getStatusBar();
 
     // Robust element finding with text validation
     const continueItem = await TestUtils.waitForSuccess(async () => {

@@ -1,5 +1,4 @@
 import { parseProxyModelName } from "@continuedev/config-yaml";
-import { ModelDescription } from "..";
 
 export const PROVIDER_TOOL_SUPPORT: Record<string, (model: string) => boolean> =
   {
@@ -456,15 +455,4 @@ export function isRecommendedAgentModel(modelName: string): boolean {
     }
   }
   return false;
-}
-export function modelSupportsNativeTools(modelDescription: ModelDescription) {
-  if (modelDescription.capabilities?.tools !== undefined) {
-    return modelDescription.capabilities.tools;
-  }
-
-  const providerSupport = PROVIDER_TOOL_SUPPORT[modelDescription.provider];
-  if (!providerSupport) {
-    return false;
-  }
-  return providerSupport(modelDescription.model) ?? false;
 }

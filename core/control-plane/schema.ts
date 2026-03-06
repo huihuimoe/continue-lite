@@ -82,42 +82,9 @@ const modelDescriptionSchema = z.object({
   promptTemplates: z.record(z.string()).optional(),
 });
 
-const embeddingsProviderSchema = z.object({
-  provider: z.enum([
-    "transformers.js",
-    "ollama",
-    "openai",
-    "cohere",
-    "gemini",
-    "ovhcloud",
-    "nebius",
-    "siliconflow",
-    "scaleway",
-    "watsonx",
-  ]),
-  apiBase: z.string().optional(),
-  apiKey: z.string().optional(),
-  model: z.string().optional(),
-  deployment: z.string().optional(),
-  apiType: z.string().optional(),
-  apiVersion: z.string().optional(),
-  requestOptions: z
-    .object({
-      timeout: z.number().optional(),
-      verifySsl: z.boolean().optional(),
-      caBundlePath: z.union([z.string(), z.array(z.string())]).optional(),
-      proxy: z.string().optional(),
-      headers: z.record(z.string()).optional(),
-      extraBodyProperties: z.record(z.any()).optional(),
-      noProxy: z.array(z.string()).optional(),
-    })
-    .optional(),
-});
+const embeddingsProviderSchema = z.object({}).passthrough();
 
-const rerankerSchema = z.object({
-  name: z.enum(["cohere", "voyage", "llm", "watsonx"]),
-  params: z.record(z.any()).optional(),
-});
+const rerankerSchema = z.object({}).passthrough();
 
 const analyticsSchema = z.object({
   url: z.string().optional(),

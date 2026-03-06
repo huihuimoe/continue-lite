@@ -219,20 +219,6 @@ export const OpenAi: ModelProvider = {
       maxCompletionTokens: 65536,
       recommendedFor: ["chat"],
     },
-    // embed
-    {
-      model: "text-embedding-3-large",
-      displayName: "Text Embedding 3-Large",
-      recommendedFor: ["embed"],
-    },
-    {
-      model: "text-embedding-3-small",
-      displayName: "Text Embedding 3-Small",
-    },
-    {
-      model: "text-embedding-ada-002",
-      displayName: "Text Embedding Ada-002",
-    },
   ],
   id: "openai",
   displayName: "OpenAI",

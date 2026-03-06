@@ -1,6 +1,5 @@
 import {
   ChatMessage,
-  Chunk,
   CompletionOptions,
   UserChatMessage,
 } from "../../index.js";
@@ -35,8 +34,8 @@ interface TestCompletionOptions extends CompletionOptions {
 class TestBedrock extends Bedrock {
   // Make _streamChat public for testing
   public async *streamChat(
-    messages: ChatMessage[],
-    signal: AbortSignal,
+    _messages: ChatMessage[],
+    _signal: AbortSignal,
     options: TestCompletionOptions,
   ): AsyncGenerator<ChatMessage> {
     if (options.mockError) {
@@ -63,27 +62,6 @@ class TestBedrock extends Bedrock {
 
     yield { role: "assistant", content: "Hello" };
     yield { role: "assistant", content: " world" };
-  }
-
-  // Override embed to avoid making real API calls
-  async embed(chunks: string[]): Promise<number[][]> {
-    if (chunks[0] === "error") {
-      throw new Error("Embedding Error");
-    }
-    return [[0.1, 0.2, 0.3]];
-  }
-
-  // Override rerank to avoid making real API calls
-  async rerank(query: string, chunks: Chunk[]): Promise<number[]> {
-    if (!query || !chunks.length) {
-      throw new Error("Query and chunks must not be empty");
-    }
-
-    if (query === "error") {
-      throw new Error("Reranking Error");
-    }
-
-    return chunks.map((_, i) => 0.8 - i * 0.3);
   }
 }
 
@@ -226,82 +204,15 @@ describe("Bedrock", () => {
     });
   });
 
-  describe("embed", () => {
-    let bedrock: TestBedrock;
-
-    beforeEach(() => {
-      bedrock = new TestBedrock({
-        apiKey: "test-key",
-        model: "cohere.embed-english-v3",
-        region: "us-east-1",
-      });
+  it("should not expose runtime embed/rerank methods", () => {
+    const bedrock = new TestBedrock({
+      apiKey: "test-key",
+      model: "anthropic.claude-3-sonnet-20240229-v1:0",
+      region: "us-east-1",
     });
 
-    it("should handle embedding requests correctly", async () => {
-      const result = await bedrock.embed(["test text"]);
-      expect(result).toEqual([[0.1, 0.2, 0.3]]);
-    });
-
-    it("should handle embedding errors", async () => {
-      await expect(bedrock.embed(["error"])).rejects.toThrow("Embedding Error");
-    });
-  });
-
-  describe("rerank", () => {
-    let bedrock: TestBedrock;
-
-    beforeEach(() => {
-      bedrock = new TestBedrock({
-        apiKey: "test-key",
-        model: "cohere.rerank-english-v2.0",
-        region: "us-east-1",
-      });
-    });
-
-    it("should handle reranking requests correctly", async () => {
-      const chunks: Chunk[] = [
-        {
-          content: "doc1",
-          digest: "digest1",
-          filepath: "file1",
-          index: 0,
-          startLine: 1,
-          endLine: 1,
-        },
-        {
-          content: "doc2",
-          digest: "digest2",
-          filepath: "file2",
-          index: 1,
-          startLine: 1,
-          endLine: 1,
-        },
-      ];
-
-      const result = await bedrock.rerank("query", chunks);
-      expect(result).toEqual([0.8, 0.5]);
-    });
-
-    it("should handle reranking errors", async () => {
-      const chunk: Chunk = {
-        content: "doc1",
-        digest: "digest1",
-        filepath: "file1",
-        index: 0,
-        startLine: 1,
-        endLine: 1,
-      };
-
-      await expect(bedrock.rerank("error", [chunk])).rejects.toThrow(
-        "Reranking Error",
-      );
-    });
-
-    it("should throw error for empty input", async () => {
-      await expect(bedrock.rerank("", [])).rejects.toThrow(
-        "Query and chunks must not be empty",
-      );
-    });
+    expect("embed" in (bedrock as any)).toBe(false);
+    expect("rerank" in (bedrock as any)).toBe(false);
   });
 
   describe("message conversion", () => {
@@ -321,8 +232,7 @@ describe("Bedrock", () => {
         { role: "assistant", content: "Hi there" },
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrock["_convertMessages"](messages, availableTools);
+      const converted = bedrock["_convertMessages"](messages);
 
       expect(converted).toEqual([
         { role: "user", content: [{ text: "Hello" }] },
@@ -354,8 +264,7 @@ describe("Bedrock", () => {
         },
       ];
 
-      const availableTools = new Set(["test_tool"]);
-      const converted = bedrock["_convertMessages"](messages, availableTools);
+      const converted = bedrock["_convertMessages"](messages);
 
       expect(converted).toEqual([
         { role: "user", content: [{ text: "Use a tool" }] },
@@ -363,11 +272,7 @@ describe("Bedrock", () => {
           role: "assistant",
           content: [
             {
-              toolUse: {
-                toolUseId: "tool-1",
-                name: "test_tool",
-                input: { arg: "value" },
-              },
+              text: expect.stringContaining("Assistant tool call:"),
             },
           ],
         },
@@ -375,10 +280,7 @@ describe("Bedrock", () => {
           role: "user",
           content: [
             {
-              toolResult: {
-                toolUseId: "tool-1",
-                content: [{ text: "Tool result" }],
-              },
+              text: "Tool call output for Tool Call ID tool-1:\n\nTool result",
             },
           ],
         },
@@ -405,8 +307,7 @@ describe("Bedrock", () => {
       ];
 
       // Empty set means no tools are available
-      const availableTools = new Set<string>();
-      const converted = bedrock["_convertMessages"](messages, availableTools);
+      const converted = bedrock["_convertMessages"](messages);
 
       expect(converted).toEqual([
         { role: "user", content: [{ text: "Use a tool" }] },
@@ -428,8 +329,7 @@ describe("Bedrock", () => {
         { role: "assistant", content: "Here's my answer" },
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrock["_convertMessages"](messages, availableTools);
+      const converted = bedrock["_convertMessages"](messages);
 
       expect(converted).toEqual([
         { role: "user", content: [{ text: "Think about this" }] },
@@ -461,8 +361,7 @@ describe("Bedrock", () => {
         { role: "assistant", content: "Here's my answer" },
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrock["_convertMessages"](messages, availableTools);
+      const converted = bedrock["_convertMessages"](messages);
 
       expect(converted).toEqual([
         { role: "user", content: [{ text: "Think about this" }] },
@@ -504,8 +403,7 @@ describe("Bedrock", () => {
         } as UserChatMessage,
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrock["_convertMessages"](messages, availableTools);
+      const converted = bedrock["_convertMessages"](messages);
 
       expect(converted).toEqual([
         {
@@ -553,11 +451,7 @@ describe("Bedrock", () => {
         { role: "user", content: "Second message" } as UserChatMessage,
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrockWithCaching["_convertMessages"](
-        messages,
-        availableTools,
-      );
+      const converted = bedrockWithCaching["_convertMessages"](messages);
 
       // The last two user messages should have cache points
       // But we're not testing the system message here since it's handled separately
@@ -597,11 +491,7 @@ describe("Bedrock", () => {
         { role: "user", content: "Second message" } as UserChatMessage,
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrockWithPromptCaching["_convertMessages"](
-        messages,
-        availableTools,
-      );
+      const converted = bedrockWithPromptCaching["_convertMessages"](messages);
 
       // The last two user messages should have cache points
       expect(converted.length).toBe(3);
@@ -644,11 +534,7 @@ describe("Bedrock", () => {
         { role: "user", content: "Second message" } as UserChatMessage,
       ];
 
-      const availableTools = new Set<string>();
-      const converted = bedrockNoCaching["_convertMessages"](
-        messages,
-        availableTools,
-      );
+      const converted = bedrockNoCaching["_convertMessages"](messages);
 
       // No cache points should be added
       expect(converted.length).toBe(3);

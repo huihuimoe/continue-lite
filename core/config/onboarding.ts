@@ -5,8 +5,6 @@ export const LOCAL_ONBOARDING_FIM_MODEL = "qwen2.5-coder:1.5b-base";
 export const LOCAL_ONBOARDING_FIM_TITLE = "Qwen2.5-Coder 1.5B";
 export const LOCAL_ONBOARDING_CHAT_MODEL = "llama3.1:8b";
 export const LOCAL_ONBOARDING_CHAT_TITLE = "Llama 3.1 8B";
-export const LOCAL_ONBOARDING_EMBEDDINGS_MODEL = "nomic-embed-text:latest";
-export const LOCAL_ONBOARDING_EMBEDDINGS_TITLE = "Nomic Embed";
 
 const ANTHROPIC_MODEL_CONFIG = {
   slugs: ["anthropic/claude-3-7-sonnet", "anthropic/claude-4-sonnet"],
@@ -49,12 +47,6 @@ export function setupLocalConfig(config: ConfigYaml): ConfigYaml {
         provider: "ollama",
         model: LOCAL_ONBOARDING_FIM_MODEL,
         roles: ["autocomplete"],
-      },
-      {
-        name: LOCAL_ONBOARDING_EMBEDDINGS_TITLE,
-        provider: "ollama",
-        model: LOCAL_ONBOARDING_EMBEDDINGS_MODEL,
-        roles: ["embed"],
       },
       ...(config.models ?? []),
     ],

@@ -11,7 +11,6 @@ class TARS extends OpenAI {
     promptTemplates: {
       edit: osModelsEditPrompt,
     },
-    useLegacyCompletionsEndpoint: false,
   };
 }
 

@@ -4,11 +4,7 @@ const path = require("path");
 const ncp = require("ncp").ncp;
 const { rimrafSync } = require("rimraf");
 const { validateFilesPresent } = require("../scripts/util");
-const { ALL_TARGETS, TARGET_TO_LANCEDB } = require("./utils/targets");
-const { fork } = require("child_process");
-const {
-  installAndCopyNodeModules,
-} = require("../extensions/vscode/scripts/install-copy-nodemodule");
+const { ALL_TARGETS } = require("./utils/targets");
 const { bundleBinary } = require("./utils/bundle-binary");
 
 const bin = path.join(__dirname, "bin");
@@ -58,7 +54,6 @@ async function buildWithEsbuild() {
       "llamaTokenizerWorkerPool.mjs",
       "tiktokenWorkerPool.mjs",
       "vscode",
-      "./index.node",
     ],
     format: "cjs",
     platform: "node",
@@ -85,8 +80,6 @@ async function buildWithEsbuild() {
 
   cleanSlate();
 
-  // Informs of where to look for node_sqlite3.node https://www.npmjs.com/package/bindings#:~:text=The%20searching%20for,file%20is%20found
-  // This is only needed for our `pkg` command at build time
   fs.writeFileSync(
     "out/package.json",
     JSON.stringify(
@@ -100,23 +93,6 @@ async function buildWithEsbuild() {
       2,
     ),
   );
-
-  // Install LanceDB packages sequentially to avoid race conditions
-  // when multiple packages copy to the same node_modules/@lancedb directory
-  for (const target of targets) {
-    if (!TARGET_TO_LANCEDB[target]) {
-      continue;
-    }
-    console.log(`[info] Downloading LanceDB for ${target}...`);
-    try {
-      await installAndCopyNodeModules(TARGET_TO_LANCEDB[target], "@lancedb");
-      console.log(`[info] Copied LanceDB for ${target}`);
-    } catch (err) {
-      console.error(`[error] Failed to copy LanceDB for ${target}:`, err);
-      process.exit(1);
-    }
-  }
-  console.log("[info] All LanceDB packages installed");
 
   // tree-sitter-wasm
   const treeSitterWasmsDir = path.join(out, "tree-sitter-wasms");
@@ -215,12 +191,7 @@ async function buildWithEsbuild() {
   for (const target of targets) {
     const exe = target.startsWith("win") ? ".exe" : "";
     const targetDir = `bin/${target}`;
-    pathsToVerify.push(
-      `${targetDir}/continue-binary${exe}`,
-      `${targetDir}/index.node`, // @lancedb
-      `${targetDir}/build/Release/node_sqlite3.node`,
-      `${targetDir}/rg${exe}`, // ripgrep binary
-    );
+    pathsToVerify.push(`${targetDir}/continue-binary${exe}`);
   }
 
   // Note that this doesn't verify they actually made it into the binary, just that they were in the expected folder before it was built

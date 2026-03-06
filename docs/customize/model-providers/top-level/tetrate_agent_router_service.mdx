@@ -95,12 +95,11 @@ models:
       TETRATE_API_KEY: ${{ secrets.TETRATE_API_KEY }}
 context:
   - provider: code
-  - provider: docs
   - provider: diff
   - provider: terminal
   - provider: problems
-  - provider: folder
-  - provider: codebase
+  - provider: open
+  - provider: currentFile
 ```
 
 Or define the model directly:
@@ -122,12 +121,11 @@ models:
       - tool_use
 context:
   - provider: code
-  - provider: docs
   - provider: diff
   - provider: terminal
   - provider: problems
-  - provider: folder
-  - provider: codebase
+  - provider: open
+  - provider: currentFile
 ```
 </Tab>
 <Tab title="Continue Mission Control">

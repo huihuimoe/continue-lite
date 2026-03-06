@@ -12,12 +12,7 @@ import {
 import { ChatCompletionCreateParams } from "openai/resources/index.js";
 import { WatsonXConfig } from "../types.js";
 import { chatCompletion, customFetch } from "../util.js";
-import {
-  BaseLlmApi,
-  CreateRerankResponse,
-  FimCreateParamsStreaming,
-  RerankCreateParams,
-} from "./base.js";
+import { BaseLlmApi, FimCreateParamsStreaming } from "./base.js";
 
 export class WatsonXApi implements BaseLlmApi {
   apiBase: string;
@@ -243,8 +238,8 @@ export class WatsonXApi implements BaseLlmApi {
   }
 
   async completionNonStream(
-    body: CompletionCreateParamsNonStreaming,
-    signal: AbortSignal,
+    _body: CompletionCreateParamsNonStreaming,
+    _signal: AbortSignal,
   ): Promise<Completion> {
     throw new Error("Method not implemented.");
   }
@@ -331,19 +326,9 @@ export class WatsonXApi implements BaseLlmApi {
   }
 
   async *fimStream(
-    body: FimCreateParamsStreaming,
-    signal: AbortSignal,
+    _body: FimCreateParamsStreaming,
+    _signal: AbortSignal,
   ): AsyncGenerator<ChatCompletionChunk, any, unknown> {
-    throw new Error("Method not implemented.");
-  }
-
-  async embed(
-    body: OpenAI.Embeddings.EmbeddingCreateParams,
-  ): Promise<OpenAI.Embeddings.CreateEmbeddingResponse> {
-    throw new Error("Method not implemented.");
-  }
-
-  async rerank(body: RerankCreateParams): Promise<CreateRerankResponse> {
     throw new Error("Method not implemented.");
   }
 

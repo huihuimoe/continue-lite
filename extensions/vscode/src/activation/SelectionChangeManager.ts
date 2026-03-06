@@ -1,10 +1,4 @@
-import {
-  EditableRegionStrategy,
-  getNextEditableRegion,
-} from "core/nextEdit/NextEditEditableRegionCalculator";
-import { PrefetchQueue } from "core/nextEdit/NextEditPrefetchQueue";
 import { NextEditProvider } from "core/nextEdit/NextEditProvider";
-import { localPathOrUriToPath } from "core/util/pathToUri";
 import * as vscode from "vscode";
 import { VsCodeIde } from "../VsCodeIde";
 import { JumpManager } from "./JumpManager";
@@ -322,8 +316,8 @@ export class SelectionChangeManager {
   }
 
   private async defaultFallbackHandler(
-    e: vscode.TextEditorSelectionChangeEvent,
-    state: StateSnapshot,
+    _e: vscode.TextEditorSelectionChangeEvent,
+    _state: StateSnapshot,
   ): Promise<boolean> {
     if (!this.ide) {
       console.error("IDE not initialized in SelectionChangeManager");
@@ -334,23 +328,6 @@ export class SelectionChangeManager {
     //   "defaultFallbackHandler: deleteChain called from onDidChangeTextEditorSelection",
     // );
     await NextEditProvider.getInstance().deleteChain();
-
-    if (!this.usingFullFileDiff) {
-      const nextEditableRegions =
-        (await getNextEditableRegion(EditableRegionStrategy.Static, {
-          cursorPosition: e.selections[0].anchor,
-          filepath: localPathOrUriToPath(e.textEditor.document.uri.toString()),
-          ide: this.ide,
-        })) ?? [];
-      // (await getNextEditableRegion(EditableRegionStrategy.Sliding, {
-      //   filepath: localPathOrUriToPath(e.textEditor.document.uri.toString()),
-      //   fileLines: e.textEditor.document.getText().split("\n"),
-      // })) ?? [];
-
-      nextEditableRegions.forEach((region) => {
-        PrefetchQueue.getInstance().enqueueUnprocessed(region);
-      });
-    }
 
     return true;
   }

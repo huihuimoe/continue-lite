@@ -206,34 +206,15 @@ describe("OpenAI", () => {
     });
   });
 
-  test("should handle embeddings", async () => {
+  test("should not expose runtime embed/rerank methods", () => {
     const openai = new OpenAI({
       apiKey: "test-api-key",
-      model: "text-embedding-ada-002",
+      model: "gpt-4",
       apiBase: "https://api.openai.com/v1/",
     });
 
-    await runLlmTest({
-      llm: openai,
-      methodToTest: "embed",
-      params: [["Hello", "World"]],
-      expectedRequest: {
-        url: "https://api.openai.com/v1/embeddings",
-        method: "POST",
-        headers: {
-          Authorization: "Bearer test-api-key",
-          "Content-Type": "application/json",
-          "api-key": "test-api-key",
-        },
-        body: {
-          input: ["Hello", "World"],
-          model: "text-embedding-ada-002",
-        },
-      },
-      mockResponse: {
-        data: [{ embedding: [0.1, 0.2, 0.3] }, { embedding: [0.4, 0.5, 0.6] }],
-      },
-    });
+    expect("embed" in (openai as any)).toBe(false);
+    expect("rerank" in (openai as any)).toBe(false);
   });
 });
 

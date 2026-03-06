@@ -6,7 +6,7 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../util/parameters.js";
 import { shouldCompleteMultiline } from "./classification/shouldCompleteMultiline.js";
 import { ContextRetrievalService } from "./context/ContextRetrievalService.js";
 
-import { isSecurityConcern } from "../indexing/ignore.js";
+import { isSecurityConcern } from "../util/ignore.js";
 import { BracketMatchingService } from "./filtering/BracketMatchingService.js";
 import { CompletionStreamer } from "./generation/CompletionStreamer.js";
 import { postprocessCompletion } from "./postprocessing/index.js";
@@ -87,10 +87,6 @@ export class CompletionProvider {
     // Set temperature (but don't override)
     if (llm.completionOptions.temperature === undefined) {
       llm.completionOptions.temperature = 0.01;
-    }
-
-    if (llm instanceof OpenAI) {
-      llm.useLegacyCompletionsEndpoint = true;
     }
 
     return llm;
@@ -283,7 +279,7 @@ export class CompletionProvider {
         uniqueId: await this.ide.getUniqueId(),
         timestamp: new Date().toISOString(),
         profileType:
-          this.configHandler.currentProfile?.profileDescription.profileType,
+          this.configHandler.getActiveProfile()?.profileDescription.profileType,
         ...helper.options,
       };
 

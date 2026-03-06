@@ -1,13 +1,9 @@
-import {
-  EditableRegionStrategy,
-  getNextEditableRegion,
-} from "core/nextEdit/NextEditEditableRegionCalculator";
-import { PrefetchQueue } from "core/nextEdit/NextEditPrefetchQueue";
 import { NextEditProvider } from "core/nextEdit/NextEditProvider";
+import * as fs from "fs";
+import * as path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as vscode from "vscode";
 import { VsCodeIde } from "../VsCodeIde";
-import { VsCodeWebviewProtocol } from "../webviewProtocol";
 import { JumpManager } from "./JumpManager";
 import { NextEditWindowManager } from "./NextEditWindowManager";
 import {
@@ -64,26 +60,6 @@ vi.mock("core/nextEdit/NextEditProvider", () => ({
   },
 }));
 
-vi.mock("core/nextEdit/NextEditEditableRegionCalculator", () => ({
-  EditableRegionStrategy: {
-    Static: "static",
-    Sliding: "sliding",
-  },
-  getNextEditableRegion: vi.fn(),
-}));
-
-vi.mock("core/nextEdit/NextEditPrefetchQueue", () => ({
-  PrefetchQueue: {
-    getInstance: vi.fn(() => ({
-      enqueueUnprocessed: vi.fn(),
-    })),
-  },
-}));
-
-vi.mock("core/util/pathToUri", () => ({
-  localPathOrUriToPath: vi.fn((uri) => uri.replace("file://", "")),
-}));
-
 vi.mock("../VsCodeIde", () => ({
   VsCodeIde: vi.fn(),
 }));
@@ -110,34 +86,16 @@ describe("SelectionChangeManager", () => {
   let selectionChangeManager: SelectionChangeManager;
   let mockIde: VsCodeIde;
   let mockDeleteChain: ReturnType<typeof vi.fn>;
-  let mockEnqueueUnprocessed: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.resetAllMocks();
 
     // Setup mock implementations
     mockDeleteChain = vi.fn();
-    mockEnqueueUnprocessed = vi.fn();
 
     vi.mocked(NextEditProvider.getInstance).mockReturnValue({
       deleteChain: mockDeleteChain,
     } as any);
-
-    vi.mocked(PrefetchQueue.getInstance).mockReturnValue({
-      enqueueUnprocessed: mockEnqueueUnprocessed,
-    } as any);
-
-    vi.mocked(getNextEditableRegion).mockResolvedValue([
-      {
-        filepath: "/test/file.ts",
-        range: {
-          start: { line: 0, character: 0 },
-          end: { line: 10, character: 0 },
-        },
-        // content: "test content",
-        // cursorPosition: { line: 2, character: 5 },
-      },
-    ]);
 
     // Create mock context and webview protocol promise
     const mockContext = {
@@ -172,15 +130,7 @@ describe("SelectionChangeManager", () => {
       extensionMode: 1, // Production mode
       extension: {} as any,
     } as vscode.ExtensionContext;
-    let resolveWebviewProtocol: any = undefined;
-    const webviewProtocolPromise = new Promise<VsCodeWebviewProtocol>(
-      (resolve) => {
-        resolveWebviewProtocol = resolve;
-      },
-    );
-
-    // Create VsCodeIde instance with proper constructor arguments
-    mockIde = new VsCodeIde(webviewProtocolPromise, mockContext);
+    mockIde = new VsCodeIde(mockContext);
 
     // Get a fresh instance
     selectionChangeManager = SelectionChangeManager.getInstance();
@@ -234,6 +184,32 @@ describe("SelectionChangeManager", () => {
         expect.any(Function),
         HandlerPriority.FALLBACK,
       );
+    });
+
+    it("keeps the shipped VS Code extension wired to full file diff mode", () => {
+      const source = fs.readFileSync(
+        path.resolve(__dirname, "../extension/VsCodeExtension.ts"),
+        "utf8",
+      );
+
+      expect(source).toContain("const usingFullFileDiff = true;");
+      expect(source).toMatch(
+        /selectionManager\.initialize\(this\.ide,\s*usingFullFileDiff\)/,
+      );
+      expect(source).toMatch(
+        /new ContinueCompletionProvider\([\s\S]*?usingFullFileDiff[\s\S]*?\)/,
+      );
+    });
+
+    it("removes old prefetch helper imports from production source", () => {
+      const source = fs.readFileSync(
+        path.resolve(__dirname, "./SelectionChangeManager.ts"),
+        "utf8",
+      );
+
+      expect(source).not.toContain("getNextEditableRegion");
+      expect(source).not.toContain("EditableRegionStrategy");
+      expect(source).not.toContain("localPathOrUriToPath");
     });
   });
 
@@ -757,8 +733,7 @@ describe("SelectionChangeManager", () => {
       consoleErrorSpy.mockRestore();
     });
 
-    it("should prefetch editable regions when not using full file diff", async () => {
-      // Initialize with usingFullFileDiff = false
+    it("should delete the chain without prefetch helpers when fallback runs", async () => {
       const newManager = SelectionChangeManager.getInstance();
       newManager.initialize(mockIde, false);
 
@@ -791,66 +766,14 @@ describe("SelectionChangeManager", () => {
         cursorPosition: mockEvent.selections[0].active,
       };
 
-      const mockRegions = [
-        {
-          filepath: "/test/file.ts",
-          range: {
-            start: { line: 0, character: 0 },
-            end: { line: 0, character: 0 },
-          },
-          // content: "test content",
-          // cursorPosition: { line: 2, character: 5 },
-        },
-      ];
-
-      vi.mocked(getNextEditableRegion).mockResolvedValue(mockRegions);
-
       const privateManager = newManager as any;
-      await privateManager.defaultFallbackHandler(mockEvent, mockState);
-
-      expect(getNextEditableRegion).toHaveBeenCalledWith(
-        EditableRegionStrategy.Static,
-        {
-          cursorPosition: mockEvent.selections[0].anchor,
-          filepath: "/test/file.ts",
-          ide: mockIde,
-        },
+      const handled = await privateManager.defaultFallbackHandler(
+        mockEvent,
+        mockState,
       );
 
-      expect(mockEnqueueUnprocessed).toHaveBeenCalledWith(mockRegions[0]);
-    });
-
-    it("should skip prefetching when using full file diff", async () => {
-      // Initialize with usingFullFileDiff = true
-      const newManager = SelectionChangeManager.getInstance();
-      newManager.initialize(mockIde, true);
-
-      const mockEvent: vscode.TextEditorSelectionChangeEvent = {
-        textEditor: vscode.window.activeTextEditor!,
-        selections: [
-          new vscode.Selection(
-            new vscode.Position(2, 5),
-            new vscode.Position(2, 5),
-          ),
-        ],
-        kind: undefined,
-      };
-
-      const mockState = {
-        nextEditWindowAccepted: false,
-        jumpInProgress: false,
-        jumpJustAccepted: false,
-        lastDocumentChangeTime: Date.now(),
-        isTypingSession: false,
-        document: mockEvent.textEditor.document,
-        cursorPosition: mockEvent.selections[0].active,
-      };
-
-      const privateManager = newManager as any;
-      await privateManager.defaultFallbackHandler(mockEvent, mockState);
-
-      expect(getNextEditableRegion).not.toHaveBeenCalled();
-      expect(mockEnqueueUnprocessed).not.toHaveBeenCalled();
+      expect(handled).toBe(true);
+      expect(mockDeleteChain).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -859,7 +782,6 @@ describe("SelectionChangeManager", () => {
       const handler1 = vi.fn().mockResolvedValue(false);
       const handler2 = vi.fn().mockResolvedValue(true);
       const handler3 = vi.fn().mockResolvedValue(false);
-      const fallbackHandler = vi.fn().mockResolvedValue(true);
 
       selectionChangeManager.registerListener(
         "handler1",

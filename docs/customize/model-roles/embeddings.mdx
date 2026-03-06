@@ -67,35 +67,6 @@ After obtaining an API key from [here](https://www.voyageai.com/), you can confi
 
 See [here](../model-providers/top-level/ollama) for instructions on how to use Ollama for embeddings.
 
-### Transformers.js (currently VS Code only)
-
-[Transformers.js](https://huggingface.co/docs/transformers.js/index) is a JavaScript port of the popular [Transformers](https://huggingface.co/transformers/) library. It allows embeddings to be calculated entirely locally. The model used is `all-MiniLM-L6-v2`, which is shipped alongside the Continue extension.
-
-<Tabs>
-    <Tab title="YAML">
-    ```yaml title="config.yaml"
-    name: My Config
-    version: 0.0.1
-    schema: v1
-
-    models:
-      - name: default-transformers
-        provider: transformers.js
-        roles:
-          - embed
-    ```
-    </Tab>
-    <Tab title="JSON">
-    ```json title="config.json"
-    {
-      "embeddingsProvider": {
-        "provider": "transformers.js"
-      }
-    }
-    ```
-    </Tab>
-</Tabs>
-
 ### Text Embeddings Inference
 
 [Hugging Face Text Embeddings Inference](https://huggingface.co/docs/text-embeddings-inference/en/index) enables you to host your own embeddings endpoint. You can configure embeddings to use your endpoint as follows:

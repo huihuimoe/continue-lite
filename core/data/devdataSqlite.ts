@@ -1,18 +1,18 @@
 import fs from "fs";
 
-import { open } from "sqlite";
-import sqlite3 from "sqlite3";
-
-import { DatabaseConnection } from "../indexing/refreshIndex.js";
-
 import { getDevDataSqlitePath } from "../util/paths.js";
+import { createSqliteConnection, type SqliteConnection } from "./nodeSqlite.js";
 
 /* The Dev Data SQLITE table is only used for local tokens generated */
-export class DevDataSqliteDb {
-  static db: DatabaseConnection | null = null;
+interface TableInfoRow {
+  name: string;
+}
 
-  private static async createTables(db: DatabaseConnection) {
-    await db.exec(
+export class DevDataSqliteDb {
+  static db: SqliteConnection | null = null;
+
+  private static async createTables(db: SqliteConnection) {
+    db.exec(
       `CREATE TABLE IF NOT EXISTS tokens_generated (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             model TEXT NOT NULL,
@@ -24,14 +24,14 @@ export class DevDataSqliteDb {
     );
 
     // Add tokens_prompt column if it doesn't exist
-    const columnCheckResult = await db.all(
+    const columnCheckResult = db.all<TableInfoRow>(
       "PRAGMA table_info(tokens_generated);",
     );
     const columnExists = columnCheckResult.some(
-      (col: any) => col.name === "tokens_prompt",
+      (column) => column.name === "tokens_prompt",
     );
     if (!columnExists) {
-      await db.exec(
+      db.exec(
         "ALTER TABLE tokens_generated ADD COLUMN tokens_prompt INTEGER NOT NULL DEFAULT 0;",
       );
     }
@@ -44,15 +44,18 @@ export class DevDataSqliteDb {
     generatedTokens: number,
   ) {
     const db = await DevDataSqliteDb.get();
-    await db?.run(
+    db?.run(
       "INSERT INTO tokens_generated (model, provider, tokens_prompt, tokens_generated) VALUES (?, ?, ?, ?)",
-      [model, provider, promptTokens, generatedTokens],
+      model,
+      provider,
+      promptTokens,
+      generatedTokens,
     );
   }
 
   public static async getTokensPerDay() {
     const db = await DevDataSqliteDb.get();
-    const result = await db?.all(
+    const result = db?.all(
       // Return a sum of tokens_generated and tokens_prompt columns aggregated by day
       `SELECT date(timestamp) as day, sum(tokens_prompt) as promptTokens, sum(tokens_generated) as generatedTokens
         FROM tokens_generated
@@ -63,7 +66,7 @@ export class DevDataSqliteDb {
 
   public static async getTokensPerModel() {
     const db = await DevDataSqliteDb.get();
-    const result = await db?.all(
+    const result = db?.all(
       // Return a sum of tokens_generated and tokens_prompt columns aggregated by model
       `SELECT model, sum(tokens_prompt) as promptTokens, sum(tokens_generated) as generatedTokens
         FROM tokens_generated
@@ -78,12 +81,7 @@ export class DevDataSqliteDb {
       return DevDataSqliteDb.db;
     }
 
-    DevDataSqliteDb.db = await open({
-      filename: devDataSqlitePath,
-      driver: sqlite3.Database,
-    });
-
-    await DevDataSqliteDb.db.exec("PRAGMA busy_timeout = 3000;");
+    DevDataSqliteDb.db = createSqliteConnection(devDataSqlitePath);
 
     await DevDataSqliteDb.createTables(DevDataSqliteDb.db!);
 

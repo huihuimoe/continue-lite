@@ -1,4 +1,4 @@
-import { ILLM } from "core";
+import type { ILLM } from "core";
 import { EXTENSION_NAME } from "core/control-plane/env";
 import * as vscode from "vscode";
 
