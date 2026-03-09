@@ -112,12 +112,9 @@ test("getAgentOptions incorporates custom CA bundle paths", async () => {
   expect(options.ca).toContain(caContent2);
 });
 
-test("getAgentOptions includes global certs when running as binary", async () => {
+test("getAgentOptions includes global certs from the shared agent", async () => {
   // Set up test certs in globalAgent
   globalAgent.options.ca = ["global-cert-1", "global-cert-2"];
-
-  // Set IS_BINARY environment variable
-  process.env.IS_BINARY = "true";
 
   const options = await getAgentOptions();
 

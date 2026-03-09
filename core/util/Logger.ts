@@ -5,8 +5,6 @@ class LoggerClass {
   private winston: winston.Logger;
 
   private constructor() {
-    const isBinaryRuntime = process.env.IS_BINARY === "true";
-
     this.winston = winston.createLogger({
       level: "info",
       format: winston.format.combine(
@@ -29,7 +27,7 @@ class LoggerClass {
               }),
             ]
           : []),
-        ...(!isBinaryRuntime ? [new winston.transports.Console()] : []),
+        new winston.transports.Console(),
       ],
     });
   }

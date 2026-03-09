@@ -17,7 +17,6 @@ describe("loadContinueConfigFromJson config.ts loading", () => {
       path.join(os.tmpdir(), "continue-config-load-"),
     );
     process.env.CONTINUE_GLOBAL_DIR = continueGlobalDir;
-    delete process.env.IS_BINARY;
     vi.resetModules();
   });
 

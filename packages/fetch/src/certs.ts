@@ -41,14 +41,12 @@ export class CertsCache {
     }
 
     const globalCerts: string[] = [];
-    if (Boolean(process.env.IS_BINARY)) {
-      if (Array.isArray(globalAgent.options.ca)) {
-        globalCerts.push(
-          ...globalAgent.options.ca.map((cert) => cert.toString()),
-        );
-      } else if (typeof globalAgent.options.ca !== "undefined") {
-        globalCerts.push(globalAgent.options.ca.toString());
-      }
+    if (Array.isArray(globalAgent.options.ca)) {
+      globalCerts.push(
+        ...globalAgent.options.ca.map((cert) => cert.toString()),
+      );
+    } else if (typeof globalAgent.options.ca !== "undefined") {
+      globalCerts.push(globalAgent.options.ca.toString());
     }
 
     const extraCerts: string[] = [];

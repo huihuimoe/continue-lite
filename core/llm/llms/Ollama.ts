@@ -354,12 +354,7 @@ class Ollama extends BaseLLM implements ModelInstaller {
   }
 
   private getEndpoint(endpoint: string): URL {
-    let base = this.apiBase;
-    if (process.env.IS_BINARY) {
-      base = base?.replace("localhost", "127.0.0.1");
-    }
-
-    return new URL(endpoint, base);
+    return new URL(endpoint, this.apiBase);
   }
 
   protected async *_streamComplete(
@@ -609,14 +604,10 @@ class Ollama extends BaseLLM implements ModelInstaller {
     if (this.apiKey) {
       headers.Authorization = `Bearer ${this.apiKey}`;
     }
-    const response = await this.fetch(
-      // localhost was causing fetch failed in pkg binary only for this Ollama endpoint
-      this.getEndpoint("api/tags"),
-      {
-        method: "GET",
-        headers: headers,
-      },
-    );
+    const response = await this.fetch(this.getEndpoint("api/tags"), {
+      method: "GET",
+      headers: headers,
+    });
     const data = await response.json();
     if (response.ok) {
       return data.models.map((model: any) => model.name);

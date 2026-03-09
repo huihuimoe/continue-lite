@@ -399,10 +399,6 @@ export function getRepoMapFilePath(): string {
   return path.join(getContinueUtilsPath(), "repo_map.txt");
 }
 
-export function getEsbuildBinaryPath(): string {
-  return path.join(getContinueUtilsPath(), "esbuild");
-}
-
 export function migrateV1DevDataFiles() {
   const devDataPath = getDevDataPath();
   function moveToV1FolderIfExists(

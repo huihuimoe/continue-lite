@@ -1,4 +1,3 @@
-import { execSync } from "child_process";
 import * as fs from "fs";
 import os from "os";
 import path from "path";
@@ -37,7 +36,6 @@ import {
   getConfigJsPath,
   getConfigTsPath,
   getContinueDotEnv,
-  getEsbuildBinaryPath,
 } from "../util/paths";
 import { localPathToUri } from "../util/pathToUri";
 
@@ -371,10 +369,6 @@ async function finalToBrowserConfig(
   };
 }
 
-function escapeSpacesInPath(p: string): string {
-  return p.replace(/ /g, "\\ ");
-}
-
 async function handleEsbuildInstallation(
   ide: IDE,
   _ideType: IdeType,
@@ -417,11 +411,7 @@ async function handleEsbuildInstallation(
 
 async function tryBuildConfigTs(): Promise<boolean> {
   try {
-    if (process.env.IS_BINARY === "true") {
-      await buildConfigTsWithBinary();
-    } else {
-      await buildConfigTsWithNodeModule();
-    }
+    await buildConfigTsWithNodeModule();
     return true;
   } catch (e) {
     console.log(
@@ -429,25 +419,6 @@ async function tryBuildConfigTs(): Promise<boolean> {
     );
     return false;
   }
-}
-
-async function buildConfigTsWithBinary() {
-  const cmd = [
-    escapeSpacesInPath(getEsbuildBinaryPath()),
-    escapeSpacesInPath(getConfigTsPath()),
-    "--bundle",
-    `--outfile=${escapeSpacesInPath(getConfigJsPath())}`,
-    "--platform=node",
-    "--format=cjs",
-    "--sourcemap",
-    "--external:fetch",
-    "--external:fs",
-    "--external:path",
-    "--external:os",
-    "--external:child_process",
-  ].join(" ");
-
-  execSync(cmd);
 }
 
 async function buildConfigTsWithNodeModule() {
