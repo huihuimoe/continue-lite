@@ -62,9 +62,6 @@ function countChatMessageTokens(
   modelName: string,
   chatMessage: ChatMessage,
 ): number {
-  // Doing simpler, safer version of what is here:
-  // https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
-  // every message follows <|im_start|>{role/name}\n{content}<|end|>\n
   const BASE_TOKENS = 4;
   const TOOL_CALL_EXTRA_TOKENS = 10;
   const TOOL_OUTPUT_EXTRA_TOKENS = 10;
@@ -407,12 +404,7 @@ function compileChatMessages({
   };
 }
 
-async function cleanupAsyncEncoders(): Promise<void> {
-  await Promise.resolve();
-}
-
 export {
-  cleanupAsyncEncoders,
   compileChatMessages,
   countTokens,
   countTokensAsync,

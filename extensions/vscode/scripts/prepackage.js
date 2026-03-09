@@ -181,41 +181,11 @@ void (async () => {
     "tree-sitter runtime WASM",
   );
 
-  await copyMinimalPackage(
-    resolveExistingPath([
-      path.join(extensionNodeModules, "workerpool"),
-      path.join(coreNodeModules, "workerpool"),
-    ]),
-    path.join(extensionRoot, "out", "node_modules", "workerpool"),
-    ["src", "package.json", "LICENSE"],
-    "workerpool",
-  );
-
-  copyFile(
-    path.join(coreRoot, "llm", "llamaTokenizerWorkerPool.mjs"),
-    path.join(extensionRoot, "out", "llamaTokenizerWorkerPool.mjs"),
-    "llama tokenizer worker",
-  );
-  copyFile(
-    path.join(coreRoot, "llm", "llamaTokenizer.mjs"),
-    path.join(extensionRoot, "out", "llamaTokenizer.mjs"),
-    "llama tokenizer runtime",
-  );
-  copyFile(
-    path.join(coreRoot, "llm", "tiktokenWorkerPool.mjs"),
-    path.join(extensionRoot, "out", "tiktokenWorkerPool.mjs"),
-    "tiktoken worker",
-  );
-
   validateFilesPresent([
     "tree-sitter/code-snippet-queries/c_sharp.scm",
     "tag-qry/tree-sitter-c_sharp-tags.scm",
     "out/tree-sitter.wasm",
     "out/tree-sitter-wasms/tree-sitter-typescript.wasm",
-    "out/node_modules/workerpool/package.json",
-    "out/llamaTokenizerWorkerPool.mjs",
-    "out/llamaTokenizer.mjs",
-    "out/tiktokenWorkerPool.mjs",
   ]);
 
   console.log(

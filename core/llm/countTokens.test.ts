@@ -3,7 +3,6 @@
 import { ChatMessage, MessagePart } from "../index.js";
 import type { ToolCall } from "./chatTypes.js";
 import {
-  cleanupAsyncEncoders,
   compileChatMessages,
   countTokens,
   countTokensAsync,
@@ -51,11 +50,6 @@ describe.skip("countTokens", () => {
 });
 
 describe("countTokensAsync", () => {
-  afterAll(async () => {
-    // Clean up the global async encoders to prevent Jest from hanging
-    await cleanupAsyncEncoders();
-  });
-
   it("should count tokens asynchronously for a simple string", async () => {
     const content = "Hello world!";
     const tokenCount = await countTokensAsync(content, "gpt-4");
@@ -66,6 +60,11 @@ describe("countTokensAsync", () => {
     const content: MessagePart[] = [{ type: "text", text: "Hello world!" }];
     const tokenCount = await countTokensAsync(content, "gpt-4");
     expect(tokenCount).toBeGreaterThan(0);
+  });
+
+  it("should resolve repeated calls without encoder cleanup", async () => {
+    await expect(countTokensAsync("abcdef", "gpt-4")).resolves.toBe(2);
+    await expect(countTokensAsync("abcdefgh", "gpt-4")).resolves.toBe(3);
   });
 });
 
