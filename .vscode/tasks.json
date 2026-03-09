@@ -175,21 +175,6 @@
       ]
     },
     {
-      "label": "binary:esbuild",
-      "type": "shell",
-      "command": "npm",
-      "args": ["run", "esbuild"],
-      "problemMatcher": [],
-      "presentation": {
-        "group": "build-tasks",
-        "panel": "shared",
-        "reveal": "always"
-      },
-      "options": {
-        "cwd": "binary"
-      }
-    },
-    {
       "label": "docs:start",
       "type": "shell",
       "command": "npm",
@@ -269,7 +254,7 @@
       "dependsOn": [
         "refresh-dependencies:core",
         "refresh-dependencies:gui",
-        "refresh-dependencies:vscode",
+        "refresh-dependencies:vscode"
       ],
       "type": "shell",
       "problemMatcher": [],
