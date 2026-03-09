@@ -207,31 +207,6 @@ void (async () => {
     "tiktoken worker",
   );
 
-  copyFile(
-    resolveExistingPath([
-      path.join(
-        extensionNodeModules,
-        "jsdom",
-        "lib",
-        "jsdom",
-        "living",
-        "xhr",
-        "xhr-sync-worker.js",
-      ),
-      path.join(
-        coreNodeModules,
-        "jsdom",
-        "lib",
-        "jsdom",
-        "living",
-        "xhr",
-        "xhr-sync-worker.js",
-      ),
-    ]),
-    path.join(extensionRoot, "out", "xhr-sync-worker.js"),
-    "jsdom xhr worker",
-  );
-
   validateFilesPresent([
     "tree-sitter/code-snippet-queries/c_sharp.scm",
     "tag-qry/tree-sitter-c_sharp-tags.scm",
@@ -241,7 +216,6 @@ void (async () => {
     "out/llamaTokenizerWorkerPool.mjs",
     "out/llamaTokenizer.mjs",
     "out/tiktokenWorkerPool.mjs",
-    "out/xhr-sync-worker.js",
   ]);
 
   console.log(
