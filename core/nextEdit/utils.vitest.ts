@@ -77,9 +77,6 @@ describe("convertNextEditModelNameToEnum", () => {
     expect(convertNextEditModelNameToEnum("blah/instinct")).toBe(
       NEXT_EDIT_MODELS.INSTINCT,
     );
-    expect(
-      convertNextEditModelNameToEnum("maternion/sweep-next-edit-1.5B:latest"),
-    ).toBe(NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT);
   });
 
   test("returns undefined for non-matching model names", () => {

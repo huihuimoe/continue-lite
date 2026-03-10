@@ -251,16 +251,6 @@ describe("modelSupportsNextEdit", () => {
       );
     });
 
-    it("should return true for sweep-next-edit", () => {
-      expect(
-        modelSupportsNextEdit(
-          undefined,
-          "maternion/sweep-next-edit-1.5B:latest",
-          undefined,
-        ),
-      ).toBe(true);
-    });
-
     it("should return true when model contains supported model name as substring", () => {
       expect(
         modelSupportsNextEdit(undefined, "provider/mercury-edit", undefined),

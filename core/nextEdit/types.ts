@@ -1,13 +1,13 @@
-import type {
+import {
   DiffLine,
   Position,
   Range,
   RangeInFile,
   TabAutocompleteOptions,
 } from "../";
-import type { SnippetPayload } from "../autocomplete/snippets";
-import type { AutocompleteCodeSnippet } from "../autocomplete/snippets/types";
-import type { HelperVars } from "../autocomplete/util/HelperVars";
+import { SnippetPayload } from "../autocomplete/snippets";
+import { AutocompleteCodeSnippet } from "../autocomplete/snippets/types";
+import { HelperVars } from "../autocomplete/util/HelperVars";
 
 export type RecentlyEditedRange = RangeInFile & {
   timestamp: number;
@@ -77,11 +77,6 @@ export interface PromptMetadata {
   userExcerpts: string;
 }
 
-export interface NextEditInferenceConfig {
-  mode: "chat" | "complete";
-  options?: Record<string, any>;
-}
-
 export type Prompt = SystemPrompt | UserPrompt;
 
 export interface SystemPrompt {
@@ -98,7 +93,7 @@ export interface NextEditTemplate {
   template: string;
 }
 
-export type TemplateVars = Record<string, string>;
+export interface TemplateVars {}
 
 export interface InstinctTemplateVars extends TemplateVars {
   contextSnippets: string;
@@ -113,14 +108,6 @@ export interface MercuryTemplateVars extends TemplateVars {
   currentFileContent: string;
   editDiffHistory: string; // could be a singe large unified diff
   currentFilePath: string;
-}
-
-export interface SweepTemplateVars extends TemplateVars {
-  contextFilesBlock: string;
-  recentDiffsBlock: string;
-  currentFilePath: string;
-  originalContent: string;
-  currentContent: string;
 }
 
 /**

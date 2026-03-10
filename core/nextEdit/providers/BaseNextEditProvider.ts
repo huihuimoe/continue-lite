@@ -1,6 +1,6 @@
 import * as path from "path";
 
-import type { HelperVars } from "../../autocomplete/util/HelperVars.js";
+import { HelperVars } from "../../autocomplete/util/HelperVars.js";
 import { myersDiff } from "../../diff/myers.js";
 import type { DiffLine, IDE, ILLM, Position } from "../../index.js";
 import { countTokens } from "../../llm/countTokens.js";
@@ -10,7 +10,6 @@ import {
   groupDiffLines,
 } from "../diff/diff.js";
 import {
-  NextEditInferenceConfig,
   ModelSpecificContext,
   NextEditOutcome,
   Prompt,
@@ -44,15 +43,6 @@ export abstract class BaseNextEditModelProvider {
     editableRegionStartLine: number;
     editableRegionEndLine: number;
   };
-
-  getInferenceConfig(): NextEditInferenceConfig {
-    return {
-      mode: "chat",
-      options: {
-        stream: false,
-      },
-    };
-  }
 
   // Methods that can be used as default fallback.
   public async handlePartialFileDiff(params: {

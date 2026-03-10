@@ -24,20 +24,6 @@ describe("NextEditPromptEngine", () => {
       expect(NEXT_EDIT_MODEL_TEMPLATES).toHaveProperty(
         NEXT_EDIT_MODELS.INSTINCT,
       );
-      expect(NEXT_EDIT_MODEL_TEMPLATES).toHaveProperty(
-        NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT,
-      );
-    });
-
-    it("sweep-next-edit template should contain expected placeholders", () => {
-      const template =
-        NEXT_EDIT_MODEL_TEMPLATES[NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT].template;
-
-      expect(template).toContain("{{{contextFilesBlock}}}");
-      expect(template).toContain("{{{recentDiffsBlock}}}");
-      expect(template).toContain("<|file_sep|>original/{{{currentFilePath}}}");
-      expect(template).toContain("<|file_sep|>current/{{{currentFilePath}}}");
-      expect(template).toContain("<|file_sep|>updated/{{{currentFilePath}}}");
     });
 
     it("mercury-edit template should contain expected tokens", () => {
