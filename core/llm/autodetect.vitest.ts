@@ -302,6 +302,48 @@ describe("modelSupportsNextEdit", () => {
     });
   });
 
+  describe("sweep-next-edit model variants", () => {
+    it("should return true for bare sweep-next-edit name", () => {
+      expect(
+        modelSupportsNextEdit(undefined, "sweep-next-edit", undefined),
+      ).toBe(true);
+    });
+
+    it("should return true for provider-prefixed sweep-next-edit", () => {
+      expect(
+        modelSupportsNextEdit(undefined, "sweepai/sweep-next-edit", undefined),
+      ).toBe(true);
+    });
+
+    it("should return true for tagged sweep-next-edit variant", () => {
+      expect(
+        modelSupportsNextEdit(
+          undefined,
+          "sweepai/sweep-next-edit:latest",
+          undefined,
+        ),
+      ).toBe(true);
+    });
+
+    it("should return true for sweep-next-edit in title", () => {
+      expect(
+        modelSupportsNextEdit(undefined, "some-model", "sweep-next-edit model"),
+      ).toBe(true);
+    });
+
+    it("should return false for similar but different names", () => {
+      expect(modelSupportsNextEdit(undefined, "sweepish-edit", undefined)).toBe(
+        false,
+      );
+    });
+
+    it("should return false for partial matches that are not sweep-next-edit", () => {
+      expect(
+        modelSupportsNextEdit(undefined, "sweep-something-else", undefined),
+      ).toBe(false);
+    });
+  });
+
   describe("edge cases", () => {
     it("should handle empty strings", () => {
       expect(modelSupportsNextEdit(undefined, "", "")).toBe(false);

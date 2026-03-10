@@ -6,7 +6,9 @@ description: "Learn how Continue's Next Edit feature predicts and suggests your 
 <Warning>
   Next Edit is currently an experimental feature. It requires
   [Instinct](https://continue.dev/continuedev/instinct) or [Mercury Coder
-  model](https://continue.dev/inception/mercury-coder) configured in
+  model](https://continue.dev/inception/mercury-coder), or
+  [Sweep Next Edit 1.5B](https://ollama.com/Maternion/sweep-next-edit-1.5B)
+  configured in
   your Continue autocomplete settings and is not yet available for JetBrains
   use.
 </Warning>
@@ -72,15 +74,15 @@ Next Edit activates automatically when:
 
 Next Edit requires:
 
-- Compatible AI models (Mercury Coder or Instinct)
+- Compatible AI models (Mercury Coder, Instinct, or Sweep Next Edit 1.5B)
 - VS Code (JetBrains support coming soon)
 - **API Keys**: Organizations can add API keys to [org secrets](/mission-control/secrets/secret-types) for team-wide access. Individual users need to provide their own API keys in their [model configuration](/customize/model-providers/overview)
 
 <Note>
-  To use Next Edit, you must have the Instinct or Mercury Coder model configured
-  in your Continue autocomplete model settings. This model is specifically
-  designed for next edit predictions. Once it's been loaded, you must reload VS
-  Code to activate it.
+  To use Next Edit, you must have Instinct, Mercury Coder, or Sweep Next Edit
+  1.5B configured in your Continue autocomplete model settings. These models
+  are specifically designed for next edit predictions. Once a model is loaded,
+  reload VS Code to activate it.
   <img
     src="/images/ide-extensions/autocomplete/images/instinct-autocomplete.png"
     alt="Next Edit Model Setup"
@@ -118,6 +120,7 @@ Next Edit requires AI models specifically trained for code prediction:
 
 - **Mercury Coder**: Primary model optimized for next edit prediction
 - **Instinct**: The leading open Next Edit model, trained by Continue
+- **Sweep Next Edit 1.5B**: Open-source next edit model available in Ollama (`maternion/sweep-next-edit-1.5B`)
 
 ### Automatic Detection
 

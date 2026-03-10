@@ -8,6 +8,10 @@ import {
   MERCURY_EDIT_DIFF_HISTORY_OPEN,
   MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_CLOSE,
   MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN,
+  SWEEP_CURRENT_FILE_PREFIX,
+  SWEEP_FILE_SEPARATOR_TOKEN,
+  SWEEP_ORIGINAL_FILE_PREFIX,
+  SWEEP_UPDATED_FILE_PREFIX,
 } from "../constants";
 import { NextEditTemplate, TemplateVars } from "../types";
 
@@ -21,6 +25,9 @@ export const NEXT_EDIT_MODEL_TEMPLATES: Record<
   },
   instinct: {
     template: `${INSTINCT_USER_PROMPT_PREFIX}\n\n### Context:\n{{{contextSnippets}}}\n\n### User Edits:\n\n{{{editDiffHistory}}}\n\n### User Excerpt:\n{{{currentFilePath}}}\n\n{{{currentFileContent}}}\`\`\`\n### Response:`,
+  },
+  "sweep-next-edit": {
+    template: `{{{contextSnippets}}}{{#if contextSnippets}}\n\n{{/if}}{{{editDiffHistory}}}{{#if editDiffHistory}}\n\n{{/if}}${SWEEP_FILE_SEPARATOR_TOKEN}${SWEEP_ORIGINAL_FILE_PREFIX}{{{currentFilePath}}}\n{{{originalFileContent}}}\n\n${SWEEP_FILE_SEPARATOR_TOKEN}${SWEEP_CURRENT_FILE_PREFIX}{{{currentFilePath}}}\n{{{currentFileContent}}}\n\n${SWEEP_FILE_SEPARATOR_TOKEN}${SWEEP_UPDATED_FILE_PREFIX}{{{currentFilePath}}}\n{{{updatedFileContent}}}`,
   },
 };
 

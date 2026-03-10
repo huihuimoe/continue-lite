@@ -6,10 +6,12 @@ import * as vscode from "vscode";
 
 import { ContinueCompletionProvider } from "../completionProvider";
 
+import * as CompletionProviderModule from "core/autocomplete/CompletionProvider";
 import * as NextEditLoggingServiceModule from "core/nextEdit/NextEditLoggingService";
 import * as NextEditProviderModule from "core/nextEdit/NextEditProvider";
 import * as JumpManagerModule from "../../activation/JumpManager";
 
+type MockCompletionProvider = ReturnType<typeof createMockCompletionProvider>;
 type MockNextEditProvider = ReturnType<typeof createMockNextEditProvider>;
 type MockJumpManager = ReturnType<typeof createMockJumpManager>;
 
@@ -20,11 +22,17 @@ const mockOutcome = {
   editableRegionEndLine: 0,
 } as any;
 
+let mockCompletionProvider: MockCompletionProvider;
 let mockNextEditProvider: MockNextEditProvider;
 let mockJumpManager: MockJumpManager;
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  mockCompletionProvider = createMockCompletionProvider();
+  (CompletionProviderModule as any).__setMockCompletionProviderInstance(
+    mockCompletionProvider,
+  );
 
   mockNextEditProvider = createMockNextEditProvider();
   (NextEditProviderModule as any).__setMockNextEditProviderInstance(
@@ -43,6 +51,29 @@ beforeEach(() => {
 });
 
 describe("ContinueCompletionProvider triggering logic", () => {
+  it("keeps using regular autocomplete when Next Edit is inactive", async () => {
+    const document = createDocument();
+    setActiveEditor(document);
+
+    const provider = buildProvider({ activateNextEdit: false });
+
+    const result = await provider.provideInlineCompletionItems(
+      document,
+      createPosition(),
+      createContext(),
+      createToken(),
+    );
+
+    expect(
+      mockCompletionProvider.provideInlineCompletionItems,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      mockNextEditProvider.provideInlineCompletionItems,
+    ).not.toHaveBeenCalled();
+    expect(mockCompletionProvider.markDisplayed).toHaveBeenCalledTimes(1);
+    expect(result).toHaveLength(1);
+  });
+
   it("starts a new chain when none exists", async () => {
     const document = createDocument();
     setActiveEditor(document);
@@ -157,7 +188,10 @@ describe("ContinueCompletionProvider triggering logic", () => {
   });
 });
 
-function buildProvider(options: { usingFullFileDiff?: boolean } = {}) {
+function buildProvider(
+  options: { activateNextEdit?: boolean; usingFullFileDiff?: boolean } = {},
+) {
+  const activateNextEdit = options.activateNextEdit ?? true;
   const usingFullFileDiff = options.usingFullFileDiff ?? true;
   const configHandler = {
     loadConfig: vi.fn(async () => ({
@@ -172,7 +206,9 @@ function buildProvider(options: { usingFullFileDiff?: boolean } = {}) {
     ide,
     usingFullFileDiff,
   );
-  provider.activateNextEdit();
+  if (activateNextEdit) {
+    provider.activateNextEdit();
+  }
   return provider;
 }
 
@@ -255,6 +291,15 @@ function createMockNextEditProvider() {
   };
 }
 
+function createMockCompletionProvider() {
+  return {
+    provideInlineCompletionItems: vi.fn(async () => ({
+      completion: "regular completion",
+    })),
+    markDisplayed: vi.fn(),
+  };
+}
+
 function createMockJumpManager() {
   return {
     isJumpInProgress: vi.fn(() => false),
@@ -325,10 +370,15 @@ vi.mock("vscode", () => {
 });
 
 vi.mock("core/autocomplete/CompletionProvider", () => {
+  let instance: any = null;
   return {
     CompletionProvider: class {
-      provideInlineCompletionItems = vi.fn();
-      markDisplayed = vi.fn();
+      constructor() {
+        return instance;
+      }
+    },
+    __setMockCompletionProviderInstance(value: any) {
+      instance = value;
     },
   };
 });

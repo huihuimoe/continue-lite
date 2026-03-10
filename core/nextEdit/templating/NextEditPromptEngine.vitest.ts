@@ -24,6 +24,9 @@ describe("NextEditPromptEngine", () => {
       expect(NEXT_EDIT_MODEL_TEMPLATES).toHaveProperty(
         NEXT_EDIT_MODELS.INSTINCT,
       );
+      expect(NEXT_EDIT_MODEL_TEMPLATES).toHaveProperty(
+        NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT,
+      );
     });
 
     it("mercury-edit template should contain expected tokens", () => {
@@ -54,6 +57,20 @@ describe("NextEditPromptEngine", () => {
       expect(template).toContain("{{{currentFileContent}}}");
       expect(template).toContain("{{{editDiffHistory}}}");
       expect(template).toContain("{{{currentFilePath}}}");
+    });
+
+    it("sweep-next-edit template should contain rewrite sections", () => {
+      const template =
+        NEXT_EDIT_MODEL_TEMPLATES[NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT].template;
+
+      expect(template).toContain("{{{contextSnippets}}}");
+      expect(template).toContain("{{{editDiffHistory}}}");
+      expect(template).toContain("<|file_sep|>original/{{{currentFilePath}}}");
+      expect(template).toContain("{{{originalFileContent}}}");
+      expect(template).toContain("<|file_sep|>current/{{{currentFilePath}}}");
+      expect(template).toContain("{{{currentFileContent}}}");
+      expect(template).toContain("<|file_sep|>updated/{{{currentFilePath}}}");
+      expect(template).toContain("{{{updatedFileContent}}}");
     });
   });
 

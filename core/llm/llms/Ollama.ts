@@ -555,12 +555,24 @@ class Ollama extends BaseLLM implements ModelInstaller {
     return this.fimSupported;
   }
 
+  private assertFimSupported() {
+    if (this.supportsFim()) {
+      return;
+    }
+
+    throw new Error(
+      `Ollama model ${this.model} does not support FIM suffix prompts. Sweep FIM requires an Ollama template that includes .Suffix.`,
+    );
+  }
+
   protected async *_streamFim(
     prefix: string,
     suffix: string,
     signal: AbortSignal,
     options: CompletionOptions,
   ): AsyncGenerator<string> {
+    this.assertFimSupported();
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };

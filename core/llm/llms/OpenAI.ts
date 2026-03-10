@@ -582,12 +582,24 @@ class OpenAI extends BaseLLM {
     return { role: "assistant", content: "" };
   }
 
+  private assertFimSupported() {
+    if (this.supportsFim()) {
+      return;
+    }
+
+    throw new Error(
+      `${this.providerName} backend does not support FIM completions. Sweep FIM requires an Ollama suffix-aware template or an OpenAI-compatible backend exposing /fim/completions.`,
+    );
+  }
+
   protected async *_streamFim(
     prefix: string,
     suffix: string,
     signal: AbortSignal,
     options: CompletionOptions,
   ): AsyncGenerator<string> {
+    this.assertFimSupported();
+
     const endpoint = new URL("fim/completions", this.apiBase);
     const resp = await this.fetch(endpoint, {
       method: "POST",
