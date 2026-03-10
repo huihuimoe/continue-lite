@@ -63,6 +63,12 @@ type ParsedShikiLine = {
 
 function decodeHtmlEntities(text: string): string {
   return text
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) =>
+      String.fromCodePoint(Number.parseInt(hex, 16)),
+    )
+    .replace(/&#(\d+);/g, (_, dec: string) =>
+      String.fromCodePoint(Number.parseInt(dec, 10)),
+    )
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
@@ -79,29 +85,73 @@ function getAttribute(tag: string, name: string): string {
   return match?.[1] ?? "";
 }
 
+function parseShikiSpans(content: string): ParsedShikiSpan[] {
+  const spans: ParsedShikiSpan[] = [];
+  const spanRegex = /<span([^>]*)>([\s\S]*?)<\/span>/g;
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(spanRegex)) {
+    const index = match.index ?? 0;
+    const plainText = stripTags(content.slice(lastIndex, index));
+    if (plainText.length > 0) {
+      spans.push({
+        text: plainText,
+        style: "",
+        className: "",
+      });
+    }
+
+    const attrs = match[1] ?? "";
+    const nestedContent = match[2] ?? "";
+    spans.push({
+      text: stripTags(nestedContent),
+      style: getAttribute(attrs, "style"),
+      className: getAttribute(attrs, "class"),
+    });
+
+    lastIndex = index + match[0].length;
+  }
+
+  const trailingText = stripTags(content.slice(lastIndex));
+  if (trailingText.length > 0 || spans.length === 0) {
+    spans.push({
+      text: trailingText,
+      style: "",
+      className: "",
+    });
+  }
+
+  return spans;
+}
+
 function parseShikiLines(shikiHtml: string): ParsedShikiLine[] {
   const codeBlockMatch = shikiHtml.match(/<code>([\s\S]*?)<\/code>/);
   if (!codeBlockMatch) {
     return [];
   }
 
-  return Array.from(
-    codeBlockMatch[1].matchAll(/<span class="([^"]*)">([\s\S]*?)<\/span>/g),
-  ).map(([, className, content]) => ({
-    className,
-    spans: Array.from(
-      content.matchAll(/<span([^>]*)>([\s\S]*?)<\/span>|([^<]+)/g),
-    ).map((match) => {
-      const tag = match[1] ?? "";
-      const nestedText = match[2];
-      const plainText = match[3];
+  return codeBlockMatch[1]
+    .split(/\r?\n/)
+    .map((rawLine) => rawLine.trim())
+    .filter((rawLine) => rawLine.length > 0)
+    .map((rawLine) => {
+      const lineMatch = rawLine.match(/^<span([^>]*)>([\s\S]*)<\/span>$/);
+
+      if (!lineMatch) {
+        return {
+          className: "",
+          spans: parseShikiSpans(rawLine),
+        };
+      }
+
+      const attrs = lineMatch[1] ?? "";
+      const content = lineMatch[2] ?? "";
+
       return {
-        text: stripTags(nestedText ?? plainText ?? ""),
-        style: getAttribute(tag, "style"),
-        className: getAttribute(tag, "class"),
+        className: getAttribute(attrs, "class"),
+        spans: parseShikiSpans(content),
       };
-    }),
-  }));
+    });
 }
 
 function getPreBackgroundColor(shikiHtml: string): string {
