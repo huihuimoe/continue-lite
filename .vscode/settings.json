@@ -50,11 +50,12 @@
   },
   "editor.formatOnSave": true,
   "eslint.workingDirectories": ["./core"],
-  "typescript.tsdk": "node_modules/typescript/lib",
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
   "conventionalCommits.showNewVersionNotes": false,
   "conventionalCommits.promptBody": false,
   "conventionalCommits.promptFooter": false,
   "conventionalCommits.promptScopes": true,
   "conventionalCommits.scopes": ["reg"],
-  "eslint.enable": false
+  "eslint.enable": false,
+  "biome.enabled": false,
 }

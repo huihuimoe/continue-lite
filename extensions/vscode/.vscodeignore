@@ -26,7 +26,7 @@ node_modules/**
 
 manual-testing-sandbox
 .continueignore
-esbuild.js
+rolldown.js
 importMetaUrl.js
 scripts
 e2e
@@ -49,9 +49,8 @@ server/exe/**
 !node_modules/@vscode/ripgrep/bin/rg
 !node_modules/@vscode/ripgrep/bin/rg.exe
 
-# Do not ship esbuild in VSIX
-out/node_modules/esbuild/**
-out/node_modules/@esbuild/**
+# Do not ship rolldown in VSIX
+out/node_modules/rolldown/**
 out/node_modules/workerpool/dist/**
 out/node_modules/workerpool/types/**
 out/node_modules/workerpool/HISTORY.md
