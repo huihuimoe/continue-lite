@@ -225,6 +225,71 @@ const mercuryMultifileFimTemplate: AutocompleteTemplate = {
   },
 };
 
+const sweepNextEditFimTemplate: AutocompleteTemplate = {
+  compilePrefixSuffix: (
+    prefix,
+    suffix,
+    filepath,
+    reponame,
+    snippets,
+    workspaceUris,
+  ): [string, string] => {
+    function getFileName(snippet: { uri: string; uniquePath: string }) {
+      return snippet.uri.startsWith("file://")
+        ? snippet.uniquePath
+        : snippet.uri;
+    }
+
+    if (snippets.length === 0) {
+      return [
+        `<|file_sep|>${getLastNUriRelativePathParts(workspaceUris, filepath, 2)}\n<|fim_prefix|>${prefix}`,
+        suffix,
+      ];
+    }
+
+    const relativePaths = getShortestUniqueRelativeUriPaths(
+      [
+        ...snippets.map((snippet) =>
+          "filepath" in snippet ? snippet.filepath : "file:///Untitled.txt",
+        ),
+        filepath,
+      ],
+      workspaceUris,
+    );
+
+    const otherFiles = snippets
+      .map((snippet, i) => {
+        if (snippet.type === AutocompleteSnippetType.Diff) {
+          return snippet.content;
+        }
+
+        return `<|file_sep|>${getFileName(relativePaths[i])} \n${snippet.content}`;
+      })
+      .join("\n\n");
+
+    return [
+      `${otherFiles}${otherFiles ? "\n\n" : ""}<|file_sep|>${getFileName(relativePaths[relativePaths.length - 1])}\n<|fim_prefix|>${prefix}`,
+      suffix,
+    ];
+  },
+  template: (prefix: string, suffix: string): string => {
+    return `${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`;
+  },
+  completionOptions: {
+    stop: [
+      "<|endoftext|>",
+      "<|fim_prefix|>",
+      "<|fim_middle|>",
+      "<|fim_suffix|>",
+      "<|fim_pad|>",
+      "<|repo_name|>",
+      "<|file_sep|>",
+      "<|im_start|>",
+      "<|im_end|>",
+    ],
+  },
+};
+
 const codegemmaFimTemplate: AutocompleteTemplate = {
   template:
     "<|fim_prefix|>{{{prefix}}}<|fim_suffix|>{{{suffix}}}<|fim_middle|>",
@@ -451,6 +516,10 @@ export function getTemplateForModel(model: string): AutocompleteTemplate {
   // }
   if (lowerCaseModel.includes("mercury")) {
     return mercuryMultifileFimTemplate;
+  }
+
+  if (lowerCaseModel.includes("sweep-next-edit")) {
+    return sweepNextEditFimTemplate;
   }
 
   if (lowerCaseModel.includes("qwen") && lowerCaseModel.includes("coder")) {
