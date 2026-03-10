@@ -14,7 +14,16 @@ vi.mock("vscode", () => ({
     executeCommand: vi.fn(),
     registerCommand: vi.fn(),
   },
+  ColorThemeKind: {
+    Dark: 1,
+    Light: 2,
+    HighContrast: 3,
+    HighContrastLight: 4,
+  },
   window: {
+    activeColorTheme: {
+      kind: 1,
+    },
     activeTextEditor: undefined,
     visibleTextEditors: [],
     createTextEditorDecorationType: vi.fn(),
@@ -140,6 +149,28 @@ import {
 } from "./NextEditWindowManager";
 
 const mockVscode = vi.mocked(vscode);
+
+function getCommandCalls(command: string) {
+  return (
+    mockVscode.commands.executeCommand as MockedFunction<any>
+  ).mock.calls.filter(([calledCommand]) => calledCommand === command);
+}
+
+function getSelectionListener(
+  value: unknown,
+): (event: {
+  textEditor: any;
+  selections: InstanceType<typeof mockVscode.Selection>[];
+}) => Promise<void> {
+  if (typeof value !== "function") {
+    throw new Error("Expected selection listener to be registered");
+  }
+
+  return value as (event: {
+    textEditor: any;
+    selections: InstanceType<typeof mockVscode.Selection>[];
+  }) => Promise<void>;
+}
 
 describe("NextEditWindowManager", () => {
   let manager: NextEditWindowManager;
@@ -813,6 +844,40 @@ describe("NextEditWindowManager", () => {
       await manager.setupNextEditWindowManager(mockContext);
     });
 
+    it("clears sweep baseline on accept", async () => {
+      await manager.showNextEditWindow(
+        mockEditor,
+        new mockVscode.Position(0, 0),
+        0,
+        0,
+        "old",
+        "new text",
+        [],
+      );
+      manager.updateCurrentCompletionId("completion-accept");
+
+      const registerCalls = (
+        mockVscode.commands.registerCommand as MockedFunction<any>
+      ).mock.calls;
+      const acceptCall = registerCalls.find(
+        (call) => call[0] === ACCEPT_NEXT_EDIT_SUGGESTION_COMMAND,
+      );
+      //@ts-ignore
+      const acceptCallback = acceptCall[1];
+
+      (mockVscode.commands.executeCommand as MockedFunction<any>).mockClear();
+
+      //@ts-ignore
+      await acceptCallback();
+
+      expect(getCommandCalls("continue.logNextEditOutcomeAccept")).toHaveLength(
+        1,
+      );
+      expect(getCommandCalls("continue.logNextEditOutcomeReject")).toHaveLength(
+        0,
+      );
+    });
+
     it("should apply text when accepting", async () => {
       // Show window first
       await manager.showNextEditWindow(
@@ -897,6 +962,131 @@ describe("NextEditWindowManager", () => {
       expect(manager["activeEditor"]).toBeNull();
       expect(manager["keyReservationState"]).toBe("free");
     });
+
+    it("clears sweep baseline on reject", async () => {
+      await manager.showNextEditWindow(
+        mockEditor,
+        new mockVscode.Position(0, 0),
+        0,
+        0,
+        "old",
+        "new",
+        [],
+      );
+      manager.updateCurrentCompletionId("completion-reject");
+
+      const registerCalls = (
+        mockVscode.commands.registerCommand as MockedFunction<any>
+      ).mock.calls;
+      const hideCall = registerCalls.find(
+        (call) => call[0] === HIDE_NEXT_EDIT_SUGGESTION_COMMAND,
+      );
+      //@ts-ignore
+      const hideCallback = hideCall[1];
+
+      (mockVscode.commands.executeCommand as MockedFunction<any>).mockClear();
+
+      //@ts-ignore
+      await hideCallback();
+
+      expect(getCommandCalls("continue.logNextEditOutcomeReject")).toHaveLength(
+        1,
+      );
+      expect(getCommandCalls("continue.logNextEditOutcomeAccept")).toHaveLength(
+        0,
+      );
+    });
+
+    it("clears sweep baseline on selection invalidation", async () => {
+      await manager.showNextEditWindow(
+        mockEditor,
+        new mockVscode.Position(0, 0),
+        0,
+        0,
+        "old",
+        "new",
+        [],
+      );
+      manager.updateCurrentCompletionId("completion-selection");
+
+      const selectionListener = getSelectionListener(
+        (
+          mockVscode.window
+            .onDidChangeTextEditorSelection as MockedFunction<any>
+        ).mock.calls[0][0],
+      );
+
+      (mockVscode.commands.executeCommand as MockedFunction<any>).mockClear();
+
+      await selectionListener({
+        textEditor: mockEditor,
+        selections: [
+          new mockVscode.Selection(
+            new mockVscode.Position(1, 0),
+            new mockVscode.Position(1, 0),
+          ),
+        ],
+      });
+      await selectionListener({
+        textEditor: mockEditor,
+        selections: [
+          new mockVscode.Selection(
+            new mockVscode.Position(2, 0),
+            new mockVscode.Position(2, 0),
+          ),
+        ],
+      });
+
+      expect(getCommandCalls("continue.logNextEditOutcomeReject")).toHaveLength(
+        1,
+      );
+      expect(manager["mostRecentCompletionId"]).toBeNull();
+    });
+
+    it("routes selection invalidation through reject cleanup once", async () => {
+      await manager.showNextEditWindow(
+        mockEditor,
+        new mockVscode.Position(0, 0),
+        0,
+        0,
+        "old",
+        "new",
+        [],
+      );
+      manager.updateCurrentCompletionId("completion-selection-cleanup");
+
+      const cleanupSpy = vi.spyOn(
+        manager,
+        "hideAllNextEditWindowsAndResetCompletionId",
+      );
+      const selectionListener = getSelectionListener(
+        (
+          mockVscode.window
+            .onDidChangeTextEditorSelection as MockedFunction<any>
+        ).mock.calls[0][0],
+      );
+
+      (mockVscode.commands.executeCommand as MockedFunction<any>).mockClear();
+
+      await selectionListener({
+        textEditor: mockEditor,
+        selections: [
+          new mockVscode.Selection(
+            new mockVscode.Position(1, 0),
+            new mockVscode.Position(1, 0),
+          ),
+        ],
+      });
+
+      expect(cleanupSpy).toHaveBeenCalledTimes(1);
+      expect(getCommandCalls("continue.logNextEditOutcomeReject")).toHaveLength(
+        1,
+      );
+      expect(manager["mostRecentCompletionId"]).toBeNull();
+      expect(manager["activeEditor"]).toBeNull();
+      expect(manager["currentTooltipText"]).toBeNull();
+      expect(manager["keyReservationState"]).toBe("free");
+    });
   });
 
   describe("Disposal", () => {
@@ -937,6 +1127,22 @@ describe("NextEditWindowManager", () => {
   });
 
   describe("Configuration Changes", () => {
+    it("uses light fallback when VS Code theme is light", async () => {
+      Object.defineProperty(mockVscode.window.activeColorTheme, "kind", {
+        value: mockVscode.ColorThemeKind.Light,
+      });
+
+      await manager.setupNextEditWindowManager(mockContext);
+
+      const { CodeRenderer } = await import("core/codeRenderer/CodeRenderer");
+      const getInstance = CodeRenderer.getInstance as MockedFunction<any>;
+      const renderer = getInstance.mock.results[0]?.value;
+
+      expect(renderer.setTheme).toHaveBeenCalledWith("dark", {
+        preferDarkFallback: false,
+      });
+    });
+
     it("should update on theme change", async () => {
       await manager.setupNextEditWindowManager(mockContext);
 

@@ -73,5 +73,5 @@ for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
 }
 
 console.log(
-  `vsce package completed - extension created at extensions/vscode/build/continue-${version}.vsix`,
+  `vsce package completed - extension created at extensions/vscode/build/continue-lite-${version}.vsix`,
 );

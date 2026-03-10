@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-// @ts-ignore
 import * as vscode from "vscode";
 
 import type { DiffChar, DiffLine } from "core";
@@ -180,6 +179,14 @@ export class NextEditWindowManager {
     this.loggingService = NextEditLoggingService.getInstance();
   }
 
+  private getPreferDarkFallback(): boolean {
+    const kind = vscode.window.activeColorTheme.kind;
+    return (
+      kind === vscode.ColorThemeKind.Dark ||
+      kind === vscode.ColorThemeKind.HighContrast
+    );
+  }
+
   // This is an implementation of last-action-wins.
   // For each action that fires setKeyReservation, it keeps its own operationId while incrementing latestOperationId.
   // When an action completes, checking for operationId === latestOperationId will determine which one came last.
@@ -286,7 +293,9 @@ export class NextEditWindowManager {
       this.textApplier = textApplier;
     }
 
-    await this.codeRenderer.setTheme(this.theme);
+    await this.codeRenderer.setTheme(this.theme, {
+      preferDarkFallback: this.getPreferDarkFallback(),
+    });
   }
 
   /**
@@ -486,7 +495,16 @@ export class NextEditWindowManager {
   }
 
   public async hideAllNextEditWindowsAndResetCompletionId() {
+    const shouldLogReject =
+      this.mostRecentCompletionId !== null ||
+      this.activeEditor !== null ||
+      this.currentTooltipText !== null;
+
     await this.hideAllNextEditWindows();
+
+    if (!shouldLogReject) {
+      return;
+    }
 
     // Log with accept = false.
     await vscode.commands.executeCommand(
@@ -614,7 +632,9 @@ export class NextEditWindowManager {
         e.affectsConfiguration("workbench.preferredHighContrastLightColorTheme")
       ) {
         this.theme = getThemeString();
-        await this.codeRenderer.setTheme(this.theme);
+        await this.codeRenderer.setTheme(this.theme, {
+          preferDarkFallback: this.getPreferDarkFallback(),
+        });
         console.debug(
           "Theme updated:",
           this.theme ? "Theme exists" : "Theme is undefined",
@@ -628,7 +648,9 @@ export class NextEditWindowManager {
     // Listen for active color theme changes.
     vscode.window.onDidChangeActiveColorTheme(async () => {
       this.theme = getThemeString();
-      await this.codeRenderer.setTheme(this.theme);
+      await this.codeRenderer.setTheme(this.theme, {
+        preferDarkFallback: this.getPreferDarkFallback(),
+      });
       console.debug(
         "Active theme changed:",
         this.theme ? "Theme exists" : "Theme is undefined",
@@ -661,6 +683,12 @@ export class NextEditWindowManager {
             this.mostRecentCompletionId,
           );
         }
+
+        if (!this.accepted) {
+          await this.hideAllNextEditWindowsAndResetCompletionId();
+          return;
+        }
+
         await this.hideAllNextEditWindows();
       }
     });

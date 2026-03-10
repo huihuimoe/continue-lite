@@ -127,18 +127,31 @@ export class CodeRenderer {
     return CodeRenderer.instance;
   }
 
-  public async setTheme(themeName: string): Promise<void> {
-    if (
-      this.themeExists(kebabOfThemeStr(themeName)) ||
-      themeName === "Default Dark Modern"
-    ) {
-      this.currentTheme =
-        themeName === "Default Dark Modern"
-          ? "dark-plus"
-          : kebabOfThemeStr(themeName);
+  public async setTheme(
+    themeName: string,
+    options?: {
+      preferDarkFallback?: boolean;
+    },
+  ): Promise<void> {
+    const preferDarkFallback = options?.preferDarkFallback ?? true;
+    const fallbackTheme: BundledTheme = preferDarkFallback
+      ? "dark-plus"
+      : "light-plus";
+
+    const normalized = kebabOfThemeStr(themeName);
+
+    const vscodeDefaultMapping: Record<string, BundledTheme> = {
+      "default-dark-modern": "dark-plus",
+      "default-light-modern": "light-plus",
+    };
+
+    const mapped = vscodeDefaultMapping[normalized];
+    if (mapped) {
+      this.currentTheme = mapped;
+    } else if (this.themeExists(normalized)) {
+      this.currentTheme = normalized;
     } else {
-      // Fallback to default theme for unsupported themes.
-      this.currentTheme = "dark-plus";
+      this.currentTheme = fallbackTheme;
     }
 
     // Always initialize the highlighter with the current theme.

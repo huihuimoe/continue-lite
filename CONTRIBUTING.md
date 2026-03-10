@@ -153,7 +153,7 @@ npm i -g vite
       2. The window you started debugging from is referred to as the _Main VS Code_
 
 3. To package the extension, run `npm run package` in the `extensions/vscode` directory, select `Tasks: Run Task` and
-   then select `vscode-extension:package`. This will generate `extensions/vscode/build/continue-{VERSION}.vsix`, which
+   then select `vscode-extension:package`. This will generate `extensions/vscode/build/continue-lite-{VERSION}.vsix`, which
    you can install by right-clicking and selecting "Install Extension VSIX".
 
 ##### Debugging
