@@ -25,6 +25,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "^2.0.24"
+    "@ai-sdk/deepseek": "^2.0.24",
+    "web-tree-sitter": "^0.26.6"
   }
 }
