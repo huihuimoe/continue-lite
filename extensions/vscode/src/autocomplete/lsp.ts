@@ -192,12 +192,11 @@ async function crawlTypes(
   for (const node of identifierNodes) {
     const [typeDef] = await executeGotoProvider({
       uri: vscode.Uri.parse(rif.filepath),
-      // TODO: tree-sitter is zero-indexed, but there seems to be an off-by-one
-      // error at least with the .ts parser sometimes
-      line:
-        rif.range.start.line +
-        Math.min(node.startPosition.row, astLineCount - 1),
-      character: rif.range.start.character + node.startPosition.column,
+      line: rif.range.start.line + node.startPosition.row,
+      character:
+        node.startPosition.row === 0
+          ? rif.range.start.character + node.startPosition.column
+          : node.startPosition.column,
       name: "vscode.executeDefinitionProvider",
     });
 
