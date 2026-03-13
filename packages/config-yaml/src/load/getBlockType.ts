@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { ConfigYaml } from "../schemas/index.js";
 
 export const BLOCK_TYPES = [
@@ -11,7 +10,6 @@ export const BLOCK_TYPES = [
   "docs",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
-export const blockTypeSchema = z.enum(BLOCK_TYPES);
 
 export function getBlockType(block: ConfigYaml): BlockType | undefined {
   if (block.context?.length) {

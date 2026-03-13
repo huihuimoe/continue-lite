@@ -40,13 +40,6 @@ export function addModel(model: JSONModelDescription) {
   });
 }
 
-export function deleteModel(title: string) {
-  editConfigYaml((config) => {
-    config.models = config.models?.filter((m: any) => m.name !== title);
-    return config;
-  });
-}
-
 function editConfigYaml(callback: (config: ConfigYaml) => ConfigYaml): void {
   const configPath = getConfigYamlPath();
   const config = fs.readFileSync(configPath, "utf8");

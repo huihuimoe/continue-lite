@@ -4,7 +4,7 @@ import {
   SelectionChangeManager,
 } from "../activation/SelectionChangeManager";
 
-export interface ExpectedGhostTextAcceptance {
+interface ExpectedGhostTextAcceptance {
   documentUri: string;
   documentVersion: number;
   text: string;

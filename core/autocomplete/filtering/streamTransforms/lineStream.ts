@@ -163,8 +163,8 @@ export function processBlockNesting(
 
 export const USELESS_LINES = [""];
 export const CODE_KEYWORDS_ENDING_IN_SEMICOLON = ["def"];
-export const CODE_STOP_BLOCK = "[/CODE]";
-export const BRACKET_ENDING_CHARS = [")", "]", "}", ";"];
+const CODE_STOP_BLOCK = "[/CODE]";
+const BRACKET_ENDING_CHARS = [")", "]", "}", ";"];
 export const PREFIXES_TO_SKIP = ["<COMPLETION>"];
 export const LINES_TO_STOP_AT = [
   "# End of file.",
@@ -173,7 +173,7 @@ export const LINES_TO_STOP_AT = [
   "```",
 ];
 export const LINES_TO_SKIP = ["</START EDITING HERE>", "<|updated_code|>"];
-export const LINES_TO_REMOVE_BEFORE_START = [
+const LINES_TO_REMOVE_BEFORE_START = [
   "<COMPLETION>",
   "[CODE]",
   "<START EDITING HERE>",
@@ -622,22 +622,6 @@ export async function* stopAtRepeatingLines(
     }
     previousLine = line;
   }
-}
-
-/**
- * Pass-through, except logs the total output at the end
- * @param lines a `LineStream`
- */
-export async function* logLines(
-  lines: LineStream,
-  prefix: string = "STREAMED LINES",
-): LineStream {
-  let linesToLog = [];
-  for await (const line of lines) {
-    yield line;
-    linesToLog.push(line);
-  }
-  console.log(`${prefix}:\n${linesToLog.join("\n")}\n\n`);
 }
 
 export async function* showWhateverWeHaveAtXMs(

@@ -124,17 +124,6 @@ export function joinPathsToUri(uri: string, ...pathSegments: string[]) {
   return URI.resolve(baseUri, segments.join("/"));
 }
 
-export function joinEncodedUriPathSegmentToUri(
-  uri: string,
-  pathSegment: string,
-) {
-  let baseUri = uri;
-  if (baseUri.at(-1) !== "/") {
-    baseUri += "/";
-  }
-  return URI.resolve(baseUri, pathSegment);
-}
-
 export function getShortestUniqueRelativeUriPaths(
   uris: string[],
   dirUriCandidates: string[],
@@ -180,22 +169,4 @@ export function getLastNPathParts(filepath: string, n: number): string {
     return "";
   }
   return filepath.split(/[\\/]/).slice(-n).join("/");
-}
-
-export function getUriDescription(uri: string, dirUriCandidates: string[]) {
-  const { relativePathOrBasename, foundInDir } = findUriInDirs(
-    uri,
-    dirUriCandidates,
-  );
-  const baseName = getUriPathBasename(uri);
-  const extension = getFileExtensionFromBasename(baseName);
-  const last2Parts = getLastNUriRelativePathParts(dirUriCandidates, uri, 2);
-  return {
-    uri,
-    relativePathOrBasename,
-    foundInDir,
-    last2Parts,
-    baseName,
-    extension,
-  };
 }

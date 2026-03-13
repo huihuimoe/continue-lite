@@ -73,11 +73,6 @@ export class CompletionProvider {
       return undefined;
     }
 
-    // Temporary fix for JetBrains autocomplete bug as described in https://github.com/continuedev/continue/pull/3022
-    if (llm.model === undefined && llm.completionOptions?.model !== undefined) {
-      llm.model = llm.completionOptions.model;
-    }
-
     // Ignore empty API keys for Mistral since we currently write
     // a template provider without one during onboarding
     if (llm.providerName === "mistral" && llm.apiKey === "") {
@@ -291,11 +286,6 @@ export class CompletionProvider {
         void cache
           .put(outcome.prefix, outcome.completion)
           .catch((e) => console.warn(`Failed to save to cache: ${e.message}`));
-      }
-
-      const ideType = (await this.ide.getIdeInfo()).ideType;
-      if (ideType === "jetbrains") {
-        this.markDisplayed(input.completionId, outcome);
       }
 
       return outcome;

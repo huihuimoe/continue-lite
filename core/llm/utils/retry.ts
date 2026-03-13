@@ -1,7 +1,7 @@
 /**
  * Configuration options for the retry decorator
  */
-export interface RetryOptions {
+interface RetryOptions {
   /** Maximum number of retry attempts (default: 3) */
   maxAttempts?: number;
   /** Base delay in milliseconds (default: 1000) */

@@ -1,8 +1,8 @@
 export type UseCase = "chat" | "autocomplete";
 
-export type ParameterType = "string" | "number" | "boolean";
+type ParameterType = "string" | "number" | "boolean";
 
-export interface Parameter {
+interface Parameter {
   key: string;
   required: boolean;
   valueType: ParameterType;
@@ -11,7 +11,7 @@ export interface Parameter {
   defaultValue?: any;
 }
 
-export enum ChatTemplate {
+enum ChatTemplate {
   None = "none",
   // TODO
 }
@@ -38,7 +38,7 @@ export type LlmInfoWithProvider = LlmInfo & {
   provider: string;
 };
 
-export enum MediaType {
+enum MediaType {
   Text = "text",
   Image = "image",
   Audio = "audio",
@@ -51,19 +51,6 @@ export const AllMediaTypes = [
   MediaType.Audio,
   MediaType.Video,
 ];
-
-export interface ApiProviderInfo {
-  displayName: string;
-  supportsStreaming: boolean;
-  handlesTemplating: boolean;
-}
-
-export type ModelProviderCapability =
-  | "stream"
-  | "fim"
-  | "image"
-  | "template_chat"
-  | "tools";
 
 export interface ModelProvider {
   id: string;

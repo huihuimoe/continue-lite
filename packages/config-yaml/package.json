@@ -16,7 +16,7 @@
     "config-yaml": "./dist/cli.js"
   },
   "scripts": {
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "vitest run",
     "build": "tsc",
     "generate-schema": "tsc && node dist/scripts/generateJsonSchema.js"
   },
@@ -32,12 +32,10 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.6",
     "@semantic-release/npm": "^13.1.5",
-    "@types/jest": "^30.0.0",
     "@types/node": "^22",
     "cross-env": "^10.1.0",
-    "jest": "^30.2.0",
     "semantic-release": "^25.0.3",
-    "ts-jest": "^29.4.6",
+    "vitest": "^4.1.0",
     "ts-node": "^10.9.2",
     "zod-to-json-schema": "^3.25.1"
   }

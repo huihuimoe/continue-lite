@@ -1,4 +1,4 @@
-export class ApplyAbortManager {
+class ApplyAbortManager {
   private static instance: ApplyAbortManager;
   private controllers: Map<string, AbortController>;
 

@@ -1,4 +1,4 @@
-export interface HubSessionInfo {
+interface HubSessionInfo {
   AUTH_TYPE: AuthType.WorkOsProd | AuthType.WorkOsStaging;
   accessToken: string;
   account: {
@@ -7,7 +7,7 @@ export interface HubSessionInfo {
   };
 }
 
-export interface OnPremSessionInfo {
+interface OnPremSessionInfo {
   AUTH_TYPE: AuthType.OnPrem;
 }
 
@@ -25,7 +25,7 @@ export enum AuthType {
   OnPrem = "on-prem",
 }
 
-export interface HubEnv {
+interface HubEnv {
   DEFAULT_CONTROL_PLANE_PROXY_URL: string;
   CONTROL_PLANE_URL: string;
   AUTH_TYPE: AuthType.WorkOsProd | AuthType.WorkOsStaging;
@@ -33,7 +33,7 @@ export interface HubEnv {
   APP_URL: string;
 }
 
-export interface OnPremEnv {
+interface OnPremEnv {
   AUTH_TYPE: AuthType.OnPrem;
   DEFAULT_CONTROL_PLANE_PROXY_URL: string;
   CONTROL_PLANE_URL: string;
@@ -41,11 +41,3 @@ export interface OnPremEnv {
 }
 
 export type ControlPlaneEnv = HubEnv | OnPremEnv;
-
-export function isHubEnv(env: ControlPlaneEnv): env is HubEnv {
-  return (
-    "AUTH_TYPE" in env &&
-    env.AUTH_TYPE !== "on-prem" &&
-    "WORKOS_CLIENT_ID" in env
-  );
-}

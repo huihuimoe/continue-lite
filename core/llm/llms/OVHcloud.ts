@@ -2,7 +2,7 @@ import { ChatCompletionCreateParams } from "openai/resources/index";
 import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js";
 import OpenAI from "./OpenAI.js";
 
-export class OVHcloud extends OpenAI {
+class OVHcloud extends OpenAI {
   static providerName = "ovhcloud";
 
   static defaultOptions: Partial<LLMOptions> = {

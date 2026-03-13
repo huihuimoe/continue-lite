@@ -191,7 +191,13 @@
           "command": "continue.nextEditWindow.hideNextEditSuggestion"
         }
       ]
-    }
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": "**/config.yaml",
+        "url": "./config-yaml-schema.json"
+      }
+    ]
   },
   "scripts": {
     "rolldown-base": "node scripts/rolldown.js",
@@ -203,8 +209,8 @@
     "tsc": "tsc -p ./tsconfig.json",
     "tsc:check": "tsc -p ./tsconfig.json --noEmit",
     "tsc-watch": "tsc -watch -p ./tsconfig.json",
-    "lint": "eslint src --ext ts",
-    "lint:fix": "eslint . --ext ts --fix",
+    "lint": "eslint src",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "vitest": "vitest run",
     "write-build-timestamp": "node scripts/write-build-timestamp.js",
@@ -230,31 +236,34 @@
     "e2e:ci:run-yaml": "npm run e2e:compile && npm run e2e:copy-vsix && npm run e2e:install-vsix && npm run e2e:install-extensions && CONTINUE_GLOBAL_DIR=e2e/test-continue-yaml npm run e2e:test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.6",
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22",
     "@types/vscode": "1.109.0",
-    "@typescript-eslint/eslint-plugin": "^8.56.1",
-    "@typescript-eslint/parser": "^8.56.1",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
     "@vscode/vsce": "^3.7.1",
     "chai": "^6.2.2",
-    "rolldown": "^1.0.0-rc.1",
-    "eslint": "^8.57.1",
-    "mocha": "^11.7.5",
+    "eslint": "^10.0.3",
     "rimraf": "^6.1.3",
+    "rolldown": "^1.0.0-rc.9",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18",
-    "vscode-extension-tester": "^8.22.1"
+    "vitest": "^4.1.0",
+    "vscode-extension-tester": "^8.23.0"
   },
   "dependencies": {
     "core": "file:../../core",
-    "lru-cache": "^11.2.6",
+    "lru-cache": "^11.2.7",
     "minisearch": "^7.2.0",
     "monaco-vscode-textmate-theme-converter": "^0.1.7",
     "ncp": "^2.0.0",
     "node-machine-id": "^1.1.12",
     "svg-builder": "^3.0.4",
-    "systeminformation": "^5.31.3"
+    "systeminformation": "^5.31.4"
+  },
+  "overrides": {
+    "vscode-extension-tester": {
+      "mocha": "next"
+    }
   }
 }

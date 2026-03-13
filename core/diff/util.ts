@@ -5,7 +5,7 @@ import { renderChatMessage } from "../util/messageContent.js";
 
 export type LineStream = AsyncGenerator<string>;
 
-export type MatchLineResult = {
+type MatchLineResult = {
   /**
    * -1 if it's a new line, otherwise the index of the first match
    * in the old lines.

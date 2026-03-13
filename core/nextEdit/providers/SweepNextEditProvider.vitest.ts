@@ -121,7 +121,10 @@ describe("SweepNextEditProvider", () => {
 
   it("reconstructs original window content from compact history diffs", () => {
     const provider = new SweepNextEditProvider();
-    const originalLines = Array.from({ length: 40 }, (_, index) => `line-${index}`);
+    const originalLines = Array.from(
+      { length: 40 },
+      (_, index) => `line-${index}`,
+    );
     const currentLines = [...originalLines];
     currentLines[20] = "line-20-updated";
 

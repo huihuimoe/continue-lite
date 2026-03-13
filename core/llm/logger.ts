@@ -27,7 +27,7 @@ export class LLMLogger implements ILLMLogger {
   }
 }
 
-export class LLMInteractionLog implements ILLMInteractionLog {
+class LLMInteractionLog implements ILLMInteractionLog {
   constructor(
     private logger: LLMLogger,
     public interactionId: string,

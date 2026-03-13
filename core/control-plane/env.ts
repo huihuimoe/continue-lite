@@ -44,10 +44,6 @@ const LOCAL_ENV: ControlPlaneEnv = {
   APP_URL: "http://localhost:3000/",
 };
 
-export async function enableHubContinueDev() {
-  return true;
-}
-
 export async function getControlPlaneEnv(
   ideSettingsPromise: Promise<IdeSettings>,
 ): Promise<ControlPlaneEnv> {

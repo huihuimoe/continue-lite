@@ -281,9 +281,6 @@ export async function loadContinueConfigFromYaml(options: {
     continueConfig,
     sharedConfig,
   );
-  if (withShared.allowAnonymousTelemetry === undefined) {
-    withShared.allowAnonymousTelemetry = true;
-  }
 
   return {
     config: withShared,

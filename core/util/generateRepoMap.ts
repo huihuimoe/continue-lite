@@ -8,7 +8,7 @@ import { getSymbolsForManyFiles } from "./treeSitter";
 import { getRepoMapFilePath } from "./paths";
 import { findUriInDirs } from "./uri";
 
-export interface RepoMapOptions {
+interface RepoMapOptions {
   includeSignatures?: boolean;
   dirUris?: string[];
   outputRelativeUriPaths: boolean;

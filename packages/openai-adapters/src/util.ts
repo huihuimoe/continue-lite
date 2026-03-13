@@ -1,10 +1,6 @@
 import { RequestOptions } from "@continuedev/config-types";
 import { fetchwithRequestOptions } from "@continuedev/fetch";
-import {
-  ChatCompletionChunk,
-  CompletionUsage,
-  Model,
-} from "openai/resources/index";
+import { ChatCompletionChunk, CompletionUsage } from "openai/resources/index";
 
 import { ChatCompletion } from "openai/resources/index.js";
 
@@ -102,15 +98,6 @@ export function chatCompletion(options: {
     id: options.id ?? "",
     model: options.model,
     object: "chat.completion",
-  };
-}
-
-export function model(options: { id: string; owned_by?: string }): Model {
-  return {
-    id: options.id,
-    object: "model",
-    created: Date.now(),
-    owned_by: options.owned_by ?? "organization-owner",
   };
 }
 

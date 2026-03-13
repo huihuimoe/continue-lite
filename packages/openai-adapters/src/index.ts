@@ -196,29 +196,15 @@ export function constructLlmApi(config: LLMConfig): BaseLlmApi | undefined {
   }
 }
 
-export {
-  type ChatCompletion,
-  type ChatCompletionChunk,
-  type ChatCompletionCreateParams,
-  type ChatCompletionCreateParamsNonStreaming,
-  type ChatCompletionCreateParamsStreaming,
-  type Completion,
-  type CompletionCreateParams,
-  type CompletionCreateParamsNonStreaming,
-  type CompletionCreateParamsStreaming,
-} from "openai/resources/index";
+export type { ChatCompletionCreateParams } from "openai/resources/index";
 
 // export
-export { AiSdkApi } from "./apis/AiSdk.js";
 export type { BaseLlmApi } from "./apis/base.js";
 export type {
-  AiSdkConfig,
   AskSageResponse,
   AskSageTokenResponse,
   AskSageTool,
   AskSageToolCall,
-  AskSageToolChoice,
-  LLMConfig,
 } from "./types.js";
 
 export {
@@ -228,5 +214,4 @@ export {
   getAnthropicMediaTypeFromDataUrl,
 } from "./apis/AnthropicUtils.js";
 
-export { isResponsesModel } from "./apis/openaiResponses.js";
-export { extractBase64FromDataUrl, parseDataUrl } from "./util/url.js";
+export { extractBase64FromDataUrl } from "./util/url.js";

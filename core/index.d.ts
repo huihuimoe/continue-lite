@@ -3,21 +3,9 @@ import {
   ModelRole,
   PromptTemplates,
 } from "@continuedev/config-yaml";
-import type { Node as SyntaxNode } from "web-tree-sitter";
-import type {
-  AssistantChatMessage,
-  ChatMessage,
-  ChatMessageRole,
-  MessageContent,
-  MessagePart,
-  ThinkingChatMessage,
-  ToolCall,
-  ToolCallDelta,
-  ToolResultChatMessage,
-  Usage,
-  UserChatMessage,
-} from "./llm/chatTypes";
 import type { ChatCompletionCreateParams } from "openai/resources/index";
+import type { Node as SyntaxNode } from "web-tree-sitter";
+import type { ChatMessage, Usage } from "./llm/chatTypes";
 
 declare global {
   interface Window {
@@ -42,7 +30,7 @@ declare global {
   }
 }
 
-export interface ChunkWithoutID {
+interface ChunkWithoutID {
   content: string;
   startLine: number;
   endLine: number;
@@ -54,23 +42,6 @@ export interface Chunk extends ChunkWithoutID {
   digest: string;
   filepath: string;
   index: number; // Index of the chunk in the document at filepath
-}
-
-export interface IndexingProgressUpdate {
-  progress: number;
-  desc: string;
-  shouldClearIndexes?: boolean;
-  status:
-    | "loading"
-    | "waiting"
-    | "indexing"
-    | "done"
-    | "failed"
-    | "paused"
-    | "disabled"
-    | "cancelled";
-  debugInfo?: string;
-  warnings?: string[];
 }
 
 // This is more or less a V2 of IndexingProgressUpdate for docs etc.
@@ -177,14 +148,14 @@ export interface ModelInstaller {
   isInstallingModel(modelName: string): Promise<boolean>;
 }
 
-export type ContextProviderType = "normal" | "query" | "submenu";
-export type ContextIndexingType =
+type ContextProviderType = "normal" | "query" | "submenu";
+type ContextIndexingType =
   | "chunk"
   | "embeddings"
   | "fullTextSearch"
   | "codeSnippets";
 
-export interface ContextProviderDescription {
+interface ContextProviderDescription {
   title: ContextProviderName;
   displayTitle: string;
   description: string;
@@ -193,9 +164,9 @@ export interface ContextProviderDescription {
   dependsOnIndexing?: ContextIndexingType[];
 }
 
-export type FetchFunction = (url: string | URL, init?: any) => Promise<any>;
+type FetchFunction = (url: string | URL, init?: any) => Promise<any>;
 
-export interface ContextProviderExtras {
+interface ContextProviderExtras {
   config: ContinueConfig;
   fullInput: string;
   llm: ILLM;
@@ -205,38 +176,18 @@ export interface ContextProviderExtras {
   isInAgentMode: boolean;
 }
 
-export interface LoadSubmenuItemsArgs {
+interface LoadSubmenuItemsArgs {
   config: ContinueConfig;
   ide: IDE;
   fetch: FetchFunction;
 }
 
-export interface CustomContextProvider {
-  title: string;
-  displayTitle?: string;
-  description?: string;
-  renderInlineAs?: string;
-  type?: ContextProviderType;
-  loadSubmenuItems?: (
-    args: LoadSubmenuItemsArgs,
-  ) => Promise<ContextSubmenuItem[]>;
-
-  getContextItems(
-    query: string,
-    extras: ContextProviderExtras,
-  ): Promise<ContextItem[]>;
-}
-
-export interface ContextSubmenuItem {
+interface ContextSubmenuItem {
   id: string;
   title: string;
   description: string;
   icon?: string;
   metadata?: any;
-}
-
-export interface ContextSubmenuItemWithProvider extends ContextSubmenuItem {
-  providerTitle: string;
 }
 
 export interface SiteIndexingConfig {
@@ -248,7 +199,7 @@ export interface SiteIndexingConfig {
   sourceFile?: string;
 }
 
-export interface IContextProvider {
+interface IContextProvider {
   get description(): ContextProviderDescription;
 
   getContextItems(
@@ -271,7 +222,7 @@ export interface Location {
   position: Position;
 }
 
-export interface FileWithContents {
+interface FileWithContents {
   filepath: string;
   contents: string;
 }
@@ -284,12 +235,6 @@ export interface Range {
 export interface Position {
   line: number;
   character: number;
-}
-
-export interface FileEdit {
-  filepath: string;
-  range: Range;
-  replacement: string;
 }
 
 export interface CompletionOptions extends BaseCompletionOptions {
@@ -311,16 +256,15 @@ export type {
   Usage,
   UserChatMessage,
 } from "./llm/chatTypes";
-export { ToolCallDelta } from "./llm/tooling";
 
 export interface ContextItemId {
   providerTitle: string;
   itemId: string;
 }
 
-export type ContextItemUriTypes = "file" | "url";
+type ContextItemUriTypes = "file" | "url";
 
-export interface ContextItemUri {
+interface ContextItemUri {
   type: ContextItemUriTypes;
   value: string;
 }
@@ -341,7 +285,7 @@ export interface ContextItemWithId extends ContextItem {
   id: ContextItemId;
 }
 
-export interface InputModifiers {
+interface InputModifiers {
   useCodebase: boolean;
   noContext: boolean;
 }
@@ -588,7 +532,7 @@ export type CustomLLM = RequireAtLeastOne<
 
 export type DiffType = "new" | "old" | "same";
 
-export interface DiffObject {
+interface DiffObject {
   type: DiffType;
 }
 
@@ -617,10 +561,7 @@ export interface Thread {
   id: number;
 }
 
-export type IdeType = "vscode" | "jetbrains";
-
 export interface IdeInfo {
-  ideType: IdeType;
   name: string;
   version: string;
   remoteName: string;
@@ -651,7 +592,7 @@ export interface IdeSettings {
   pauseCodebaseIndexOnStart: boolean;
 }
 
-export interface FileStats {
+interface FileStats {
   size: number;
   lastModified: number;
 }
@@ -669,8 +610,6 @@ export interface IDE {
   getDiff(includeUnstaged: boolean): Promise<string[]>;
 
   getClipboardContent(): Promise<{ text: string; copiedAt: string }>;
-
-  isTelemetryEnabled(): Promise<boolean>;
 
   isWorkspaceRemote(): Promise<boolean>;
 
@@ -755,8 +694,8 @@ export interface IDE {
 
   // LSP
   gotoDefinition(location: Location): Promise<RangeInFile[]>;
-  gotoTypeDefinition(location: Location): Promise<RangeInFile[]>; // TODO: add to jetbrains
-  getSignatureHelp(location: Location): Promise<SignatureHelp | null>; // TODO: add to jetbrains
+  gotoTypeDefinition(location: Location): Promise<RangeInFile[]>;
+  getSignatureHelp(location: Location): Promise<SignatureHelp | null>;
   getReferences(location: Location): Promise<RangeInFile[]>;
   getDocumentSymbols(textDocumentIdentifier: string): Promise<DocumentSymbol[]>;
 
@@ -766,7 +705,7 @@ export interface IDE {
 
 // Slash Commands
 
-export interface ContinueSDK {
+interface ContinueSDK {
   ide: IDE;
   llm: ILLM;
   addContextItem: (item: ContextItemWithId) => void;
@@ -788,11 +727,11 @@ interface SlashCommandFields {
   params?: { [key: string]: any };
 }
 
-export interface SlashCommand extends SlashCommandFields {
+interface SlashCommand extends SlashCommandFields {
   run: (sdk: ContinueSDK) => AsyncGenerator<string | undefined>;
 }
 
-export interface SlashCommandWithSource extends SlashCommandFields {
+interface SlashCommandWithSource extends SlashCommandFields {
   run?: (sdk: ContinueSDK) => AsyncGenerator<string | undefined>; // Optional - only needed for legacy
   source: SlashCommandSource;
   sourceFile?: string;
@@ -800,7 +739,7 @@ export interface SlashCommandWithSource extends SlashCommandFields {
   overrideSystemMessage?: string;
 }
 
-export type SlashCommandSource =
+type SlashCommandSource =
   | "built-in-legacy"
   | "built-in"
   | "json-custom-command"
@@ -810,7 +749,7 @@ export type SlashCommandSource =
 
 // Config
 
-export type StepName =
+type StepName =
   | "AnswerQuestionChroma"
   | "GenerateShellCommandStep"
   | "EditHighlightedCodeStep"
@@ -822,7 +761,7 @@ export type StepName =
   | "GenerateShellCommandStep"
   | "DraftIssueStep";
 
-export type ContextProviderName =
+type ContextProviderName =
   | "diff"
   | "terminal"
   | "debugger"
@@ -889,7 +828,7 @@ export interface ClientCertificateOptions {
   passphrase?: string;
 }
 
-export interface StepWithParams {
+interface StepWithParams {
   name: StepName;
   params: { [key: string]: any };
 }
@@ -992,7 +931,7 @@ export interface TabAutocompleteOptions {
 // Leaving here to ideate on
 // export type ContinueConfigSource = "local-yaml" | "local-json" | "hub-assistant" | "hub"
 
-export type ApplyStateStatus =
+type ApplyStateStatus =
   | "not-started" // Apply state created but not necessarily streaming
   | "streaming" // Changes are being applied to the file
   | "done" // All changes have been applied, awaiting user to accept/reject
@@ -1008,32 +947,6 @@ export interface ApplyState {
   toolCallId?: string;
   autoFormattingDiff?: string;
 }
-
-export type StreamDiffLinesType = "edit" | "apply";
-interface StreamDiffLinesOptionsBase {
-  type: StreamDiffLinesType;
-  prefix: string;
-  highlighted: string;
-  suffix: string;
-  input: string;
-  language: string | undefined;
-  modelTitle: string | undefined;
-  includeRulesInSystemMessage: boolean;
-  fileUri?: string;
-}
-
-interface StreamDiffLinesOptionsEdit extends StreamDiffLinesOptionsBase {
-  type: "edit";
-}
-
-interface StreamDiffLinesOptionsApply extends StreamDiffLinesOptionsBase {
-  type: "apply";
-  newCode: string;
-}
-
-export type StreamDiffLinesPayload =
-  | StreamDiffLinesOptionsApply
-  | StreamDiffLinesOptionsEdit;
 
 export interface HighlightedCodePayload {
   rangeInFileWithContents: RangeInFileWithContents;
@@ -1107,7 +1020,7 @@ export class SignatureHelp {
  * can have a label, like a function-name, a doc-comment, and
  * a set of parameters.
  */
-export class SignatureInformation {
+class SignatureInformation {
   /**
    * The label of this signature. Will be shown in
    * the UI.
@@ -1131,7 +1044,7 @@ export class SignatureInformation {
  * Represents a parameter of a callable-signature. A parameter can
  * have a label and a doc-comment.
  */
-export class ParameterInformation {
+class ParameterInformation {
   /**
    * The label of this signature.
    *
@@ -1192,7 +1105,6 @@ export interface JSONModelDescription {
 // config.json
 export interface SerializedContinueConfig {
   env?: string[];
-  allowAnonymousTelemetry?: boolean;
   models: JSONModelDescription[];
   systemMessage?: string;
   completionOptions?: BaseCompletionOptions;
@@ -1208,14 +1120,8 @@ export interface SerializedContinueConfig {
 
 export type ConfigMergeType = "merge" | "overwrite";
 
-export type ContinueRcJson = Partial<SerializedContinueConfig> & {
-  mergeBehavior: ConfigMergeType;
-};
-
 // config.ts - give users simplified interfaces
 export interface Config {
-  /** If set to true, Continue will collect anonymous usage data to improve the product. If set to false, we will collect nothing. Read here to learn more: https://docs.continue.dev/telemetry */
-  allowAnonymousTelemetry?: boolean;
   /** Each entry in this array will originally be a JSONModelDescription, the same object from your config.json, but you may add CustomLLMs.
    * A CustomLLM requires you only to define an AsyncGenerator that calls the LLM and yields string updates. You can choose to define either `streamCompletion` or `streamChat` (or both).
    * Continue will do the rest of the work to construct prompt templates, handle context items, prune context, etc.
@@ -1246,7 +1152,6 @@ export interface Config {
 
 // in the actual Continue source code
 export interface ContinueConfig {
-  allowAnonymousTelemetry?: boolean;
   // systemMessage?: string;
   completionOptions?: BaseCompletionOptions;
   requestOptions?: RequestOptions;
@@ -1262,7 +1167,6 @@ export interface ContinueConfig {
 }
 
 export interface BrowserSerializedContinueConfig {
-  allowAnonymousTelemetry?: boolean;
   // systemMessage?: string;
   completionOptions?: BaseCompletionOptions;
   requestOptions?: RequestOptions;
@@ -1277,50 +1181,13 @@ export interface BrowserSerializedContinueConfig {
   selectedModelByRole: Partial<Record<ModelRole, ModelDescription | null>>;
 }
 
-// DOCS SUGGESTIONS AND PACKAGE INFO
-export interface FilePathAndName {
-  path: string;
-  name: string;
-}
-
-export interface PackageFilePathAndName extends FilePathAndName {
-  packageRegistry: string; // e.g. npm, pypi
-}
-
-export type ParsedPackageInfo = {
-  name: string;
-  packageFile: PackageFilePathAndName;
-  language: string;
-  version: string;
-};
-
-export type PackageDetails = {
-  docsLink?: string;
-  docsLinkWarning?: string;
-  title?: string;
-  description?: string;
-  repo?: string;
-  license?: string;
-};
-
-export type PackageDetailsSuccess = PackageDetails & {
-  docsLink: string;
-};
-
-export type PackageDocsResult = {
-  packageInfo: ParsedPackageInfo;
-} & (
-  | { error: string; details?: never }
-  | { details: PackageDetailsSuccess; error?: never }
-);
-
 export interface TerminalOptions {
   reuseTerminal?: boolean;
   terminalName?: string;
   waitForCompletion?: boolean;
 }
 
-export type RuleSource =
+type RuleSource =
   | "default-chat"
   | "default-plan"
   | "default-agent"
@@ -1348,21 +1215,6 @@ export interface RuleWithSource extends RuleMetadata {
   rule: string;
 }
 
-export interface Skill {
-  name: string;
-  description: string;
-  path: string;
-  content: string;
-  files: string[];
-  license?: string;
-}
-
-export interface CompleteOnboardingPayload {
-  mode: OnboardingModes;
-  provider?: string;
-  apiKey?: string;
-}
-
 export interface CompiledMessagesResult {
   compiledChatMessages: ChatMessage[];
   didPrune: boolean;
@@ -1387,7 +1239,7 @@ export interface MessageOption {
 
 // See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolKind.
 // We shift this one index down to match vscode.SymbolKind.
-export enum SymbolKind {
+enum SymbolKind {
   File = 0,
   Module = 1,
   Namespace = 2,
@@ -1417,12 +1269,12 @@ export enum SymbolKind {
 }
 
 // See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolTag.
-export namespace SymbolTag {
+namespace SymbolTag {
   export const Deprecated: 1 = 1;
 }
 
 // See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolTag.
-export type SymbolTag = 1;
+type SymbolTag = 1;
 
 // See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol.
 export interface DocumentSymbol {

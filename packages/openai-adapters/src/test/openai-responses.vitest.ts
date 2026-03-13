@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { ChatCompletionAssistantMessageParam, ChatCompletionChunk, ChatCompletionMessageParam } from "openai/resources/index.js";
+import type {
+  ChatCompletionAssistantMessageParam,
+  ChatCompletionChunk,
+  ChatCompletionMessageParam,
+} from "openai/resources/index.js";
 import type {
   Response,
   ResponseCompletedEvent,

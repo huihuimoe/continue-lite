@@ -14,7 +14,6 @@ import {
 import { ControlPlaneClient } from "../../control-plane/client.js";
 import { PolicySingleton } from "../../control-plane/PolicySingleton";
 import { getConfigYamlPath } from "../../util/paths";
-import { Telemetry } from "../../util/posthog";
 import { TTS } from "../../util/tts";
 import { getWorkspaceContinueRuleDotFiles } from "../getWorkspaceContinueRuleDotFiles";
 import { CodebaseRulesCache } from "../markdown/loadCodebaseRules";
@@ -70,8 +69,7 @@ export default async function doLoadConfig(options: {
   const uniqueId = await ide.getUniqueId();
   const ideSettings = await ide.getIdeSettings();
 
-  const configYamlPath =
-    overrideConfigYamlByPath || getConfigYamlPath(ideInfo.ideType);
+  const configYamlPath = overrideConfigYamlByPath || getConfigYamlPath();
   const yamlPackageIdentifier: PackageIdentifier =
     packageIdentifier.uriType === "file"
       ? {
@@ -133,30 +131,6 @@ export default async function doLoadConfig(options: {
       });
     }
   });
-
-  // VS Code has an IDE telemetry setting
-  // Since it's a security concern we use OR behavior on false
-  if (
-    newConfig.allowAnonymousTelemetry !== false &&
-    ideInfo.ideType === "vscode"
-  ) {
-    if ((await ide.isTelemetryEnabled()) === false) {
-      newConfig.allowAnonymousTelemetry = false;
-    }
-  }
-
-  // Org policies
-  const policy = PolicySingleton.getInstance().policy?.policy;
-  if (policy?.allowAnonymousTelemetry === false) {
-    newConfig.allowAnonymousTelemetry = false;
-  }
-
-  // Setup telemetry only after (and if) we know it is enabled
-  await Telemetry.setup(
-    newConfig.allowAnonymousTelemetry ?? true,
-    await ide.getUniqueId(),
-    ideInfo,
-  );
 
   // TODO: pass config to pre-load non-system TTS models
   await TTS.setup();

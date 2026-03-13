@@ -2,19 +2,16 @@ import { BLOCK_TYPES } from "@continuedev/config-yaml";
 import ignore from "ignore";
 import * as URI from "uri-js";
 import { IDE } from "..";
-import { DEFAULT_IGNORE_DIRS, DEFAULT_IGNORE_FILETYPES } from "../util/ignore";
-import { walkDir } from "../util/walkDir";
 import { RULES_MARKDOWN_FILENAME } from "../llm/rules/constants";
+import { DEFAULT_IGNORE_DIRS, DEFAULT_IGNORE_FILETYPES } from "../util/ignore";
 import { getGlobalFolderWithName } from "../util/paths";
 import { localPathToUri } from "../util/pathToUri";
 import { getUriPathBasename, joinPathsToUri } from "../util/uri";
+import { walkDir } from "../util/walkDir";
 import { SYSTEM_PROMPT_DOT_FILE } from "./getWorkspaceContinueRuleDotFiles";
-import { SUPPORTED_AGENT_FILES } from "./markdown";
 export function isContinueConfigRelatedUri(uri: string): boolean {
   return (
-    uri.endsWith(".continuerc.json") ||
     uri.endsWith(".prompt") ||
-    !!SUPPORTED_AGENT_FILES.find((file) => uri.endsWith(`/${file}`)) ||
     uri.endsWith(SYSTEM_PROMPT_DOT_FILE) ||
     (uri.includes(".continue") &&
       (uri.endsWith(".yaml") ||
@@ -97,7 +94,7 @@ export interface LoadAssistantFilesOptions {
   fileExtType?: "yaml" | "markdown";
 }
 
-export function getDotContinueSubDirs(
+function getDotContinueSubDirs(
   ide: IDE,
   options: LoadAssistantFilesOptions,
   workspaceDirs: string[],

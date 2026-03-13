@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 import * as plist from "plist";
 
-export interface MdmKeys {
+interface MdmKeys {
   licenseKey: string;
 }
 
@@ -22,7 +22,7 @@ interface LicenseKeyUnsignedData {
   apiUrl: string;
 }
 
-export interface LicenseKey {
+interface LicenseKey {
   signature: string;
   data: string;
   unsignedData: LicenseKeyUnsignedData;
@@ -256,115 +256,5 @@ export function getLicenseKeyData(): LicenseKey | undefined {
   } catch (e) {
     console.warn("Error reading MDM keys: ", e);
     return undefined;
-  }
-}
-
-function writeMdmKeysMacOS(licenseKey: string): boolean {
-  try {
-    // Write to user-specific MDM plist
-    const userMdmPath = path.join(
-      os.homedir(),
-      "Library/Managed Preferences/dev.continue.app.plist",
-    );
-
-    const config = {
-      licenseKey,
-    };
-
-    // Ensure directory exists
-    fs.mkdirSync(path.dirname(userMdmPath), { recursive: true });
-
-    // Write the plist file
-    const plistContent = plist.build(config);
-    fs.writeFileSync(userMdmPath, plistContent, "utf8");
-
-    return true;
-  } catch (error) {
-    console.error("Error writing macOS MDM keys:", error);
-    return false;
-  }
-}
-
-function writeMdmKeysWindows(licenseKey: string): boolean {
-  try {
-    const { execSync } = require("child_process");
-
-    // Use HKEY_CURRENT_USER to avoid needing admin privileges
-    const userRegPath = "HKCU\\Software\\Continue\\MDM";
-
-    // Create the registry key if it doesn't exist
-    try {
-      execSync(`reg add "${userRegPath}" /f`);
-    } catch (error) {
-      // Key might already exist
-    }
-
-    // Set the license key and API URL
-    execSync(
-      `reg add "${userRegPath}" /v licenseKey /t REG_SZ /d "${licenseKey}" /f`,
-    );
-
-    return true;
-  } catch (error) {
-    console.error("Error writing Windows MDM keys:", error);
-    return false;
-  }
-}
-
-function writeMdmKeysLinux(licenseKey: string): boolean {
-  try {
-    // Write to user-specific configuration
-    const userMdmPath = path.join(os.homedir(), ".config/continue/mdm.json");
-
-    const config = {
-      licenseKey,
-    };
-
-    // Ensure directory exists
-    fs.mkdirSync(path.dirname(userMdmPath), { recursive: true });
-
-    // Write the JSON configuration file
-    fs.writeFileSync(userMdmPath, JSON.stringify(config, null, 2), "utf8");
-
-    return true;
-  } catch (error) {
-    console.error("Error writing Linux MDM keys:", error);
-    return false;
-  }
-}
-
-/**
- * Store the license key in the appropriate OS-specific location.
- * For now, we'll use a default API URL since it's not provided in the command.
- */
-export function setMdmLicenseKey(licenseKey: string): boolean {
-  try {
-    // Validate the license key first
-    const { isValid } = validateLicenseKey(licenseKey);
-    if (!isValid) {
-      return false;
-    }
-
-    const platform = os.platform();
-
-    switch (platform) {
-      case "darwin":
-        return writeMdmKeysMacOS(licenseKey);
-
-      case "win32":
-        return writeMdmKeysWindows(licenseKey);
-
-      case "linux":
-        return writeMdmKeysLinux(licenseKey);
-
-      default:
-        console.error(
-          `Setting MDM keys not supported on platform: ${platform}`,
-        );
-        return false;
-    }
-  } catch (error) {
-    console.error("Error setting MDM license key:", error);
-    return false;
   }
 }

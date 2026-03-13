@@ -74,17 +74,14 @@ const onEndPlugin = {
   generateBundle(_outputOptions, bundle) {
     try {
       fs.mkdirSync("./build", { recursive: true });
-      const meta = Object.values(bundle).reduce(
-        (acc, item) => {
-          acc[item.fileName] = {
-            type: item.type,
-            name: item.name ?? null,
-            originalFileNames: item.originalFileNames ?? null,
-          };
-          return acc;
-        },
-        {},
-      );
+      const meta = Object.values(bundle).reduce((acc, item) => {
+        acc[item.fileName] = {
+          type: item.type,
+          name: item.name ?? null,
+          originalFileNames: item.originalFileNames ?? null,
+        };
+        return acc;
+      }, {});
       fs.writeFileSync("./build/meta.json", JSON.stringify(meta, null, 2));
     } catch (e) {
       console.error("Failed to write rolldown meta file", e);
@@ -100,7 +97,10 @@ const rolldownInputOptions = {
   transform: {
     define: { "import.meta.url": "importMetaUrl" },
     inject: {
-      importMetaUrl: [path.resolve(__dirname, "./importMetaUrl.js"), "importMetaUrl"],
+      importMetaUrl: [
+        path.resolve(__dirname, "./importMetaUrl.js"),
+        "importMetaUrl",
+      ],
     },
   },
   plugins: [dedupePlugin, nodeFilePlugin, onEndPlugin],

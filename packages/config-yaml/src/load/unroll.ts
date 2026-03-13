@@ -73,7 +73,7 @@ export function parseAssistantUnrolled(configYaml: string): AssistantUnrolled {
   }
 }
 
-export function parseBlock(configYaml: string): Block {
+function parseBlock(configYaml: string): Block {
   try {
     const parsed = YAML.parse(configYaml);
     const result = blockSchema.parse(parsed);
@@ -83,7 +83,7 @@ export function parseBlock(configYaml: string): Block {
   }
 }
 
-export const TEMPLATE_VAR_REGEX = /\${{[\s]*([^}\s]+)[\s]*}}/g;
+const TEMPLATE_VAR_REGEX = /\${{[\s]*([^}\s]+)[\s]*}}/g;
 
 export function getTemplateVariables(templatedYaml: string): string[] {
   // Defensive guard against undefined/null/non-string values
@@ -118,7 +118,7 @@ export function fillTemplateVariables(
   });
 }
 
-export interface TemplateData {
+interface TemplateData {
   inputs: Record<string, string> | undefined;
   secrets: Record<string, string> | undefined;
   continue: {};
@@ -827,7 +827,7 @@ function inputsToFQSNs(
   return renderedInputs;
 }
 
-export function mergeOverrides<T extends Record<string, any>>(
+function mergeOverrides<T extends Record<string, any>>(
   block: T,
   overrides: Partial<T>,
 ): T {

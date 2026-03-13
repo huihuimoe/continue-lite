@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LLMFullCompletionOptions } from "..";
 import { testLLM } from "../test/fixtures";
 import { ChatDescriber } from "./chatDescriber";
@@ -10,7 +11,7 @@ describe("ChatDescriber", () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe("describe method", () => {

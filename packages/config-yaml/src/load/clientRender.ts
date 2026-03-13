@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { PlatformClient, SecretStore } from "../interfaces/index.js";
-import {
-  decodeSecretLocation,
-  encodeSecretLocation,
-  SecretLocation,
-} from "../interfaces/SecretResult.js";
+import { encodeSecretLocation } from "../interfaces/SecretResult.js";
 import {
   decodeFQSN,
   encodeFQSN,
@@ -77,30 +73,6 @@ export async function renderSecrets(
     onPremProxyUrl,
   );
   return finalConfig;
-}
-
-export function getUnrenderedSecretLocation(
-  value: string | undefined,
-): SecretLocation | undefined {
-  if (!value) return undefined;
-
-  const templateVars = getTemplateVariables(value);
-  if (templateVars.length === 1) {
-    const secretLocationEncoded = templateVars[0].split("secrets.")[1];
-    try {
-      const secretLocation = decodeSecretLocation(secretLocationEncoded);
-      return secretLocation;
-    } catch (e) {
-      // If it's a templated secret but not a valid secret location, leave it be
-      // in case on-prem proxy has the secret in an env variable
-      if (templateVars[0].startsWith("secrets.")) {
-        return undefined; // TODO
-      }
-      return undefined;
-    }
-  }
-
-  return undefined;
 }
 
 export function packageIdentifierToShorthandSlug(

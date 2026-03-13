@@ -40,7 +40,7 @@ export interface AutocompleteLanguageInfo {
 }
 
 // TypeScript
-export const Typescript = {
+const Typescript = {
   name: "TypeScript",
   topLevelKeywords: ["function", "class", "module", "export", "import"],
   singleLineComment: "//",
@@ -48,7 +48,7 @@ export const Typescript = {
 };
 
 // JavaScript
-export const JavaScript = {
+const JavaScript = {
   name: "JavaScript",
   topLevelKeywords: ["function", "class", "module", "export", "import"],
   singleLineComment: "//",
@@ -56,7 +56,7 @@ export const JavaScript = {
 };
 
 // Python
-export const Python = {
+const Python = {
   name: "Python",
   // """"#" is for .ipynb files, where we add '"""' surrounding markdown blocks.
   // This stops the model from trying to complete the start of a new markdown block
@@ -66,7 +66,7 @@ export const Python = {
 };
 
 // Java
-export const Java = {
+const Java = {
   name: "Java",
   topLevelKeywords: ["class", "function"],
   singleLineComment: "//",
@@ -74,7 +74,7 @@ export const Java = {
 };
 
 // C++
-export const Cpp = {
+const Cpp = {
   name: "C++",
   topLevelKeywords: ["class", "namespace", "template"],
   singleLineComment: "//",
@@ -82,7 +82,7 @@ export const Cpp = {
 };
 
 // C#
-export const CSharp = {
+const CSharp = {
   name: "C#",
   topLevelKeywords: ["class", "namespace", "void"],
   singleLineComment: "//",
@@ -90,7 +90,7 @@ export const CSharp = {
 };
 
 // C
-export const C = {
+const C = {
   name: "C",
   topLevelKeywords: ["if", "else", "while", "for", "switch", "case"],
   singleLineComment: "//",
@@ -98,7 +98,7 @@ export const C = {
 };
 
 // Scala
-export const Scala = {
+const Scala = {
   name: "Scala",
   topLevelKeywords: ["def", "val", "var", "class", "object", "trait"],
   singleLineComment: "//",
@@ -106,7 +106,7 @@ export const Scala = {
 };
 
 // Go
-export const Go = {
+const Go = {
   name: "Go",
   topLevelKeywords: ["func", "package", "import", "type"],
   singleLineComment: "//",
@@ -114,7 +114,7 @@ export const Go = {
 };
 
 // Rust
-export const Rust = {
+const Rust = {
   name: "Rust",
   topLevelKeywords: ["fn", "mod", "pub", "struct", "enum", "trait"],
   singleLineComment: "//",
@@ -122,7 +122,7 @@ export const Rust = {
 };
 
 // Haskell
-export const Haskell = {
+const Haskell = {
   name: "Haskell",
   topLevelKeywords: [
     "data",
@@ -139,7 +139,7 @@ export const Haskell = {
 };
 
 // PHP
-export const PHP = {
+const PHP = {
   name: "PHP",
   topLevelKeywords: ["function", "class", "namespace", "use"],
   singleLineComment: "//",
@@ -147,7 +147,7 @@ export const PHP = {
 };
 
 // Ruby on Rails
-export const RubyOnRails = {
+const RubyOnRails = {
   name: "Ruby on Rails",
   topLevelKeywords: ["def", "class", "module"],
   singleLineComment: "#",
@@ -155,7 +155,7 @@ export const RubyOnRails = {
 };
 
 // Swift
-export const Swift = {
+const Swift = {
   name: "Swift",
   topLevelKeywords: ["func", "class", "struct", "import"],
   singleLineComment: "//",
@@ -163,7 +163,7 @@ export const Swift = {
 };
 
 // Kotlin
-export const Kotlin = {
+const Kotlin = {
   name: "Kotlin",
   topLevelKeywords: ["fun", "class", "package", "import"],
   singleLineComment: "//",
@@ -171,7 +171,7 @@ export const Kotlin = {
 };
 
 // Ruby
-export const Ruby = {
+const Ruby = {
   name: "Ruby",
   topLevelKeywords: ["class", "module", "def"],
   singleLineComment: "#",
@@ -179,7 +179,7 @@ export const Ruby = {
 };
 
 // Clojure
-export const Clojure = {
+const Clojure = {
   name: "Clojure",
   topLevelKeywords: ["def", "fn", "let", "do", "if", "defn", "ns", "defmacro"],
   singleLineComment: ";",
@@ -187,7 +187,7 @@ export const Clojure = {
 };
 
 // Julia
-export const Julia = {
+const Julia = {
   name: "Julia",
   topLevelKeywords: [
     "function",
@@ -206,7 +206,7 @@ export const Julia = {
 };
 
 // F#
-export const FSharp = {
+const FSharp = {
   name: "F#",
   topLevelKeywords: [
     "let",
@@ -225,7 +225,7 @@ export const FSharp = {
 };
 
 // R
-export const R = {
+const R = {
   name: "R",
   topLevelKeywords: [
     "function",
@@ -242,7 +242,7 @@ export const R = {
 };
 
 // Dart
-export const Dart = {
+const Dart = {
   name: "Dart",
   topLevelKeywords: ["class", "import", "void", "enum"],
   singleLineComment: "//",
@@ -250,7 +250,7 @@ export const Dart = {
 };
 
 // Solidity
-export const Solidity = {
+const Solidity = {
   name: "Solidity",
   topLevelKeywords: [
     "contract",
@@ -273,7 +273,7 @@ export const Solidity = {
 };
 
 // Lua
-export const Lua = {
+const Lua = {
   name: "Lua",
   topLevelKeywords: ["function"],
   singleLineComment: "--",
@@ -281,7 +281,7 @@ export const Lua = {
 };
 
 // YAML
-export const YAML: AutocompleteLanguageInfo = {
+const YAML: AutocompleteLanguageInfo = {
   name: "YAML",
   topLevelKeywords: [],
   singleLineComment: "#",
@@ -322,7 +322,7 @@ export const YAML: AutocompleteLanguageInfo = {
   ],
 };
 
-export const Json: AutocompleteLanguageInfo = {
+const Json: AutocompleteLanguageInfo = {
   name: "JSON",
   topLevelKeywords: [],
   singleLineComment: "//",
@@ -341,7 +341,7 @@ export const Json: AutocompleteLanguageInfo = {
   ],
 };
 
-export const Markdown: AutocompleteLanguageInfo = {
+const Markdown: AutocompleteLanguageInfo = {
   name: "Markdown",
   topLevelKeywords: [],
   singleLineComment: "",

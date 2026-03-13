@@ -12,7 +12,7 @@ interface WalkDirIDE {
   readFile(filepath: string): Promise<string>;
 }
 
-export interface WalkerOptions {
+interface WalkerOptions {
   include?: "dirs" | "files" | "both";
   returnRelativeUrisPaths?: boolean;
   source?: string;
@@ -216,7 +216,7 @@ const defaultOptions: WalkerOptions = {
   recursive: true,
 };
 
-export async function* walkDirAsync(
+async function* walkDirAsync(
   path: string,
   ide: WalkDirIDE,
   _optionOverrides?: WalkerOptions,
@@ -249,7 +249,7 @@ export async function walkDirs(
   return results.flat();
 }
 
-export async function getIgnoreContext(
+async function getIgnoreContext(
   currentDir: string,
   currentDirEntries: Entry[],
   ide: WalkDirIDE,

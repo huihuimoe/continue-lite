@@ -89,8 +89,6 @@ const analyticsSchema = z.object({
   clientKey: z.string().optional(),
 });
 
-export type ControlPlaneAnalytics = z.infer<typeof analyticsSchema>;
-
 const devDataSchema = z.object({
   url: z.string().optional(),
 });
@@ -103,5 +101,3 @@ export const controlPlaneSettingsSchema = z.object({
   analytics: analyticsSchema,
   devData: devDataSchema,
 });
-
-export type ControlPlaneSettings = z.infer<typeof controlPlaneSettingsSchema>;

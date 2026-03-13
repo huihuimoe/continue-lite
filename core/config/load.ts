@@ -41,7 +41,6 @@ async function finalToBrowserConfig(
   ide: IDE,
 ): Promise<BrowserSerializedContinueConfig> {
   return {
-    allowAnonymousTelemetry: final.allowAnonymousTelemetry,
     completionOptions: final.completionOptions,
     userToken: final.userToken,
     experimental: final.experimental,

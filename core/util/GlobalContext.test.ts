@@ -1,5 +1,6 @@
 // core/util/GlobalContext.test.ts
 import fs from "node:fs";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GlobalContext } from "./GlobalContext";
 import { getGlobalContextFilePath } from "./paths";
 
@@ -61,7 +62,7 @@ describe("GlobalContext", () => {
     // Write invalid JSON to the file
     fs.writeFileSync(globalContextFilePath, "{ invalid json }");
 
-    const consoleWarnMock = jest
+    const consoleWarnMock = vi
       .spyOn(console, "warn")
       .mockImplementation(() => {});
 
@@ -82,7 +83,7 @@ describe("GlobalContext", () => {
     fs.writeFileSync(globalContextFilePath, "{ invalid json }");
     expect(fs.existsSync(globalContextFilePath)).toBe(true);
 
-    const consoleWarnMock = jest
+    const consoleWarnMock = vi
       .spyOn(console, "warn")
       .mockImplementation(() => {});
 
@@ -106,7 +107,7 @@ describe("GlobalContext", () => {
     // Write invalid JSON to the file
     fs.writeFileSync(globalContextFilePath, "{ invalid json }");
 
-    const consoleWarnMock = jest
+    const consoleWarnMock = vi
       .spyOn(console, "warn")
       .mockImplementation(() => {});
 
@@ -132,7 +133,7 @@ describe("GlobalContext", () => {
     fs.writeFileSync(globalContextFilePath, "{ invalid json }");
     expect(fs.existsSync(globalContextFilePath)).toBe(true);
 
-    const consoleWarnMock = jest
+    const consoleWarnMock = vi
       .spyOn(console, "warn")
       .mockImplementation(() => {});
 
@@ -156,16 +157,6 @@ describe("GlobalContext", () => {
     consoleWarnMock.mockRestore();
   });
 
-  it("should update and retrieve multiple values correctly", () => {
-    globalContext.update("indexingPaused", true);
-    globalContext.update("hasDismissedConfigTsNoticeJetBrains", false);
-
-    expect(globalContext.get("indexingPaused")).toBe(true);
-    expect(globalContext.get("hasDismissedConfigTsNoticeJetBrains")).toBe(
-      false,
-    );
-  });
-
   it("should handle updating hasAlreadyCreatedAPromptFile correctly", () => {
     globalContext.update("hasAlreadyCreatedAPromptFile", true);
     expect(globalContext.get("hasAlreadyCreatedAPromptFile")).toBe(true);
@@ -176,38 +167,6 @@ describe("GlobalContext", () => {
   });
 
   describe("salvage functionality", () => {
-    it("should salvage allowAnonymousTelemetry from corrupted sharedConfig", () => {
-      // Create a file with partially corrupted JSON that contains salvageable sharedConfig
-      const corruptedContent = `{
-  "indexingPaused": true,
-  "sharedConfig": {"allowAnonymousTelemetry": false},
-  "corrupted": { invalid json
-}`;
-      fs.writeFileSync(globalContextFilePath, corruptedContent);
-
-      const consoleWarnMock = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-
-      // Try to update - this should salvage the allowAnonymousTelemetry value
-      globalContext.update("indexingPaused", false);
-
-      expect(consoleWarnMock).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "Error updating global context, attempting to salvage security-sensitive values",
-        ),
-      );
-
-      // Should have the new value
-      expect(globalContext.get("indexingPaused")).toBe(false);
-
-      // Should have salvaged the sharedConfig with allowAnonymousTelemetry
-      const salvaged = globalContext.get("sharedConfig");
-      expect(salvaged).toEqual({ allowAnonymousTelemetry: false });
-
-      consoleWarnMock.mockRestore();
-    });
-
     it("should handle salvage when no sharedConfig is present", () => {
       const corruptedContent = `{
   "indexingPaused": true,
@@ -215,7 +174,7 @@ describe("GlobalContext", () => {
 }`;
       fs.writeFileSync(globalContextFilePath, corruptedContent);
 
-      const consoleWarnMock = jest
+      const consoleWarnMock = vi
         .spyOn(console, "warn")
         .mockImplementation(() => {});
 
@@ -236,55 +195,13 @@ describe("GlobalContext", () => {
       consoleWarnMock.mockRestore();
     });
 
-    it("should handle salvage when sharedConfig has invalid allowAnonymousTelemetry", () => {
-      const corruptedContent = `{
-  "indexingPaused": true,
-  "sharedConfig": {"allowAnonymousTelemetry": "not-a-boolean"},
-  "corrupted": { invalid json
-}`;
-      fs.writeFileSync(globalContextFilePath, corruptedContent);
-
-      const consoleWarnMock = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-
-      globalContext.update("indexingPaused", false);
-
-      // Should not have salvaged an invalid boolean value
-      const salvaged = globalContext.get("sharedConfig");
-      expect(salvaged).toBeUndefined();
-
-      consoleWarnMock.mockRestore();
-    });
-
-    it("should handle salvage with valid allowAnonymousTelemetry set to true", () => {
-      const corruptedContent = `{
-  "indexingPaused": true,
-  "sharedConfig": {"allowAnonymousTelemetry": true, "otherField": "value"},
-  "corrupted": { invalid json
-}`;
-      fs.writeFileSync(globalContextFilePath, corruptedContent);
-
-      const consoleWarnMock = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-
-      globalContext.update("hasAlreadyCreatedAPromptFile", true);
-
-      // Should have salvaged only the allowAnonymousTelemetry value
-      const salvaged = globalContext.get("sharedConfig");
-      expect(salvaged).toEqual({ allowAnonymousTelemetry: true });
-
-      consoleWarnMock.mockRestore();
-    });
-
     it("should handle completely unparseable content gracefully", () => {
       fs.writeFileSync(
         globalContextFilePath,
         "complete garbage not json at all",
       );
 
-      const consoleWarnMock = jest
+      const consoleWarnMock = vi
         .spyOn(console, "warn")
         .mockImplementation(() => {});
 
@@ -293,33 +210,6 @@ describe("GlobalContext", () => {
       // Should still work and create a new file
       expect(globalContext.get("indexingPaused")).toBe(true);
       expect(globalContext.get("sharedConfig")).toBeUndefined();
-
-      consoleWarnMock.mockRestore();
-    });
-
-    it("should preserve multiple salvageable values when updating different key", () => {
-      const corruptedContent = `{
-  "indexingPaused": true,
-  "sharedConfig": {"allowAnonymousTelemetry": false},
-  "hasAlreadyCreatedAPromptFile": true,
-  "corrupted": { invalid json
-}`;
-      fs.writeFileSync(globalContextFilePath, corruptedContent);
-
-      const consoleWarnMock = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-
-      // Update a different key - should salvage and preserve existing data
-      globalContext.update("showConfigUpdateToast", false);
-
-      // Should have the new value
-      expect(globalContext.get("showConfigUpdateToast")).toBe(false);
-
-      // Should have salvaged the security-sensitive value
-      expect(globalContext.get("sharedConfig")).toEqual({
-        allowAnonymousTelemetry: false,
-      });
 
       consoleWarnMock.mockRestore();
     });

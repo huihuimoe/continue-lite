@@ -38,7 +38,6 @@ models/**
 textmate-syntaxes/**
 continue_tutorial.py
 config_schema.json
-config-yaml-schema.json
 continue_rc_schema.json
 
 server/exe/**

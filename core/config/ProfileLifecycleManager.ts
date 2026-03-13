@@ -34,16 +34,6 @@ export interface OrganizationDescription {
   policy?: Policy;
 }
 
-export type OrgWithProfiles = OrganizationDescription & {
-  profiles: ProfileLifecycleManager[];
-  currentProfile: ProfileLifecycleManager | null;
-};
-
-export type SerializedOrgWithProfiles = OrganizationDescription & {
-  profiles: ProfileDescription[];
-  selectedProfileId: string | null;
-};
-
 export class ProfileLifecycleManager {
   private savedConfigResult: ConfigResult<ContinueConfig> | undefined;
   private savedBrowserConfigResult?: ConfigResult<BrowserSerializedContinueConfig>;

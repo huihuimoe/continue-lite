@@ -1,7 +1,5 @@
 import { DataLogger } from "../../data/log";
 import { COUNT_COMPLETION_REJECTED_AFTER } from "../../util/parameters";
-import { Telemetry } from "../../util/posthog";
-import { getUriFileExtension } from "../../util/uri";
 
 import { AutocompleteOutcome } from "./types";
 
@@ -103,30 +101,5 @@ export class AutocompleteLoggingService {
         useFileSuffix: true,
       },
     });
-
-    const { prompt, completion, prefix, suffix, ...restOfOutcome } = outcome;
-    const toLog = {
-      accepted: restOfOutcome.accepted,
-      cacheHit: restOfOutcome.cacheHit,
-      completionId: restOfOutcome.completionId,
-      completionOptions: restOfOutcome.completionOptions,
-      debounceDelay: restOfOutcome.debounceDelay,
-      fileExtension: getUriFileExtension(restOfOutcome.filepath),
-      maxPromptTokens: restOfOutcome.maxPromptTokens,
-      modelName: restOfOutcome.modelName,
-      modelProvider: restOfOutcome.modelProvider,
-      multilineCompletions: restOfOutcome.multilineCompletions,
-      time: restOfOutcome.time,
-      useRecentlyEdited: restOfOutcome.useRecentlyEdited,
-      numLines: restOfOutcome.numLines,
-      profileType: restOfOutcome.profileType,
-    };
-
-    outcome.enabledStaticContextualization
-      ? void Telemetry.capture("autocomplete", {
-          ...toLog,
-          enabledStaticContextualization: true,
-        })
-      : void Telemetry.capture("autocomplete", toLog);
   }
 }

@@ -9,15 +9,6 @@ export interface Message<T = any> {
   data: T;
 }
 
-export interface FromMessage<
-  FromProtocol extends IProtocol,
-  T extends keyof FromProtocol,
-> {
-  messageType: T;
-  messageId: string;
-  data: FromProtocol[T][1];
-}
-
 export interface IMessenger<
   ToProtocol extends IProtocol,
   FromProtocol extends IProtocol,

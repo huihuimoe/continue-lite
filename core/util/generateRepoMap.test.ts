@@ -2,6 +2,7 @@
 
 import fs from "fs";
 import path from "path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as treeSitterUtils from "./treeSitter";
 import { testIde, testLLM } from "../test/fixtures";
 import {
@@ -20,7 +21,7 @@ describe.skip("generateRepoMap", () => {
 
   afterEach(() => {
     tearDownTestDir();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("should generate a repo map with signatures included", async () => {
@@ -34,7 +35,7 @@ describe.skip("generateRepoMap", () => {
     // Do not mock testIde.getWorkspaceDirs
 
     // Mock tree-sitter symbol extraction
-    jest.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
+    vi.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
       [path.join(TEST_DIR, "file1.js")]: [
         {
           filepath: path.join(TEST_DIR, "file1.js"),
@@ -83,7 +84,7 @@ describe.skip("generateRepoMap", () => {
 
     // Set testLLM properties
     testLLM._contextLength = 2048;
-    testLLM.countTokens = jest.fn().mockReturnValue(10);
+    testLLM.countTokens = vi.fn().mockReturnValue(10);
 
     // Act
     const repoMapContent = await generateRepoMap(testLLM, testIde, {
@@ -127,14 +128,14 @@ describe.skip("generateRepoMap", () => {
     // Do not mock testIde.getWorkspaceDirs
 
     // Mock tree-sitter symbol extraction
-    jest.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
+    vi.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
       [path.join(TEST_DIR, "file1.js")]: [],
       [path.join(TEST_DIR, "subdir/file2.py")]: [],
     });
 
     // Set testLLM properties
     testLLM._contextLength = 2048;
-    testLLM.countTokens = jest.fn().mockReturnValue(10);
+    testLLM.countTokens = vi.fn().mockReturnValue(10);
 
     // Act
     const repoMapContent = await generateRepoMap(testLLM, testIde, {
@@ -172,7 +173,7 @@ describe.skip("generateRepoMap", () => {
     // Do not mock testIde.getWorkspaceDirs
 
     // Mock tree-sitter symbol extraction
-    jest.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
+    vi.spyOn(treeSitterUtils, "getSymbolsForManyFiles").mockResolvedValue({
       [path.join(TEST_DIR, "file1.js")]: [],
       [path.join(TEST_DIR, "subdir/file2.py")]: [
         {
@@ -189,23 +190,23 @@ describe.skip("generateRepoMap", () => {
     });
 
     // Mock fs.promises.readFile to throw an error when reading file1.js
-    jest
-      .spyOn(fs.promises, "readFile")
-      .mockImplementation((filePath, encoding) => {
+    vi.spyOn(fs.promises, "readFile").mockImplementation(
+      (filePath, encoding) => {
         if (filePath === path.join(TEST_DIR, "file1.js")) {
           return Promise.reject(new Error("File not found"));
         }
         return fs.promises.readFile(filePath, encoding);
-      });
+      },
+    );
 
     // Spy on console.error
-    const consoleErrorSpy = jest
+    const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
     // Set testLLM properties
     testLLM._contextLength = 2048;
-    testLLM.countTokens = jest.fn().mockReturnValue(10);
+    testLLM.countTokens = vi.fn().mockReturnValue(10);
 
     // Act
     const repoMapContent = await generateRepoMap(testLLM, testIde, {

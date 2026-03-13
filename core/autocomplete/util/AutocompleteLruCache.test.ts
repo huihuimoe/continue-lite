@@ -1,12 +1,13 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AutocompleteLruCache from "./AutocompleteLruCache";
 
-jest.mock("async-mutex", () => {
-  const acquire = jest.fn().mockResolvedValue(jest.fn());
-  return {
-    Mutex: jest.fn().mockImplementation(() => ({ acquire })),
-  };
+vi.mock("async-mutex", () => {
+  const acquire = vi.fn().mockResolvedValue(vi.fn());
+  class Mutex {
+    acquire = acquire;
+  }
+  return { Mutex };
 });
-jest.useFakeTimers();
 
 describe("AutocompleteLruCache", () => {
   let mockDb: any;
@@ -14,17 +15,18 @@ describe("AutocompleteLruCache", () => {
   let currentTime: number;
 
   const createMockDb = () => ({
-    run: jest.fn().mockResolvedValue(undefined),
-    all: jest.fn().mockResolvedValue([]),
-    exec: jest.fn().mockResolvedValue(undefined),
-    close: jest.fn().mockResolvedValue(undefined),
+    run: vi.fn().mockResolvedValue(undefined),
+    all: vi.fn().mockResolvedValue([]),
+    exec: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
   });
 
   beforeEach(() => {
-    jest.clearAllTimers();
-    jest.clearAllMocks();
+    vi.useFakeTimers();
+    vi.clearAllTimers();
+    vi.clearAllMocks();
     currentTime = 1000000;
-    jest.spyOn(Date, "now").mockImplementation(() => currentTime);
+    vi.spyOn(Date, "now").mockImplementation(() => currentTime);
 
     mockDb = createMockDb();
     cache = new (AutocompleteLruCache as any)(mockDb);
@@ -39,7 +41,8 @@ describe("AutocompleteLruCache", () => {
     if ((cache as any).flushTimer) {
       clearInterval((cache as any).flushTimer);
     }
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   // ═══════════════════════════════════════════════════════════════
@@ -82,9 +85,9 @@ describe("AutocompleteLruCache", () => {
       });
 
       it("should acquire mutex lock during put operation", async () => {
-        const releaseSpy = jest.fn();
+        const releaseSpy = vi.fn();
         const mutex = (cache as any).mutex;
-        const acquireSpy = jest
+        const acquireSpy = vi
           .spyOn(mutex, "acquire")
           .mockResolvedValue(releaseSpy);
 
@@ -338,7 +341,7 @@ describe("AutocompleteLruCache", () => {
       });
 
       it("should log error when flush fails", async () => {
-        const consoleError = jest.spyOn(console, "error").mockImplementation();
+        const consoleError = vi.spyOn(console, "error").mockImplementation();
         await cache.put("key", "value");
         const dbError = new Error("Database failure");
         mockDb.run.mockRejectedValueOnce(dbError);
@@ -354,9 +357,9 @@ describe("AutocompleteLruCache", () => {
       });
 
       it("should acquire mutex during flush", async () => {
-        const releaseSpy = jest.fn();
+        const releaseSpy = vi.fn();
         const mutex = (cache as any).mutex;
-        const acquireSpy = jest
+        const acquireSpy = vi
           .spyOn(mutex, "acquire")
           .mockResolvedValue(releaseSpy);
 
@@ -368,16 +371,14 @@ describe("AutocompleteLruCache", () => {
       });
 
       it("should release mutex even if error occurs", async () => {
-        const consoleError = jest.spyOn(console, "error").mockImplementation();
-        const releaseSpy = jest.fn();
-        jest
-          .spyOn((cache as any).mutex, "acquire")
-          .mockResolvedValue(releaseSpy);
+        const consoleError = vi.spyOn(console, "error").mockImplementation();
+        const releaseSpy = vi.fn();
+        vi.spyOn((cache as any).mutex, "acquire").mockResolvedValue(releaseSpy);
 
         await cache.put("key", "value");
 
         const originalRun = mockDb.run;
-        mockDb.run = jest.fn().mockImplementation((sql: string) => {
+        mockDb.run = vi.fn().mockImplementation((sql: string) => {
           if (sql === "BEGIN TRANSACTION" || sql === "ROLLBACK") {
             return Promise.resolve();
           }
@@ -459,31 +460,31 @@ describe("AutocompleteLruCache", () => {
 
     it("should call flush at configured intervals", async () => {
       (AutocompleteLruCache as any).flushInterval = 1000;
-      const flushSpy = jest.spyOn(cache, "flush").mockResolvedValue();
+      const flushSpy = vi.spyOn(cache, "flush").mockResolvedValue();
 
       (cache as any).startFlushTimer();
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(flushSpy).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(flushSpy).toHaveBeenCalledTimes(2);
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(flushSpy).toHaveBeenCalledTimes(3);
 
       flushSpy.mockRestore();
     });
 
     it("should handle flush errors gracefully", async () => {
-      const consoleError = jest.spyOn(console, "error").mockImplementation();
+      const consoleError = vi.spyOn(console, "error").mockImplementation();
       const flushError = new Error("Flush failed");
-      jest.spyOn(cache, "flush").mockRejectedValue(flushError);
+      vi.spyOn(cache, "flush").mockRejectedValue(flushError);
 
       (AutocompleteLruCache as any).flushInterval = 1000;
       (cache as any).startFlushTimer();
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await Promise.resolve(); // Let error handler run
 
       expect(consoleError).toHaveBeenCalledWith(
@@ -502,7 +503,7 @@ describe("AutocompleteLruCache", () => {
     it("should clear timer on close()", async () => {
       (cache as any).startFlushTimer();
       const timerId = (cache as any).flushTimer;
-      const clearSpy = jest.spyOn(global, "clearInterval");
+      const clearSpy = vi.spyOn(global, "clearInterval");
 
       await cache.close();
 
@@ -537,18 +538,16 @@ describe("AutocompleteLruCache", () => {
       const operations: string[] = [];
 
       const originalClearInterval = clearInterval;
-      const clearIntervalSpy = jest
+      const clearIntervalSpy = vi
         .spyOn(global, "clearInterval")
         .mockImplementation((id) => {
           operations.push("clearTimer");
           return originalClearInterval(id);
         });
 
-      const flushSpy = jest
-        .spyOn(cache, "flush")
-        .mockImplementation(async () => {
-          operations.push("flush");
-        });
+      const flushSpy = vi.spyOn(cache, "flush").mockImplementation(async () => {
+        operations.push("flush");
+      });
 
       const closeDbSpy = mockDb.close.mockImplementation(() => {
         operations.push("dbClose");

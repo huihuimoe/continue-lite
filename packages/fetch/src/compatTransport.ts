@@ -25,7 +25,7 @@ type CompatTimeoutOptions = {
   connectTimeout?: number;
 };
 
-export type CompatTransport = {
+type CompatTransport = {
   dispatcher: Dispatcher;
   signal?: AbortSignal;
   proxy?: string;

@@ -11,7 +11,7 @@ interface BasicMatchResult {
 /**
  * Represents a match result with start and end character positions
  */
-export interface SearchMatchResult extends BasicMatchResult {
+interface SearchMatchResult extends BasicMatchResult {
   /** The name of the strategy that successfully matched */
   strategyName: string;
 }

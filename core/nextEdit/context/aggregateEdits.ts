@@ -26,7 +26,7 @@ interface FileState {
   isProcessing: boolean;
 }
 
-export interface EditClusterConfig {
+interface EditClusterConfig {
   deltaT: number; // Time threshold in seconds; if exceeded, a new cluster is created
   deltaL: number; // Line threshold; if the user jumps more than this many lines, a new cluster is created
   maxEdits: number; // Maximum number of edits in a cluster

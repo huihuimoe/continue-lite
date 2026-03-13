@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { ConfigHandler } from "../config/ConfigHandler.js";
-import { ChatMessage, IDE, ILLM } from "../index.js";
-import OpenAI from "../llm/llms/OpenAI.js";
+import { ChatMessage, IDE, ILLM, Range, RangeInFile } from "../index.js";
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../util/parameters.js";
 
 import { ContextRetrievalService } from "../autocomplete/context/ContextRetrievalService.js";
@@ -11,14 +10,15 @@ import { CompletionStreamer } from "../autocomplete/generation/CompletionStreame
 import { postprocessCompletion } from "../autocomplete/postprocessing/index.js";
 import { shouldPrefilter } from "../autocomplete/prefiltering/index.js";
 import { getAllSnippetsWithoutRace } from "../autocomplete/snippets/index.js";
+import { AutocompleteCodeSnippet } from "../autocomplete/snippets/types.js";
 import { GetLspDefinitionsFunction } from "../autocomplete/types.js";
 import { getAst } from "../autocomplete/util/ast.js";
 import { AutocompleteDebouncer } from "../autocomplete/util/AutocompleteDebouncer.js";
 import AutocompleteLruCache from "../autocomplete/util/AutocompleteLruCache.js";
 import { HelperVars } from "../autocomplete/util/HelperVars.js";
 import { AutocompleteInput } from "../autocomplete/util/types.js";
-import { isSecurityConcern } from "../util/ignore.js";
 import { modelSupportsNextEdit } from "../llm/autodetect.js";
+import { isSecurityConcern } from "../util/ignore.js";
 import { localPathOrUriToPath } from "../util/pathToUri.js";
 import { EditAggregator } from "./context/aggregateEdits.js";
 import { createDiff, DiffFormatType } from "./context/diffFormatting.js";
@@ -31,9 +31,8 @@ import {
   NextEditOutcome,
   Prompt,
   PromptMetadata,
+  RecentlyEditedRange,
 } from "./types.js";
-
-const autocompleteCache = AutocompleteLruCache.get();
 
 // Errors that can be expected on occasion even during normal functioning should not be shown.
 // Not worth disrupting the user to tell them that a single autocomplete request didn't go through
@@ -132,11 +131,6 @@ export class NextEditProvider {
 
     if (!llm) {
       return undefined;
-    }
-
-    // Temporary fix for JetBrains autocomplete bug as described in https://github.com/continuedev/continue/pull/3022
-    if (llm.model === undefined && llm.completionOptions?.model !== undefined) {
-      llm.model = llm.completionOptions.model;
     }
 
     // Ignore empty API keys for Mistral since we currently write
@@ -526,21 +520,85 @@ export class NextEditProvider {
     if (outcome) {
       // Handle NextEditProvider-specific state.
       this.previousCompletions.push(outcome);
-
-      // Mark as displayed for JetBrains
-      await this._markDisplayedIfJetBrains(helper.input.completionId, outcome);
     }
 
     return outcome;
   }
 
-  private async _markDisplayedIfJetBrains(
-    completionId: string,
-    outcome: NextEditOutcome,
-  ): Promise<void> {
-    const ideType = (await this.ide.getIdeInfo()).ideType;
-    if (ideType === "jetbrains") {
-      this.markDisplayed(completionId, outcome);
+  /**
+   * This is a wrapper around provideInlineCompletionItems.
+   * This is invoked when we call the model in the background using prefetch.
+   * It's not currently used anywhere (references are not used either), but I decided to keep it in case we actually need to use prefetch.
+   * You will see that calls to this method is made from NextEditPrefetchQueue.proecss(), which is wrapped in `if (!this.usingFullFileDiff)`.
+   */
+  public async provideInlineCompletionItemsWithChain(
+    ctx: {
+      completionId: string;
+      manuallyPassFileContents?: string;
+      manuallyPassPrefix?: string;
+      selectedCompletionInfo?: {
+        text: string;
+        range: Range;
+      };
+      isUntitledFile: boolean;
+      recentlyVisitedRanges: AutocompleteCodeSnippet[];
+      recentlyEditedRanges: RecentlyEditedRange[];
+    },
+    nextEditLocation: RangeInFile,
+    token: AbortSignal | undefined,
+    usingFullFileDiff: boolean,
+  ) {
+    try {
+      const previousOutcome = this.getPreviousCompletion();
+      if (!previousOutcome) {
+        console.log("previousOutcome is undefined");
+        return undefined;
+      }
+
+      // Use the frontmost RangeInFile to build an input.
+      const input = this.buildAutocompleteInputFromChain(
+        previousOutcome,
+        nextEditLocation,
+        ctx,
+      );
+      if (!input) {
+        console.log("input is undefined");
+        return undefined;
+      }
+
+      return await this.provideInlineCompletionItems(input, token, {
+        withChain: true,
+        usingFullFileDiff,
+      });
+    } catch (e: any) {
+      this.onError(e);
     }
+  }
+  private buildAutocompleteInputFromChain(
+    previousOutcome: NextEditOutcome,
+    nextEditableRegion: RangeInFile,
+    ctx: {
+      completionId: string;
+      manuallyPassFileContents?: string;
+      manuallyPassPrefix?: string;
+      selectedCompletionInfo?: {
+        text: string;
+        range: Range;
+      };
+      isUntitledFile: boolean;
+      recentlyVisitedRanges: AutocompleteCodeSnippet[];
+      recentlyEditedRanges: RecentlyEditedRange[];
+    },
+  ): AutocompleteInput | undefined {
+    const input: AutocompleteInput = {
+      pos: {
+        line: nextEditableRegion.range.start.line,
+        character: nextEditableRegion.range.start.character,
+      },
+      filepath: previousOutcome.fileUri,
+      ...ctx,
+    };
+
+    return input;
   }
 }

@@ -9,9 +9,6 @@ import {
 
 export const sharedConfigSchema = z
   .object({
-    // boolean fields in config.json
-    allowAnonymousTelemetry: z.boolean(),
-
     // `experimental` in `ContinueConfig`
     useCurrentFileAsContext: z.boolean(),
     enableStaticContextualization: z.boolean(),
@@ -30,12 +27,6 @@ export type SharedConfigSchema = z.infer<typeof sharedConfigSchema>;
 // For security in case of damaged config file, try to salvage any security-related values
 export function salvageSharedConfig(sharedConfig: object): SharedConfigSchema {
   const salvagedConfig: SharedConfigSchema = {};
-  if ("allowAnonymousTelemetry" in sharedConfig) {
-    const val = z.boolean().safeParse(sharedConfig.allowAnonymousTelemetry);
-    if (val.success) {
-      salvagedConfig.allowAnonymousTelemetry = val.data;
-    }
-  }
   if ("disableAutocompleteInFiles" in sharedConfig) {
     const val = sharedConfigSchema.shape.disableAutocompleteInFiles.safeParse(
       sharedConfig.disableAutocompleteInFiles,
@@ -88,10 +79,6 @@ export function modifyAnyConfigWithSharedConfig<
   if (sharedConfig.debounceDelay !== undefined) {
     configCopy.tabAutocompleteOptions.debounceDelay =
       sharedConfig.debounceDelay;
-  }
-
-  if (sharedConfig.allowAnonymousTelemetry !== undefined) {
-    configCopy.allowAnonymousTelemetry = sharedConfig.allowAnonymousTelemetry;
   }
 
   configCopy.experimental = {

@@ -1,9 +1,9 @@
-export const BRACKETS: { [key: string]: string } = {
+const BRACKETS: { [key: string]: string } = {
   "(": ")",
   "{": "}",
   "[": "]",
 };
-export const BRACKETS_REVERSE: { [key: string]: string } = {
+const BRACKETS_REVERSE: { [key: string]: string } = {
   ")": "(",
   "}": "{",
   "]": "[",

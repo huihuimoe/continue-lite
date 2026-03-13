@@ -19,7 +19,7 @@ export type GlobalContextModelSelections = Partial<
   Record<ModelRole, string | null>
 >;
 
-export type GlobalContextType = {
+type GlobalContextType = {
   indexingPaused: boolean;
   lastSelectedProfileForWorkspace: {
     [workspaceIdentifier: string]: string | null;
@@ -31,16 +31,7 @@ export type GlobalContextType = {
     [profileId: string]: GlobalContextModelSelections;
   };
   cliSelectedModel?: string; // CLI-specific model selection for unauthenticated users
-
-  /**
-   * This is needed to handle the case where a JetBrains user has created
-   * docs embeddings using one provider, and then updates to a new provider.
-   *
-   * For VS Code users, it is unnecessary since we use transformers.js by default.
-   */
-  hasDismissedConfigTsNoticeJetBrains: boolean;
   hasAlreadyCreatedAPromptFile: boolean;
-  hasShownUnsupportedPlatformWarning: boolean;
   showConfigUpdateToast: boolean;
   isSupportedLanceDbCpuTargetForLinux: boolean;
   sharedConfig: SharedConfigSchema;

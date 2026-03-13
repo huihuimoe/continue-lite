@@ -7,15 +7,6 @@ export enum RuleType {
   Manual = "Manual",
 }
 
-export const RuleTypeDescriptions: Record<RuleType, string> = {
-  [RuleType.Always]: "Always included in model context",
-  [RuleType.AutoAttached]:
-    "Included when files matching a glob pattern are referenced",
-  [RuleType.AgentRequested]:
-    "Available to AI, which decides whether to include it. Must provide a description",
-  [RuleType.Manual]: "Only included when explicitly mentioned using @ruleName",
-};
-
 /**
  * Determines the rule type based on the rule properties
  */

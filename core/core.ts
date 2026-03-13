@@ -11,7 +11,6 @@ import { isSecurityConcern } from "./util/ignore";
 import { EditAggregator } from "./nextEdit/context/aggregateEdits";
 import { GlobalContext } from "./util/GlobalContext";
 import { migrateV1DevDataFiles } from "./util/paths";
-import { Telemetry } from "./util/posthog";
 
 import { IdeSettings, Position, type IDE } from ".";
 
@@ -148,17 +147,6 @@ export class Core {
   /* eslint-disable max-lines-per-function */
   private registerMessageHandlers(_ideSettingsPromise: Promise<IdeSettings>) {
     const on = this.messenger.on.bind(this.messenger);
-
-    // Note, VsCode's in-process messenger doesn't do anything with this
-    // It will only show for jetbrains
-    this.messenger.onError((_message, err) => {
-      void Telemetry.capture("core_messenger_error", {
-        message: err.message,
-        stack: err.stack,
-      });
-
-      void this.ide.showToast("error", err.message);
-    });
 
     on("abort", (msg) => {
       this.abortById(msg.data ?? msg.messageId);
