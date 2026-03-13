@@ -4,7 +4,6 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { testConfigHandler } from "../test/fixtures";
 import { TEST_DIR } from "../test/testDir";
-import { getConfigTsPath } from "../util/paths";
 
 import { defaultConfig } from "./default";
 
@@ -26,7 +25,7 @@ describe.skip("Test the ConfigHandler and E2E config loading", () => {
     config.systemMessage = "SYSTEM";
     return config;
 }`;
-    fs.writeFileSync(getConfigTsPath(), configTs);
+    fs.writeFileSync(path.join(TEST_DIR, "config.ts"), configTs);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const config = await testConfigHandler.reloadConfig("test");
     /**

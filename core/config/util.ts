@@ -1,80 +1,63 @@
 import fs from "fs";
 import os from "os";
 
-import { ModelConfig } from "@continuedev/config-yaml";
+import { ConfigYaml, ModelConfig } from "@continuedev/config-yaml";
+import YAML from "yaml";
 import { ContinueConfig, IDE, JSONModelDescription, PromptTemplate } from "../";
 import { GlobalContext } from "../util/GlobalContext";
-import { editConfigFile } from "../util/paths";
-
-function stringify(obj: any, indentation?: number): string {
-  return JSON.stringify(
-    obj,
-    (_key, value) => {
-      return value === null ? undefined : value;
-    },
-    indentation,
-  );
-}
+import { getConfigYamlPath, setConfigFilePermissions } from "../util/paths";
 
 export function addModel(model: JSONModelDescription) {
-  editConfigFile(
-    (config) => {
-      if (config.models?.some((m) => stringify(m) === stringify(model))) {
-        return config;
+  editConfigYaml((config) => {
+    let numMatches = 0;
+    for (const entry of config.models ?? []) {
+      if (
+        typeof (entry as { name?: unknown }).name === "string" &&
+        (entry as { name: string }).name.startsWith(model.title)
+      ) {
+        numMatches += 1;
       }
+    }
+    if (numMatches > 0) {
+      model.title = `${model.title} (${numMatches})`;
+    }
 
-      const numMatches = config.models?.reduce(
-        (prev, curr) => (curr.title.startsWith(model.title) ? prev + 1 : prev),
-        0,
-      );
-      if (numMatches !== undefined && numMatches > 0) {
-        model.title = `${model.title} (${numMatches})`;
-      }
+    if (!config.models) {
+      config.models = [];
+    }
 
-      config.models.push(model);
-
-      return config;
-    },
-    (config) => {
-      const numMatches = config.models?.reduce(
-        (prev, curr) =>
-          "name" in curr && curr.name.startsWith(model.title) ? prev + 1 : prev,
-        0,
-      );
-      if (numMatches !== undefined && numMatches > 0) {
-        model.title = `${model.title} (${numMatches})`;
-      }
-
-      if (!config.models) {
-        config.models = [];
-      }
-
-      const desc: ModelConfig = {
-        name: model.title,
-        provider: model.provider,
-        model: model.model,
-        apiKey: model.apiKey,
-        apiBase: model.apiBase,
-        maxStopWords: model.maxStopWords,
-        defaultCompletionOptions: model.completionOptions,
-      };
-      config.models.push(desc);
-      return config;
-    },
-  );
+    const desc: ModelConfig = {
+      name: model.title,
+      provider: model.provider,
+      model: model.model,
+      apiKey: model.apiKey,
+      apiBase: model.apiBase,
+      maxStopWords: model.maxStopWords,
+      defaultCompletionOptions: model.completionOptions,
+    };
+    config.models.push(desc);
+    return config;
+  });
 }
 
 export function deleteModel(title: string) {
-  editConfigFile(
-    (config) => {
-      config.models = config.models.filter((m: any) => m.title !== title);
-      return config;
-    },
-    (config) => {
-      config.models = config.models?.filter((m: any) => m.name !== title);
-      return config;
-    },
-  );
+  editConfigYaml((config) => {
+    config.models = config.models?.filter((m: any) => m.name !== title);
+    return config;
+  });
+}
+
+function editConfigYaml(callback: (config: ConfigYaml) => ConfigYaml): void {
+  const configPath = getConfigYamlPath();
+  const config = fs.readFileSync(configPath, "utf8");
+  let configYaml = YAML.parse(config) as unknown;
+  if (typeof configYaml === "object" && configYaml !== null) {
+    configYaml = callback(configYaml as ConfigYaml);
+    fs.writeFileSync(configPath, YAML.stringify(configYaml));
+    setConfigFilePermissions(configPath);
+  } else {
+    console.warn("config.yaml is not a valid object");
+  }
 }
 
 /**

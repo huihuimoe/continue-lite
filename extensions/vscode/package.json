@@ -49,15 +49,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [
-      {
-        "filenames": [
-          "config.json",
-          ".continuerc.json"
-        ],
-        "id": "jsonc"
-      }
-    ],
     "configuration": {
       "title": "Continue",
       "properties": {

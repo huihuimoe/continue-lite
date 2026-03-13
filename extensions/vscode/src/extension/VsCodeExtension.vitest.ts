@@ -36,6 +36,9 @@ const mocks = vi.hoisted(() => ({
     registerListener: vi.fn(),
     updateUsingFullFileDiff: vi.fn(),
   },
+  updateUsingFullFileDiff: vi.fn(),
+  activateNextEdit: vi.fn(),
+  deactivateNextEdit: vi.fn(),
   monitorBatteryChanges: vi.fn(() => ({ dispose: vi.fn() })),
   setupStatusBar: vi.fn(),
   registerAllCommands: vi.fn(),
@@ -44,12 +47,16 @@ const mocks = vi.hoisted(() => ({
   clearDocumentContentCache: vi.fn(),
   handleTextDocumentChange: vi.fn(),
   initDocumentContentCache: vi.fn(),
+  fsExistsSync: vi.fn(() => false),
+  fsWatch: vi.fn(),
 }));
 
 vi.mock("fs", () => ({
   default: {
     watchFile: mocks.fsWatchFile,
     unwatchFile: mocks.fsUnwatchFile,
+    existsSync: mocks.fsExistsSync,
+    watch: mocks.fsWatch,
   },
 }));
 
@@ -60,10 +67,16 @@ vi.mock("vscode", () => ({
     onDidChangeTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
     onDidOpenTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
     onDidCloseTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidSaveTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidDeleteFiles: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidCreateFiles: vi.fn(() => ({ dispose: vi.fn() })),
+    textDocuments: [],
     notebookDocuments: [],
   },
   window: {
     showWarningMessage: mocks.showWarningMessage,
+    onDidChangeVisibleTextEditors: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidChangeTextEditorSelection: vi.fn(() => ({ dispose: vi.fn() })),
   },
   commands: {
     executeCommand: mocks.executeCommand,
@@ -85,7 +98,18 @@ vi.mock("core/control-plane/env", () => ({
 }));
 
 vi.mock("core/core", () => ({
-  Core: class {},
+  Core: class {
+    configHandler = {
+      loadConfig: vi.fn(async () => ({
+        config: {
+          selectedModelByRole: {},
+        },
+      })),
+      onConfigUpdate: vi.fn(),
+      reloadConfig: vi.fn(),
+    };
+    invoke = vi.fn();
+  },
 }));
 
 vi.mock("core/protocol", () => ({}));
@@ -97,14 +121,16 @@ vi.mock("core/protocol/messenger", () => ({
 }));
 
 vi.mock("core/util/paths", () => ({
-  getConfigJsonPath: vi.fn(() => "/tmp/config.json"),
-  getConfigTsPath: vi.fn(() => "/tmp/config.ts"),
   getConfigYamlPath: vi.fn(() => "/tmp/config.yaml"),
   getContinueGlobalPath: vi.fn(() => "/tmp"),
 }));
 
 vi.mock("../autocomplete/completionProvider", () => ({
-  ContinueCompletionProvider: class {},
+  ContinueCompletionProvider: class {
+    updateUsingFullFileDiff = mocks.updateUsingFullFileDiff;
+    activateNextEdit = mocks.activateNextEdit;
+    deactivateNextEdit = mocks.deactivateNextEdit;
+  },
 }));
 
 vi.mock("../autocomplete/statusBar", () => ({
@@ -168,11 +194,17 @@ vi.mock("../util/editLoggingUtils", () => ({
 }));
 
 vi.mock("../util/ideUtils", () => ({
-  VsCodeIdeUtils: class {},
+  VsCodeIdeUtils: class {
+    getOpenFiles = vi.fn(() => []);
+  },
 }));
 
 vi.mock("../VsCodeIde", () => ({
-  VsCodeIde: class {},
+  VsCodeIde: class {
+    onDidChangeActiveTextEditor = vi.fn();
+    getIdeInfo = vi.fn();
+    getIdeSettings = vi.fn();
+  },
 }));
 
 vi.mock("core/llm/autodetect", () => ({
@@ -259,6 +291,23 @@ describe("VsCodeExtension updateNextEditState", () => {
     expect(JumpManager.clearInstance).toHaveBeenCalledTimes(1);
     expect(GhostTextAcceptanceTracker.clearInstance).toHaveBeenCalledTimes(1);
     expect(NextEditWindowManager.freeTabAndEsc).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("VsCodeExtension constructor", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("watches only the global YAML config file", () => {
+    new VsCodeExtension({ subscriptions: [] } as vscode.ExtensionContext);
+
+    expect(mocks.fsWatchFile).toHaveBeenCalledTimes(1);
+    expect(mocks.fsWatchFile).toHaveBeenCalledWith(
+      "/tmp/config.yaml",
+      { interval: 1000 },
+      expect.any(Function),
+    );
   });
 });
 

@@ -127,6 +127,13 @@ describe("LocalPlatformClient", () => {
   });
 
   describe("should be able to get secrets from workspace .env files", () => {
+    let getContinueDotEnv: Mock;
+    beforeEach(async () => {
+      const utilPaths = await import("../../util/paths");
+      getContinueDotEnv = vi.fn(() => ({}));
+      utilPaths.getContinueDotEnv = getContinueDotEnv;
+    });
+
     test("should get secrets from <workspace>/.continue/.env and <workspace>/.env", async () => {
       const originalIdeFileExists = testIde.fileExists;
       testIde.fileExists = vi.fn(async (fileUri: string) =>

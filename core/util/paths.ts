@@ -4,13 +4,11 @@ import * as path from "path";
 import * as URI from "uri-js";
 import * as YAML from "yaml";
 
-import { ConfigYaml, DevEventName } from "@continuedev/config-yaml";
-import * as JSONC from "comment-json";
+import { DevEventName } from "@continuedev/config-yaml";
 import dotenv from "dotenv";
 
-import { IdeType, SerializedContinueConfig } from "../";
+import { IdeType } from "../";
 import { defaultConfig } from "../config/default";
-import Types from "../config/types";
 
 dotenv.config();
 
@@ -38,10 +36,6 @@ const CONTINUE_GLOBAL_DIR = (() => {
 // export const DEFAULT_CONFIG_TS_CONTENTS = `import { Config } from "./types"\n\nexport function modifyConfig(config: Config): Config {
 //   return config;
 // }`;
-
-export const DEFAULT_CONFIG_TS_CONTENTS = `export function modifyConfig(config: Config): Config {
-  return config;
-}`;
 
 export function getChromiumPath(): string {
   return path.join(getContinueUtilsPath(), ".chromium-browser-snapshots");
@@ -111,14 +105,9 @@ export function getSessionsListPath(): string {
   return filepath;
 }
 
-export function getConfigJsonPath(): string {
-  const p = path.join(getContinueGlobalPath(), "config.json");
-  return p;
-}
-
 export function getConfigYamlPath(ideType?: IdeType): string {
   const p = path.join(getContinueGlobalPath(), "config.yaml");
-  if (!fs.existsSync(p) && !fs.existsSync(getConfigJsonPath())) {
+  if (!fs.existsSync(p)) {
     if (ideType === "jetbrains") {
       // https://github.com/continuedev/continue/pull/7224
       // This was here because we had different context provider support between jetbrains and vs code
@@ -133,47 +122,7 @@ export function getConfigYamlPath(ideType?: IdeType): string {
 }
 
 export function getPrimaryConfigFilePath(): string {
-  const configYamlPath = getConfigYamlPath();
-  if (fs.existsSync(configYamlPath)) {
-    return configYamlPath;
-  }
-  return getConfigJsonPath();
-}
-
-export function getConfigTsPath(): string {
-  const p = path.join(getContinueGlobalPath(), "config.ts");
-  if (!fs.existsSync(p)) {
-    fs.writeFileSync(p, DEFAULT_CONFIG_TS_CONTENTS);
-  }
-
-  const typesPath = path.join(getContinueGlobalPath(), "types");
-  if (!fs.existsSync(typesPath)) {
-    fs.mkdirSync(typesPath);
-  }
-  const corePath = path.join(typesPath, "core");
-  if (!fs.existsSync(corePath)) {
-    fs.mkdirSync(corePath);
-  }
-  const packageJsonPath = path.join(getContinueGlobalPath(), "package.json");
-  if (!fs.existsSync(packageJsonPath)) {
-    fs.writeFileSync(
-      packageJsonPath,
-      JSON.stringify({
-        name: "continue-config",
-        version: "1.0.0",
-        description: "My Continue Configuration",
-        main: "config.js",
-      }),
-    );
-  }
-
-  fs.writeFileSync(path.join(corePath, "index.d.ts"), Types);
-  return p;
-}
-
-export function getConfigJsPath(): string {
-  // Do not create automatically
-  return path.join(getContinueGlobalPath(), "out", "config.js");
+  return getConfigYamlPath();
 }
 
 export function getTsConfigPath(): string {
@@ -239,47 +188,6 @@ export function getDevDataFilePath(
     fs.mkdirSync(versionPath);
   }
   return path.join(versionPath, `${String(eventName)}.jsonl`);
-}
-
-function editConfigJson(
-  callback: (config: SerializedContinueConfig) => SerializedContinueConfig,
-): void {
-  const config = fs.readFileSync(getConfigJsonPath(), "utf8");
-  let configJson = JSONC.parse(config);
-  // Check if it's an object
-  if (typeof configJson === "object" && configJson !== null) {
-    configJson = callback(configJson as any) as any;
-    fs.writeFileSync(getConfigJsonPath(), JSONC.stringify(configJson, null, 2));
-  } else {
-    console.warn("config.json is not a valid object");
-  }
-}
-
-function editConfigYaml(callback: (config: ConfigYaml) => ConfigYaml): void {
-  const configPath = getConfigYamlPath();
-  const config = fs.readFileSync(configPath, "utf8");
-  let configYaml = YAML.parse(config);
-  // Check if it's an object
-  if (typeof configYaml === "object" && configYaml !== null) {
-    configYaml = callback(configYaml as any) as any;
-    fs.writeFileSync(configPath, YAML.stringify(configYaml));
-    setConfigFilePermissions(configPath);
-  } else {
-    console.warn("config.yaml is not a valid object");
-  }
-}
-
-export function editConfigFile(
-  configJsonCallback: (
-    config: SerializedContinueConfig,
-  ) => SerializedContinueConfig,
-  configYamlCallback: (config: ConfigYaml) => ConfigYaml,
-): void {
-  if (fs.existsSync(getConfigYamlPath())) {
-    editConfigYaml(configYamlCallback);
-  } else if (fs.existsSync(getConfigJsonPath())) {
-    editConfigJson(configJsonCallback);
-  }
 }
 
 function getMigrationsFolderPath(): string {

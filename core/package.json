@@ -28,7 +28,6 @@
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "cross-env": "^10.1.0",
-    "esbuild": "0.27.3",
     "eslint": "^10",
     "jest": "^30.2.0",
     "myers-diff": "^2.1.0",

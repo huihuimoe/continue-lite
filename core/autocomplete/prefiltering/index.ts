@@ -5,7 +5,7 @@ import {
   getGlobalContinueIgArray,
   getWorkspaceContinueIgArray,
 } from "../../util/continueignore";
-import { getConfigJsonPath } from "../../util/paths";
+import { getPrimaryConfigFilePath } from "../../util/paths";
 import { findUriInDirs } from "../../util/uri";
 import { HelperVars } from "../util/HelperVars";
 
@@ -48,8 +48,8 @@ export async function shouldPrefilter(
     return true;
   }
 
-  // Check whether we're in the continue config.json file
-  if (helper.filepath === getConfigJsonPath()) {
+  // Check whether we're in the primary continue config file
+  if (helper.filepath === getPrimaryConfigFilePath()) {
     return true;
   }
 

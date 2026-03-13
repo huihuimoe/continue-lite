@@ -201,13 +201,8 @@ export async function configYamlToContinueConfig(options: {
   }));
 
   // Models
-  let warnAboutFreeTrial = false;
   for (const model of config.models ?? []) {
     const roles = model.roles ?? ["autocomplete"];
-
-    if (model.provider === "free-trial") {
-      warnAboutFreeTrial = true;
-    }
     try {
       const llms = await llmsFromModelConfig({
         model,
@@ -228,14 +223,6 @@ export async function configYamlToContinueConfig(options: {
         message: `Failed to load model:\nName: ${model.name}\nModel: ${model.model}\nProvider: ${model.provider}\n${e instanceof Error ? e.message : e}`,
       });
     }
-  }
-
-  if (warnAboutFreeTrial) {
-    localErrors.push({
-      fatal: false,
-      message:
-        "Model provider 'free-trial' is no longer supported, will be ignored.",
-    });
   }
 
   return { config: continueConfig, errors: localErrors };

@@ -150,14 +150,6 @@ export class NextEditProvider {
       llm.completionOptions.temperature = 0.01;
     }
 
-    // TODO: Resolve import error with TRIAL_FIM_MODEL
-    // else if (
-    //   llm.providerName === "free-trial" &&
-    //   llm.model !== TRIAL_FIM_MODEL
-    // ) {
-    //   llm.model = TRIAL_FIM_MODEL;
-    // }
-
     return llm;
   }
 
