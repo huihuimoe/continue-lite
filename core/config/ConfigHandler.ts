@@ -14,8 +14,8 @@ import {
   IdeSettings,
   ILLMLogger,
 } from "../index.js";
-import { Logger } from "../util/Logger.js";
 import { GlobalContext } from "../util/GlobalContext.js";
+import { Logger } from "../util/Logger.js";
 import LocalProfileLoader from "./profile/LocalProfileLoader.js";
 import {
   ProfileDescription,
@@ -127,6 +127,7 @@ export class ConfigHandler {
   async getSerializedConfig(): Promise<
     ConfigResult<BrowserSerializedContinueConfig>
   > {
+    await this.isInitialized;
     if (!this.profileManager) {
       return {
         config: undefined,
