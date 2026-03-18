@@ -11,6 +11,8 @@ import {
   SelectionChangeManager,
 } from "./SelectionChangeManager";
 
+const getNextEditableRegionMock = vi.fn();
+
 // Mock VSCode API
 vi.mock("vscode", () => ({
   window: {
@@ -82,6 +84,14 @@ vi.mock("./NextEditWindowManager", () => ({
   },
 }));
 
+vi.mock("core/nextEdit/NextEditEditableRegionCalculator", () => ({
+  EditableRegionStrategy: {
+    Static: "Static",
+    Sliding: "Sliding",
+  },
+  getNextEditableRegion: (...args: any[]) => getNextEditableRegionMock(...args),
+}));
+
 describe("SelectionChangeManager", () => {
   let selectionChangeManager: SelectionChangeManager;
   let mockIde: VsCodeIde;
@@ -89,6 +99,7 @@ describe("SelectionChangeManager", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    getNextEditableRegionMock.mockReset();
 
     // Setup mock implementations
     mockDeleteChain = vi.fn();
@@ -763,6 +774,7 @@ describe("SelectionChangeManager", () => {
 
       expect(handled).toBe(true);
       expect(mockDeleteChain).toHaveBeenCalledTimes(1);
+      expect(getNextEditableRegionMock).not.toHaveBeenCalled();
     });
   });
 

@@ -292,6 +292,36 @@ describe("VsCodeExtension updateNextEditState", () => {
     expect(GhostTextAcceptanceTracker.clearInstance).toHaveBeenCalledTimes(1);
     expect(NextEditWindowManager.freeTabAndEsc).toHaveBeenCalledTimes(1);
   });
+
+  it("warns when a Sweep Ollama autocomplete model lacks .Suffix FIM support", async () => {
+    const extension = createExtension({
+      model: "sweep-next-edit",
+      title: "Sweep Next Edit",
+      providerName: "ollama",
+      supportsFim: () => false,
+    });
+
+    await extension.updateNextEditState({ subscriptions: [] } as any);
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      expect.stringContaining("does not advertise .Suffix support"),
+      "Open config menu",
+    );
+  });
+
+  it("only warns once per unsupported Sweep Ollama model", async () => {
+    const extension = createExtension({
+      model: "sweep-next-edit",
+      title: "Sweep Next Edit",
+      providerName: "ollama",
+      supportsFim: () => false,
+    });
+
+    await extension.updateNextEditState({ subscriptions: [] } as any);
+    await extension.updateNextEditState({ subscriptions: [] } as any);
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("VsCodeExtension constructor", () => {
@@ -314,6 +344,9 @@ describe("VsCodeExtension constructor", () => {
 function createExtension(autocompleteModel?: {
   model: string;
   title?: string;
+  providerName?: string;
+  underlyingProviderName?: string;
+  supportsFim?: () => boolean;
 }) {
   type TestVsCodeExtension = {
     configHandler: {

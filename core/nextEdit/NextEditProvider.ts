@@ -451,24 +451,43 @@ export class NextEditProvider {
       }
     }
 
-    // Send prompts to LLM (using only user prompt for fine-tuned models).
-    // prompts[1] extracts the user prompt from the system-user prompt pair.
-    // NOTE: Stream is currently set to false, but this should ideally be a per-model flag.
-    // Mercury Coder currently does not support streaming.
-    const msg: ChatMessage = await llm.chat(
-      this.endpointType === "fineTuned" ? [prompts[1]] : prompts,
-      token,
-      {
-        stream: false,
-      },
-    );
+    const inferenceOptions = this.modelProvider.getInferenceOptions();
 
-    if (typeof msg.content !== "string") {
-      return undefined;
+    let rawCompletion: string;
+
+    if (inferenceOptions.mode === "complete") {
+      const prompt = prompts[prompts.length - 1]?.content;
+      if (typeof prompt !== "string") {
+        return undefined;
+      }
+
+      rawCompletion = await llm.complete(prompt, token, {
+        stream: false,
+        ...inferenceOptions.completionOptions,
+      });
+    } else {
+      // Send prompts to LLM (using only user prompt for fine-tuned models).
+      // prompts[1] extracts the user prompt from the system-user prompt pair.
+      // NOTE: Stream is currently set to false, but this should ideally be a per-model flag.
+      // Mercury Coder currently does not support streaming.
+      const msg: ChatMessage = await llm.chat(
+        this.endpointType === "fineTuned" ? [prompts[1]] : prompts,
+        token,
+        {
+          stream: false,
+          ...inferenceOptions.completionOptions,
+        },
+      );
+
+      if (typeof msg.content !== "string") {
+        return undefined;
+      }
+
+      rawCompletion = msg.content;
     }
 
     // Extract completion using model-specific logic.
-    let nextCompletion = this.modelProvider.extractCompletion(msg.content);
+    let nextCompletion = this.modelProvider.extractCompletion(rawCompletion);
 
     // Postprocess the completion (same as autocomplete).
     const postprocessed = postprocessCompletion({
@@ -523,82 +542,5 @@ export class NextEditProvider {
     }
 
     return outcome;
-  }
-
-  /**
-   * This is a wrapper around provideInlineCompletionItems.
-   * This is invoked when we call the model in the background using prefetch.
-   * It's not currently used anywhere (references are not used either), but I decided to keep it in case we actually need to use prefetch.
-   * You will see that calls to this method is made from NextEditPrefetchQueue.proecss(), which is wrapped in `if (!this.usingFullFileDiff)`.
-   */
-  public async provideInlineCompletionItemsWithChain(
-    ctx: {
-      completionId: string;
-      manuallyPassFileContents?: string;
-      manuallyPassPrefix?: string;
-      selectedCompletionInfo?: {
-        text: string;
-        range: Range;
-      };
-      isUntitledFile: boolean;
-      recentlyVisitedRanges: AutocompleteCodeSnippet[];
-      recentlyEditedRanges: RecentlyEditedRange[];
-    },
-    nextEditLocation: RangeInFile,
-    token: AbortSignal | undefined,
-    usingFullFileDiff: boolean,
-  ) {
-    try {
-      const previousOutcome = this.getPreviousCompletion();
-      if (!previousOutcome) {
-        console.log("previousOutcome is undefined");
-        return undefined;
-      }
-
-      // Use the frontmost RangeInFile to build an input.
-      const input = this.buildAutocompleteInputFromChain(
-        previousOutcome,
-        nextEditLocation,
-        ctx,
-      );
-      if (!input) {
-        console.log("input is undefined");
-        return undefined;
-      }
-
-      return await this.provideInlineCompletionItems(input, token, {
-        withChain: true,
-        usingFullFileDiff,
-      });
-    } catch (e: any) {
-      this.onError(e);
-    }
-  }
-  private buildAutocompleteInputFromChain(
-    previousOutcome: NextEditOutcome,
-    nextEditableRegion: RangeInFile,
-    ctx: {
-      completionId: string;
-      manuallyPassFileContents?: string;
-      manuallyPassPrefix?: string;
-      selectedCompletionInfo?: {
-        text: string;
-        range: Range;
-      };
-      isUntitledFile: boolean;
-      recentlyVisitedRanges: AutocompleteCodeSnippet[];
-      recentlyEditedRanges: RecentlyEditedRange[];
-    },
-  ): AutocompleteInput | undefined {
-    const input: AutocompleteInput = {
-      pos: {
-        line: nextEditableRegion.range.start.line,
-        character: nextEditableRegion.range.start.character,
-      },
-      filepath: previousOutcome.fileUri,
-      ...ctx,
-    };
-
-    return input;
   }
 }
