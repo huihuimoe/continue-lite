@@ -81,4 +81,14 @@ describe("supportsFim provider gating", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  test("OpenAI keeps prompt-based FIM fallback for local sweep models without a fim endpoint", () => {
+    const openai = new OpenAI({
+      apiBase: "http://localhost:1234/v1",
+      apiKey: "test-api-key",
+      model: "sweep-next-edit-1.5b",
+    });
+
+    expect(openai.supportsFim()).toBe(false);
+  });
 });

@@ -26,6 +26,29 @@ function isChatOnlyModel(model: string): boolean {
   return model.startsWith("gpt") || model.startsWith("o");
 }
 
+function isPromptCompletionModel(model: string): boolean {
+  const lowerCaseModel = model.toLowerCase();
+
+  return (
+    lowerCaseModel.includes("mercury") ||
+    lowerCaseModel.includes("sweep-next-edit") ||
+    (lowerCaseModel.includes("qwen") && lowerCaseModel.includes("coder")) ||
+    (lowerCaseModel.includes("granite") && lowerCaseModel.includes("4")) ||
+    (lowerCaseModel.includes("seed") && lowerCaseModel.includes("coder")) ||
+    lowerCaseModel.includes("starcoder") ||
+    lowerCaseModel.includes("star-coder") ||
+    lowerCaseModel.includes("starchat") ||
+    lowerCaseModel.includes("octocoder") ||
+    lowerCaseModel.includes("stable") ||
+    lowerCaseModel.includes("codeqwen") ||
+    lowerCaseModel.includes("codestral") ||
+    lowerCaseModel.includes("codegemma") ||
+    lowerCaseModel.includes("codellama") ||
+    lowerCaseModel.includes("deepseek") ||
+    lowerCaseModel.includes("codegeex")
+  );
+}
+
 const formatMessageForO1OrGpt5 = (messages: ChatCompletionMessageParam[]) => {
   return messages?.map((message: any) => {
     if (message?.role === "system") {
@@ -216,6 +239,32 @@ class OpenAI extends BaseLLM {
     return {};
   }
 
+  private isOfficialOpenAIApi(): boolean {
+    if (!this.apiBase || this.apiType?.includes("azure")) {
+      return false;
+    }
+
+    try {
+      return new URL(this.apiBase).host === "api.openai.com";
+    } catch {
+      return false;
+    }
+  }
+
+  private shouldUsePromptCompletionsEndpoint(model: string): boolean {
+    if (["together", "novita"].includes(this.providerName)) {
+      return true;
+    }
+
+    return (
+      !this.isOfficialOpenAIApi() &&
+      !this.apiType?.includes("azure") &&
+      this.supportsCompletions() &&
+      !isChatOnlyModel(model) &&
+      isPromptCompletionModel(model)
+    );
+  }
+
   protected getMaxStopWords(): number {
     const url = new URL(this.apiBase!);
 
@@ -325,6 +374,26 @@ class OpenAI extends BaseLLM {
     signal: AbortSignal,
     options: CompletionOptions,
   ): Promise<string> {
+    if (this.shouldUsePromptCompletionsEndpoint(options.model)) {
+      const response = await this.fetch(this._getEndpoint("completions"), {
+        method: "POST",
+        headers: this._getHeaders(),
+        body: JSON.stringify({
+          ...toCompleteBody(prompt, options),
+          ...this.extraBodyProperties(),
+          stream: false,
+        }),
+        signal,
+      });
+
+      if (response.status === 499) {
+        return "";
+      }
+
+      const data = await response.json();
+      return data?.choices?.[0]?.text ?? "";
+    }
+
     let completion = "";
     for await (const chunk of this._streamChat(
       [{ role: "user", content: prompt }],
@@ -367,7 +436,7 @@ class OpenAI extends BaseLLM {
     signal: AbortSignal,
     options: CompletionOptions,
   ): AsyncGenerator<string> {
-    if (["together", "novita"].includes(this.providerName)) {
+    if (this.shouldUsePromptCompletionsEndpoint(options.model)) {
       const response = await this.fetch(this._getEndpoint("completions"), {
         method: "POST",
         headers: this._getHeaders(),
