@@ -6,7 +6,7 @@ export interface CompletionTestCase {
   tillMarker?: string;
 }
 
-export interface ProcessedTestCase {
+interface ProcessedTestCase {
   input: {
     lastLineOfCompletionText: string;
     currentText: string;

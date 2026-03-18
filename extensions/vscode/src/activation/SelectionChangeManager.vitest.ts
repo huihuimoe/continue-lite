@@ -200,17 +200,6 @@ describe("SelectionChangeManager", () => {
         /new ContinueCompletionProvider\([\s\S]*?usingFullFileDiff[\s\S]*?\)/,
       );
     });
-
-    it("removes old prefetch helper imports from production source", () => {
-      const source = fs.readFileSync(
-        path.resolve(__dirname, "./SelectionChangeManager.ts"),
-        "utf8",
-      );
-
-      expect(source).not.toContain("getNextEditableRegion");
-      expect(source).not.toContain("EditableRegionStrategy");
-      expect(source).not.toContain("localPathOrUriToPath");
-    });
   });
 
   describe("documentChanged", () => {

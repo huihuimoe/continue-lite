@@ -22,9 +22,9 @@ export interface HoleContext {
 export type RelevantTypes = Map<string, TypeSpanAndSourceFileAndAst>;
 export type RelevantHeaders = Set<TypeSpanAndSourceFile>;
 
-export type Filepath = string;
-export type RelevantType = string;
-export type RelevantHeader = string;
+type Filepath = string;
+type RelevantType = string;
+type RelevantHeader = string;
 
 export interface StaticContext {
   holeType: string;

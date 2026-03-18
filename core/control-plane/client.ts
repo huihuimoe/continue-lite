@@ -1,4 +1,3 @@
-import { ConfigJson } from "@continuedev/config-types";
 import {
   AssistantUnrolled,
   ConfigResult,
@@ -10,7 +9,7 @@ import {
 } from "@continuedev/config-yaml";
 
 import { OrganizationDescription } from "../config/ProfileLifecycleManager.js";
-import { ChatHistoryItem, IDE, ModelDescription } from "../index.js";
+import { ChatHistoryItem, IDE } from "../index.js";
 import { Logger } from "../util/Logger.js";
 
 import { ControlPlaneSessionInfo, isOnPremSession } from "./AuthTypes.js";
@@ -21,27 +20,16 @@ export interface PolicyResponse {
   policy?: Policy;
 }
 
-export interface ControlPlaneWorkspace {
-  id: string;
-  name: string;
-  settings: ConfigJson;
-}
-
-export interface ControlPlaneModelDescription extends ModelDescription {}
-
-export interface CreditStatus {
+interface CreditStatus {
   optedInToFreeTrial: boolean;
   hasCredits: boolean;
   creditBalance: number;
   hasPurchasedCredits: boolean;
 }
 
-export const TRIAL_PROXY_URL =
-  "https://proxy-server-blue-l6vsfbzhba-uw.a.run.app";
+type ControlPlaneMessageMode = "chat" | "agent" | "plan" | "background";
 
-export type ControlPlaneMessageMode = "chat" | "agent" | "plan" | "background";
-
-export interface ControlPlaneSessionUsage {
+interface ControlPlaneSessionUsage {
   completionTokens: number;
   promptTokens: number;
   promptTokensDetails?: {
@@ -58,7 +46,7 @@ export interface ControlPlaneSessionUsage {
   totalCost: number;
 }
 
-export interface ControlPlaneSessionMetadata {
+interface ControlPlaneSessionMetadata {
   sessionId: string;
   title: string;
   dateCreated: string;
@@ -66,7 +54,7 @@ export interface ControlPlaneSessionMetadata {
   messageCount?: number;
 }
 
-export interface ControlPlaneSession {
+interface ControlPlaneSession {
   sessionId: string;
   title: string;
   workspaceDirectory: string;
@@ -76,12 +64,12 @@ export interface ControlPlaneSession {
   usage?: ControlPlaneSessionUsage;
 }
 
-export interface RemoteSessionMetadata extends ControlPlaneSessionMetadata {
+interface RemoteSessionMetadata extends ControlPlaneSessionMetadata {
   isRemote: true;
   remoteId: string;
 }
 
-export interface AgentSessionMetadata {
+interface AgentSessionMetadata {
   createdBy: string;
   github_repo: string;
   organizationId?: string;
@@ -93,7 +81,7 @@ export interface AgentSessionMetadata {
   createdBySlug?: string;
 }
 
-export interface AgentSessionView {
+interface AgentSessionView {
   id: string;
   devboxId: string | null;
   name: string | null;

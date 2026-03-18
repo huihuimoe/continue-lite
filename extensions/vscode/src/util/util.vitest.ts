@@ -11,42 +11,6 @@ vi.mock("vscode", () => ({
   },
 }));
 
-describe("isUnsupportedPlatform", () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it("should be true when os is winarm64", async () => {
-    const { platform, arch } = await import("node:os");
-    vi.mocked(platform).mockReturnValue("win32");
-    vi.mocked(arch).mockReturnValue("arm64");
-
-    const { isUnsupportedPlatform } = await import("./util");
-
-    const platformCheck = isUnsupportedPlatform();
-
-    expect(platformCheck.isUnsupported).toBe(true);
-    expect(platformCheck.reason).toMatch(/windows/gi);
-    expect(platformCheck.reason).toMatch(/arm64/gi);
-  });
-
-  it("should not be true when os is supported", async () => {
-    const { platform, arch } = await import("node:os");
-    vi.mocked(platform).mockReturnValue("linux");
-    vi.mocked(arch).mockReturnValue("arm64");
-
-    const { isUnsupportedPlatform } = await import("./util");
-
-    const platformCheck = isUnsupportedPlatform();
-
-    expect(platformCheck.isUnsupported).toBe(false);
-  });
-});
-
 describe("isExtensionPrerelease", () => {
   beforeEach(() => {
     vi.resetModules();

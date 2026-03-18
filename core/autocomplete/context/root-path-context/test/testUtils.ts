@@ -79,7 +79,7 @@ export async function testRootPathContext(
   });
 }
 
-export async function copyRootPathContextTestFolder(folderName: string) {
+async function copyRootPathContextTestFolder(folderName: string) {
   const folderPath = path.join(TEST_FIXTURES_DIR, folderName);
   const workspaceDir = localPathOrUriToPath(
     (await testIde.getWorkspaceDirs())[0],

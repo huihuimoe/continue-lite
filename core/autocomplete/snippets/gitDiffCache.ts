@@ -68,8 +68,3 @@ export class GitDiffCache {
 export function getDiffFn(ide: DiffIde): GetDiffFn {
   return () => ide.getDiff(true);
 }
-
-export async function getDiffsFromCache(ide: DiffIde): Promise<string[]> {
-  const diffCache = GitDiffCache.getInstance(getDiffFn(ide));
-  return await diffCache.get();
-}

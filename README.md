@@ -20,7 +20,7 @@ npm install
 3. Build the retained VS Code extension surface:
 
 ```bash
-npm --prefix extensions/vscode run esbuild
+npm --prefix extensions/vscode run rolldown
 ```
 
 ## Features
@@ -32,7 +32,7 @@ npm --prefix extensions/vscode run esbuild
 ## Verification
 
 ```bash
-fnm use 22.22.0 && npm --prefix extensions/vscode run esbuild
+fnm use 22.22.0 && npm --prefix extensions/vscode run rolldown
 ```
 
 Run that command whenever you need to verify a clean build of the only supported product surface in this branch.

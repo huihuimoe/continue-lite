@@ -4,7 +4,6 @@ import { ContextRetrievalService } from "../context/ContextRetrievalService";
 import { GetLspDefinitionsFunction } from "../types";
 import { HelperVars } from "../util/HelperVars";
 import { openedFilesLruCache } from "../util/openedFilesLruCache";
-import { getDiffsFromCache } from "./gitDiffCache";
 
 import {
   AutocompleteClipboardSnippet,
@@ -26,14 +25,6 @@ export interface SnippetPayload {
   clipboardSnippets: AutocompleteClipboardSnippet[];
   recentlyOpenedFileSnippets: AutocompleteCodeSnippet[];
   staticSnippet: AutocompleteStaticSnippet[];
-}
-
-function racePromise<T>(promise: Promise<T[]>, timeout = 100): Promise<T[]> {
-  const timeoutPromise = new Promise<T[]>((resolve) => {
-    setTimeout(() => resolve([]), timeout);
-  });
-
-  return Promise.race([promise, timeoutPromise]);
 }
 
 // Some IDEs might have special ways of finding snippets (e.g. JetBrains and VS Code have different "LSP-equivalent" systems,
@@ -90,19 +81,6 @@ const getClipboardSnippets = async (
       content: item.text,
       copiedAt: item.copiedAt,
       type: AutocompleteSnippetType.Clipboard,
-    };
-  });
-};
-
-const getDiffSnippets = async (
-  ide: IDE,
-): Promise<AutocompleteDiffSnippet[]> => {
-  const diffs = await getDiffsFromCache(ide);
-
-  return diffs.map((item) => {
-    return {
-      content: item,
-      type: AutocompleteSnippetType.Diff,
     };
   });
 };
@@ -164,57 +142,6 @@ const getSnippetsFromRecentlyOpenedFiles = async (
     console.error("Error processing opened files cache:", e);
     return [];
   }
-};
-
-export const getAllSnippets = async ({
-  helper,
-  ide,
-  getDefinitionsFromLsp,
-  contextRetrievalService,
-}: {
-  helper: HelperVars;
-  ide: IDE;
-  getDefinitionsFromLsp: GetLspDefinitionsFunction;
-  contextRetrievalService: ContextRetrievalService;
-}): Promise<SnippetPayload> => {
-  const recentlyEditedRangeSnippets =
-    getSnippetsFromRecentlyEditedRanges(helper);
-
-  const [
-    rootPathSnippets,
-    importDefinitionSnippets,
-    ideSnippets,
-    diffSnippets,
-    clipboardSnippets,
-    recentlyOpenedFileSnippets,
-    staticSnippet,
-  ] = await Promise.all([
-    racePromise(contextRetrievalService.getRootPathSnippets(helper)),
-    racePromise(
-      contextRetrievalService.getSnippetsFromImportDefinitions(helper),
-    ),
-    IDE_SNIPPETS_ENABLED
-      ? racePromise(getIdeSnippets(helper, ide, getDefinitionsFromLsp))
-      : [],
-    [], // racePromise(getDiffSnippets(ide)) // temporarily disabled, see https://github.com/continuedev/continue/pull/5882,
-    racePromise(getClipboardSnippets(ide)),
-    racePromise(getSnippetsFromRecentlyOpenedFiles(helper, ide)), // giving this one a little more time to complete
-    helper.options.experimental_enableStaticContextualization
-      ? racePromise(contextRetrievalService.getStaticContextSnippets(helper))
-      : [],
-  ]);
-
-  return {
-    rootPathSnippets,
-    importDefinitionSnippets,
-    ideSnippets,
-    recentlyEditedRangeSnippets,
-    diffSnippets,
-    clipboardSnippets,
-    recentlyVisitedRangesSnippets: helper.input.recentlyVisitedRanges,
-    recentlyOpenedFileSnippets,
-    staticSnippet,
-  };
 };
 
 export const getAllSnippetsWithoutRace = async ({

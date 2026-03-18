@@ -5,51 +5,6 @@ import { dedent } from "../../util";
 
 export const BUFFER_LINES_BELOW = 3;
 
-const MATCH_LINES_ABOVE = 1;
-export function getReplacementByMatching(
-  oldCode: string,
-  linesBefore: string[],
-  linesAfter: string[],
-): string | undefined {
-  const oldLines = oldCode.split("\n");
-  const linesToMatchAbove = MATCH_LINES_ABOVE;
-  const linesToMatchBelow = Math.min(BUFFER_LINES_BELOW, linesAfter.length);
-
-  // Get surrounding lines around the gap
-  const beforeContext = linesBefore.slice(-linesToMatchAbove).join("\n");
-  const afterContext = linesAfter.slice(0, linesToMatchBelow).join("\n");
-
-  // Find the start index in the old code
-  const startIndex = oldLines.findIndex((line, index) => {
-    const chunk = oldLines.slice(index, index + linesToMatchAbove).join("\n");
-    return chunk === beforeContext;
-  });
-
-  if (startIndex === -1) {
-    return undefined; // Couldn't find matching start
-  }
-
-  // Find the end index in the old code
-  const endIndex = oldLines.findIndex((line, index) => {
-    if (index <= startIndex + linesToMatchBelow) {
-      return false;
-    }
-    const chunk = oldLines.slice(index, index + linesToMatchBelow).join("\n");
-    return chunk === afterContext;
-  });
-
-  if (endIndex === -1) {
-    return undefined; // Couldn't find matching end
-  }
-
-  // Extract the replacement code
-  const replacement = oldLines
-    .slice(startIndex + linesToMatchAbove, endIndex)
-    .join("\n");
-
-  return replacement;
-}
-
 const REPLACE_HERE = "// REPLACE HERE //";
 export async function* getReplacementWithLlm(
   oldCode: string,

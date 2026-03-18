@@ -64,7 +64,7 @@ export class CodebaseRulesCache {
 /**
  * Loads rules from rules.md files colocated in the codebase
  */
-export async function loadCodebaseRules(ide: IDE): Promise<{
+async function loadCodebaseRules(ide: IDE): Promise<{
   rules: RuleWithSource[];
   errors: ConfigValidationError[];
 }> {

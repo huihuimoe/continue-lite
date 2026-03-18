@@ -5,7 +5,7 @@ import OpenAI from "./OpenAI.js";
 /**
  * CometAPI-specific error types for better error handling
  */
-export class CometAPIError extends Error {
+class CometAPIError extends Error {
   constructor(
     message: string,
     public code?: string,
@@ -16,14 +16,14 @@ export class CometAPIError extends Error {
   }
 }
 
-export class CometAPIAuthenticationError extends CometAPIError {
+class CometAPIAuthenticationError extends CometAPIError {
   constructor(message: string = "Invalid CometAPI API key") {
     super(message, "AUTHENTICATION_ERROR", 401);
     this.name = "CometAPIAuthenticationError";
   }
 }
 
-export class CometAPIQuotaExceededError extends CometAPIError {
+class CometAPIQuotaExceededError extends CometAPIError {
   constructor(message: string = "CometAPI quota exceeded") {
     super(message, "QUOTA_EXCEEDED", 429);
     this.name = "CometAPIQuotaExceededError";

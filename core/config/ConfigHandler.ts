@@ -14,9 +14,8 @@ import {
   IdeSettings,
   ILLMLogger,
 } from "../index.js";
-import { Logger } from "../util/Logger.js";
 import { GlobalContext } from "../util/GlobalContext.js";
-import { Telemetry } from "../util/posthog.js";
+import { Logger } from "../util/Logger.js";
 import LocalProfileLoader from "./profile/LocalProfileLoader.js";
 import {
   ProfileDescription,
@@ -102,15 +101,6 @@ export class ConfigHandler {
     const duration = endTime - startTime;
     const profileDescription = this.profileManager.profileDescription;
 
-    void Telemetry.capture("config_reload", {
-      duration,
-      reason,
-      totalConfigLoads: this.totalConfigReloads,
-      configLoadInterrupted,
-      profileType: profileDescription.profileType,
-      errorCount: errors.length,
-    });
-
     if (errors.length) {
       Logger.error("Errors loading config: ", errors);
     }
@@ -137,6 +127,7 @@ export class ConfigHandler {
   async getSerializedConfig(): Promise<
     ConfigResult<BrowserSerializedContinueConfig>
   > {
+    await this.isInitialized;
     if (!this.profileManager) {
       return {
         config: undefined,

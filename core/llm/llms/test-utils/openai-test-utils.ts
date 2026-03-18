@@ -129,7 +129,7 @@ async function runLlmTest(testCase: LlmTestCase) {
   assertFetchCall(mockFetch, expectedRequest);
 }
 
-export interface OpenAISubclassConfig {
+interface OpenAISubclassConfig {
   providerName: string;
   defaultApiBase?: string;
   modelConversions?: { [key: string]: string };

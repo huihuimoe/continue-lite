@@ -34,13 +34,13 @@ npm install
 3. Build the extension:
 
 ```bash
-npm run esbuild
+npm run rolldown
 ```
 
 ## Verification
 
 ```bash
-fnm use 22.22.0 && npm run esbuild
+fnm use 22.22.0 && npm run rolldown
 ```
 
 ## License

@@ -15,7 +15,7 @@ const ttsKillTimeout: number = 5000;
  *
  * Return modified message text.
  */
-export function sanitizeMessageForTTS(message: string): string {
+function sanitizeMessageForTTS(message: string): string {
   message = removeCodeBlocksAndTrim(message);
 
   // Remove or replace problematic characters

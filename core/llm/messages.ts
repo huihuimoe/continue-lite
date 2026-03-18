@@ -1,10 +1,6 @@
 import { ChatMessage } from "./chatTypes";
 
-export function messageHasToolCalls(msg: ChatMessage): boolean {
-  return msg.role === "assistant" && !!msg.toolCalls;
-}
-
-export function messageIsEmpty(message: ChatMessage): boolean {
+function messageIsEmpty(message: ChatMessage): boolean {
   if (typeof message.content === "string") {
     return message.content.trim() === "";
   }
@@ -33,13 +29,6 @@ export function isUserOrToolMsg(msg: ChatMessage | undefined): boolean {
     return false;
   }
   return msg.role === "user" || msg.role === "tool";
-}
-
-export function isToolMessageForId(
-  msg: ChatMessage | undefined,
-  toolCallId: string,
-): boolean {
-  return !!msg && msg.role === "tool" && msg.toolCallId === toolCallId;
 }
 
 export function messageHasToolCallId(

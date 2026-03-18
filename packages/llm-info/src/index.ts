@@ -10,7 +10,7 @@ import { Vllm } from "./providers/vllm.js";
 import { Voyage } from "./providers/voyage.js";
 import { xAI } from "./providers/xAI.js";
 import { zAI } from "./providers/zai.js";
-import { LlmInfoWithProvider, ModelProvider, UseCase } from "./types.js";
+import { LlmInfoWithProvider, ModelProvider } from "./types.js";
 
 export const allModelProviders: ModelProvider[] = [
   OpenAi,
@@ -27,9 +27,8 @@ export const allModelProviders: ModelProvider[] = [
   zAI,
 ];
 
-export const allLlms: LlmInfoWithProvider[] = allModelProviders.flatMap(
-  (provider) =>
-    provider.models.map((model) => ({ ...model, provider: provider.id })),
+const allLlms: LlmInfoWithProvider[] = allModelProviders.flatMap((provider) =>
+  provider.models.map((model) => ({ ...model, provider: provider.id })),
 );
 
 export function findLlmInfo(
@@ -51,8 +50,4 @@ export function findLlmInfo(
   return allLlms.find((llm) =>
     llm.regex ? llm.regex.test(model) : llm.model === model,
   );
-}
-
-export function getAllRecommendedFor(useCase: UseCase): LlmInfoWithProvider[] {
-  return allLlms.filter((llm) => llm.recommendedFor?.includes(useCase));
 }

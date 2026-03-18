@@ -16,7 +16,7 @@ export interface SweepDiffBlock {
   updated: string;
 }
 
-export interface SweepFileTripletInput {
+interface SweepFileTripletInput {
   filepath: string;
   cursorLine: number;
   originalFileContent: string;
@@ -24,7 +24,7 @@ export interface SweepFileTripletInput {
   updatedFileContent: string;
 }
 
-export interface SweepRewriteWindow {
+interface SweepRewriteWindow {
   startLine: number;
   endLine: number;
 }

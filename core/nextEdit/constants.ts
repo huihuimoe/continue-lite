@@ -1,20 +1,5 @@
-import { NEXT_EDIT_MODELS } from "../llm/constants";
-
-export const IS_NEXT_EDIT_ACTIVE = false;
 export const NEXT_EDIT_EDITABLE_REGION_TOP_MARGIN = 0;
 export const NEXT_EDIT_EDITABLE_REGION_BOTTOM_MARGIN = 5;
-
-export const MODEL_WINDOW_SIZES: Record<
-  NEXT_EDIT_MODELS,
-  { topMargin: number; bottomMargin: number }
-> = {
-  "mercury-edit": {
-    topMargin: 0,
-    bottomMargin: 5,
-  }, // mercury coder uses full file diff, so this should be unnecessary
-  instinct: { topMargin: 1, bottomMargin: 5 },
-  "sweep-next-edit": { topMargin: 1, bottomMargin: 5 },
-};
 
 export const UNIQUE_TOKEN = "<|!@#IS_NEXT_EDIT!@#|>";
 

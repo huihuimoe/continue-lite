@@ -93,7 +93,7 @@ function appendReasoningFieldsIfSupported(
   }
 }
 
-export function toChatMessage(
+function toChatMessage(
   message: ChatMessage,
   options: CompletionOptions,
   prevMessage?: ChatMessage,
@@ -702,51 +702,6 @@ export function fromResponsesChunk(
     return handleResponsesStreamEvent(event as ResponseStreamEvent);
   }
   return handleResponsesFinal(event as OpenAIResponse);
-}
-
-export function mergeReasoningDetails(
-  existing: any[] | undefined,
-  delta: any[] | undefined,
-): any[] | undefined {
-  if (!delta) return existing;
-  if (!existing) return delta;
-
-  const result = [...existing];
-
-  for (const deltaItem of delta) {
-    // Skip items without a type
-    if (!deltaItem.type) {
-      continue;
-    }
-
-    // Find existing item with the same type
-    const existingIndex = result.findIndex(
-      (item) => item.type === deltaItem.type,
-    );
-
-    if (existingIndex === -1) {
-      // No existing item with this type, add new item
-      result.push({ ...deltaItem });
-    } else {
-      // Merge with existing item of the same type
-      const existingItem = result[existingIndex];
-
-      for (const [key, value] of Object.entries(deltaItem)) {
-        if (value === null || value === undefined) continue;
-
-        if (key === "text" || key === "signature" || key === "summary") {
-          // Concatenate text and signature fields
-          existingItem[key] = (existingItem[key] || "") + value;
-        } else if (key !== "type") {
-          // Don't overwrite type
-          // Overwrite other fields
-          existingItem[key] = value;
-        }
-      }
-    }
-  }
-
-  return result;
 }
 
 function getTextFromMessageContent(content: MessageContent): string {

@@ -1,13 +1,11 @@
 import { z } from "zod";
 
-export const clientCertificateOptionsSchema = z.object({
+const clientCertificateOptionsSchema = z.object({
   cert: z.string(),
   key: z.string(),
   passphrase: z.string().optional(),
 });
-export type ClientCertificateOptions = z.infer<
-  typeof clientCertificateOptionsSchema
->;
+type ClientCertificateOptions = z.infer<typeof clientCertificateOptionsSchema>;
 
 export const requestOptionsSchema = z.object({
   timeout: z.number().optional(),
@@ -20,7 +18,7 @@ export const requestOptionsSchema = z.object({
   clientCertificate: clientCertificateOptionsSchema.optional(),
 });
 export type RequestOptions = z.infer<typeof requestOptionsSchema>;
-export const modelRolesSchema = z.enum([
+const modelRolesSchema = z.enum([
   "chat",
   "autocomplete",
   "embed",
@@ -34,7 +32,7 @@ export type ModelRole = z.infer<typeof modelRolesSchema>;
 
 // TODO consider just using array of strings for model capabilities
 // To allow more dynamic string parsing
-export const modelCapabilitySchema = z.union([
+const modelCapabilitySchema = z.union([
   z.literal("tool_use"),
   z.literal("image_input"),
   z.literal("next_edit"),
@@ -42,7 +40,7 @@ export const modelCapabilitySchema = z.union([
 ]);
 
 // not ideal but lose type suggestions if use z.infer because of the string fallback
-export type ModelCapability = "tool_use" | "image_input" | "next_edit";
+type ModelCapability = "tool_use" | "image_input" | "next_edit";
 
 export const completionOptionsSchema = z.object({
   contextLength: z.number().optional(),
@@ -60,41 +58,35 @@ export const completionOptionsSchema = z.object({
   promptCaching: z.boolean().optional(),
   stream: z.boolean().optional(),
 });
-export type CompletionOptions = z.infer<typeof completionOptionsSchema>;
+type CompletionOptions = z.infer<typeof completionOptionsSchema>;
 
-export const embeddingTasksSchema = z.union([
-  z.literal("chunk"),
-  z.literal("query"),
-]);
-export type EmbeddingTasks = z.infer<typeof embeddingTasksSchema>;
+const embeddingTasksSchema = z.union([z.literal("chunk"), z.literal("query")]);
+type EmbeddingTasks = z.infer<typeof embeddingTasksSchema>;
 
-export const embeddingPrefixesSchema = z.record(
-  embeddingTasksSchema,
-  z.string(),
-);
-export type EmbeddingPrefixes = z.infer<typeof embeddingPrefixesSchema>;
+const embeddingPrefixesSchema = z.record(embeddingTasksSchema, z.string());
+type EmbeddingPrefixes = z.infer<typeof embeddingPrefixesSchema>;
 
-export const cacheBehaviorSchema = z.object({
+const cacheBehaviorSchema = z.object({
   cacheSystemMessage: z.boolean().optional(),
   cacheConversation: z.boolean().optional(),
 });
-export type CacheBehavior = z.infer<typeof cacheBehaviorSchema>;
+type CacheBehavior = z.infer<typeof cacheBehaviorSchema>;
 
-export const embedOptionsSchema = z
+const embedOptionsSchema = z
   .object({
     maxChunkSize: z.unknown().optional(),
     maxBatchSize: z.unknown().optional(),
     embeddingPrefixes: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
-export type EmbedOptions = z.infer<typeof embedOptionsSchema>;
+type EmbedOptions = z.infer<typeof embedOptionsSchema>;
 
-export const chatOptionsSchema = z.object({
+const chatOptionsSchema = z.object({
   baseSystemMessage: z.string().optional(),
   baseAgentSystemMessage: z.string().optional(),
   basePlanSystemMessage: z.string().optional(),
 });
-export type ChatOptions = z.infer<typeof chatOptionsSchema>;
+type ChatOptions = z.infer<typeof chatOptionsSchema>;
 
 const templateSchema = z.enum([
   "llama2",
@@ -117,7 +109,7 @@ const templateSchema = z.enum([
   "codestral",
 ]);
 
-export const autocompleteOptionsSchema = z.object({
+const autocompleteOptionsSchema = z.object({
   disable: z.boolean().optional(),
   maxPromptTokens: z.number().optional(),
   debounceDelay: z.number().optional(),

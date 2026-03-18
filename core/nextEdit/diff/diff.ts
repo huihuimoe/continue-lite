@@ -60,61 +60,6 @@ export function getOffsetPositionAtLastNewLine(
   };
 }
 
-export function getRenderableDiffWithGutterAnnotations(
-  diffLines: DiffLine[],
-  lineContentAtCursorPos: string,
-  lineOffsetAtCursorPos: number,
-): {
-  offset: {
-    line: number;
-    character: number;
-  };
-} {
-  let lastNewLineContent = "";
-  let lineOffset = -1;
-  let currentResultLine = 0;
-  let hasChanges = false;
-
-  // Build the string while tracking line numbers in the result
-  diffLines.reduce((acc, curr, i) => {
-    // Add the current line to our result
-    acc += curr.line;
-
-    // Add newline if not the last line
-    if (i < diffLines.length - 1) {
-      acc += "\n";
-    }
-
-    // If this is a "new" or "same" line, it will be part of the result
-    if (curr.type === "new" || curr.type === "same") {
-      if (curr.type === "new") {
-        // If it's a new line, update our tracking
-        lastNewLineContent = curr.line;
-        lineOffset = currentResultLine;
-        hasChanges = true;
-      }
-      // Increment our position in the result
-      currentResultLine++;
-    }
-
-    return acc;
-  }, "");
-
-  // If nothing has changed, return the original position
-  if (!hasChanges) {
-    lineOffset = lineOffsetAtCursorPos;
-    lastNewLineContent = lineContentAtCursorPos;
-  }
-  // Calculate the character position for the end of the last relevant line
-  const endOfCharPos = lastNewLineContent.length;
-  return {
-    offset: {
-      line: lineOffset,
-      character: endOfCharPos,
-    },
-  };
-}
-
 /**
  * Check if the diff is indeed a FIM.
  * @param oldEditRange Original string content.
@@ -247,29 +192,6 @@ export function calculateFinalCursorPosition(
  * @param linesToReplace Optional number of lines to replace; if not provided, will replace the same number of lines as in the completion
  * @returns The file content with the completion applied
  */
-export function applyCompletionToFile(
-  fileContent: string,
-  completion: string,
-  startLineNumber: number,
-  linesToReplace?: number,
-): string {
-  const lines = fileContent.split("\n");
-  const completionLines = completion.split("\n");
-
-  // Determine how many lines to replace
-  const numLinesToReplace =
-    linesToReplace !== undefined ? linesToReplace : completionLines.length;
-
-  // Replace the lines
-  const newLines = [
-    ...lines.slice(0, startLineNumber),
-    ...completionLines,
-    ...lines.slice(startLineNumber + numLinesToReplace),
-  ];
-
-  return newLines.join("\n");
-}
-
 export interface DiffGroup {
   startLine: number;
   endLine: number;

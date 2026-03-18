@@ -1,5 +1,3 @@
-import fs from "fs";
-
 import {
   AssistantUnrolled,
   ConfigResult,
@@ -15,15 +13,11 @@ import {
 } from "../../";
 import { ControlPlaneClient } from "../../control-plane/client.js";
 import { PolicySingleton } from "../../control-plane/PolicySingleton";
-import { getConfigJsonPath, getConfigYamlPath } from "../../util/paths";
-import { localPathOrUriToPath } from "../../util/pathToUri";
-import { Telemetry } from "../../util/posthog";
+import { getConfigYamlPath } from "../../util/paths";
 import { TTS } from "../../util/tts";
 import { getWorkspaceContinueRuleDotFiles } from "../getWorkspaceContinueRuleDotFiles";
-import { loadContinueConfigFromJson } from "../load";
 import { CodebaseRulesCache } from "../markdown/loadCodebaseRules";
 import { loadMarkdownRules } from "../markdown/loadMarkdownRules";
-import { migrateJsonSharedConfig } from "../migrateSharedConfig";
 import { rectifySelectedModelsFromGlobalContext } from "../selectedModels";
 import { loadContinueConfigFromYaml } from "../yaml/loadYaml";
 
@@ -64,7 +58,6 @@ export default async function doLoadConfig(options: {
     ide,
     controlPlaneClient,
     llmLogger,
-    overrideConfigJson,
     overrideConfigYaml,
     profileId,
     overrideConfigYamlByPath,
@@ -76,48 +69,32 @@ export default async function doLoadConfig(options: {
   const uniqueId = await ide.getUniqueId();
   const ideSettings = await ide.getIdeSettings();
 
-  // Migrations for old config files
-  // Removes
-  const configJsonPath = getConfigJsonPath();
-  if (fs.existsSync(configJsonPath)) {
-    migrateJsonSharedConfig(configJsonPath);
-  }
-
-  const configYamlPath = localPathOrUriToPath(
-    overrideConfigYamlByPath || getConfigYamlPath(ideInfo.ideType),
-  );
+  const configYamlPath = overrideConfigYamlByPath || getConfigYamlPath();
+  const yamlPackageIdentifier: PackageIdentifier =
+    packageIdentifier.uriType === "file"
+      ? {
+          ...packageIdentifier,
+          fileUri: configYamlPath,
+        }
+      : packageIdentifier;
 
   let newConfig: ContinueConfig | undefined;
   let errors: ConfigValidationError[] | undefined;
   let configLoadInterrupted = false;
 
-  if (overrideConfigYaml || fs.existsSync(configYamlPath)) {
-    const result = await loadContinueConfigFromYaml({
-      ide,
-      ideSettings,
-      uniqueId,
-      llmLogger,
-      overrideConfigYaml,
-      controlPlaneClient,
-      orgScopeId,
-      packageIdentifier,
-    });
-    newConfig = result.config;
-    errors = result.errors;
-    configLoadInterrupted = result.configLoadInterrupted;
-  } else {
-    const result = await loadContinueConfigFromJson(
-      ide,
-      ideSettings,
-      ideInfo,
-      uniqueId,
-      llmLogger,
-      overrideConfigJson,
-    );
-    newConfig = result.config;
-    errors = result.errors;
-    configLoadInterrupted = result.configLoadInterrupted;
-  }
+  const result = await loadContinueConfigFromYaml({
+    ide,
+    ideSettings,
+    uniqueId,
+    llmLogger,
+    overrideConfigYaml,
+    controlPlaneClient,
+    orgScopeId,
+    packageIdentifier: yamlPackageIdentifier,
+  });
+  newConfig = result.config;
+  errors = result.errors;
+  configLoadInterrupted = result.configLoadInterrupted;
 
   if (configLoadInterrupted || !newConfig) {
     return { errors, config: newConfig, configLoadInterrupted: true };
@@ -154,30 +131,6 @@ export default async function doLoadConfig(options: {
       });
     }
   });
-
-  // VS Code has an IDE telemetry setting
-  // Since it's a security concern we use OR behavior on false
-  if (
-    newConfig.allowAnonymousTelemetry !== false &&
-    ideInfo.ideType === "vscode"
-  ) {
-    if ((await ide.isTelemetryEnabled()) === false) {
-      newConfig.allowAnonymousTelemetry = false;
-    }
-  }
-
-  // Org policies
-  const policy = PolicySingleton.getInstance().policy?.policy;
-  if (policy?.allowAnonymousTelemetry === false) {
-    newConfig.allowAnonymousTelemetry = false;
-  }
-
-  // Setup telemetry only after (and if) we know it is enabled
-  await Telemetry.setup(
-    newConfig.allowAnonymousTelemetry ?? true,
-    await ide.getUniqueId(),
-    ideInfo,
-  );
 
   // TODO: pass config to pre-load non-system TTS models
   await TTS.setup();

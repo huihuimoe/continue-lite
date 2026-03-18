@@ -4,7 +4,7 @@
 
 import type { ChatCompletionMessageParam } from "openai/resources/index.js";
 
-export interface VercelCoreMessage {
+interface VercelCoreMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string | Array<any>;
 }

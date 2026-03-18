@@ -2,7 +2,7 @@ import { diffChars, diffLines, type Change } from "diff";
 
 import { DiffChar, DiffLine } from "..";
 
-export function convertMyersChangeToDiffLines(change: Change): DiffLine[] {
+function convertMyersChangeToDiffLines(change: Change): DiffLine[] {
   const type: DiffLine["type"] = change.added
     ? "new"
     : change.removed

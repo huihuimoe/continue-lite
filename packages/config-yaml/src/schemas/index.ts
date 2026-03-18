@@ -7,20 +7,20 @@ import {
   requestOptionsSchema,
 } from "./models.js";
 
-export const contextSchema = z.object({
+const contextSchema = z.object({
   name: z.string().optional(),
   provider: z.string(),
   params: z.any().optional(),
 });
 
-export const promptSchema = z.object({
+const promptSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   prompt: z.string(),
   sourceFile: z.string().optional(),
 });
 
-export const docSchema = z.object({
+const docSchema = z.object({
   name: z.string(),
   startUrl: z.string(),
   rootUrl: z.string().optional(),
@@ -33,7 +33,7 @@ const mcpServerEnvSchema = z.record(
   z.union([z.string(), z.number(), z.boolean()]),
 );
 
-export const mcpServerSchema = z.object({
+const mcpServerSchema = z.object({
   name: z.string(),
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
@@ -57,7 +57,7 @@ const ruleSchema = z.union([z.string(), ruleObjectSchema]);
 /**
  * A schema for rules.json files
  */
-export const rulesJsonSchema = z.object({
+const rulesJsonSchema = z.object({
   name: z.string(),
   version: z.string(),
   author: z.string().optional(),
@@ -70,13 +70,13 @@ export type RuleObject = z.infer<typeof ruleObjectSchema>;
 /**
  * A schema for rules.json files
  */
-export type RulesJson = z.infer<typeof rulesJsonSchema>;
+type RulesJson = z.infer<typeof rulesJsonSchema>;
 
 const defaultUsesSchema = z.string();
 
 type AnyObjectSchema = z.ZodObject<z.ZodRawShape>;
 
-export const blockItemWrapperSchema = <T extends AnyObjectSchema>(
+const blockItemWrapperSchema = <T extends AnyObjectSchema>(
   schema: T,
   usesSchema: z.ZodTypeAny = defaultUsesSchema,
 ) =>
@@ -86,12 +86,12 @@ export const blockItemWrapperSchema = <T extends AnyObjectSchema>(
     override: schema.partial().optional(),
   });
 
-export const blockOrSchema = <T extends AnyObjectSchema>(
+const blockOrSchema = <T extends AnyObjectSchema>(
   schema: T,
   usesSchema: z.ZodTypeAny = defaultUsesSchema,
 ) => z.union([schema, blockItemWrapperSchema(schema, usesSchema)]);
 
-export const commonMetadataSchema = z.object({
+const commonMetadataSchema = z.object({
   tags: z.string().optional(),
   sourceCodeUrl: z.string().optional(),
   description: z.string().optional(),
@@ -105,7 +105,7 @@ const envRecord = z.record(
   z.union([z.string(), z.number(), z.boolean()]),
 );
 
-export const baseConfigYamlSchema = z.object({
+const baseConfigYamlSchema = z.object({
   name: z.string(),
   version: z.string(),
   schema: z.string().optional(),
@@ -166,7 +166,7 @@ export const assistantUnrolledSchema = baseConfigYamlSchema.extend({
 
 export type AssistantUnrolled = z.infer<typeof assistantUnrolledSchema>;
 
-export const assistantUnrolledSchemaNonNullable = baseConfigYamlSchema.extend({
+const assistantUnrolledSchemaNonNullable = baseConfigYamlSchema.extend({
   models: z.array(modelSchema).optional(),
   context: z.array(contextSchema).optional(),
   data: z.array(dataSchema).optional(),
@@ -180,7 +180,7 @@ export type AssistantUnrolledNonNullable = z.infer<
   typeof assistantUnrolledSchemaNonNullable
 >;
 
-export const isAssistantUnrolledNonNullable = (
+const isAssistantUnrolledNonNullable = (
   a: AssistantUnrolled,
 ): a is AssistantUnrolledNonNullable =>
   (!a.models || a.models.every((m) => m !== null)) &&
@@ -207,14 +207,14 @@ export const blockSchema = baseConfigYamlSchema.and(
 
 export type Block = z.infer<typeof blockSchema>;
 
-export const languageMarkerSchema = z.object({
+const languageMarkerSchema = z.object({
   language: z.string(),
   markers: z.array(z.string()),
 });
 
-export const autoindentExtensionsSchema = z.array(z.string());
+const autoindentExtensionsSchema = z.array(z.string());
 
-export const configSchema = z.object({
+const configSchema = z.object({
   models: z.array(modelSchema).optional(),
   defaultRecentMessages: z.number().optional(),
   langMarkers: z.array(languageMarkerSchema).optional(),
@@ -229,4 +229,4 @@ export const configSchema = z.object({
   requestOptions: requestOptionsSchema.optional(),
 });
 
-export type Config = z.infer<typeof configSchema>;
+type Config = z.infer<typeof configSchema>;

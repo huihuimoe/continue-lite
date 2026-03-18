@@ -1,6 +1,5 @@
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
 
-import { RangeInFileWithContents } from "../../";
 import { getParserForFile } from "../../util/treeSitter";
 
 export type AstPath = SyntaxNode[];
@@ -44,53 +43,4 @@ export async function getTreePathAtCursor(
   }
 
   return path;
-}
-
-export async function getScopeAroundRange(
-  range: RangeInFileWithContents,
-): Promise<RangeInFileWithContents | undefined> {
-  const ast = await getAst(range.filepath, range.contents);
-  if (!ast) {
-    return undefined;
-  }
-
-  const { start: s, end: e } = range.range;
-  const lines = range.contents.split("\n");
-  const startIndex =
-    lines.slice(0, s.line).join("\n").length +
-    (lines[s.line]?.slice(s.character).length ?? 0);
-  const endIndex =
-    lines.slice(0, e.line).join("\n").length +
-    (lines[e.line]?.slice(0, e.character).length ?? 0);
-
-  let node = ast.rootNode;
-  while (node.childCount > 0) {
-    let foundChild = false;
-    for (const child of node.children) {
-      if (child.startIndex < startIndex && child.endIndex > endIndex) {
-        node = child;
-        foundChild = true;
-        break;
-      }
-    }
-
-    if (!foundChild) {
-      break;
-    }
-  }
-
-  return {
-    contents: node.text,
-    filepath: range.filepath,
-    range: {
-      start: {
-        line: node.startPosition.row,
-        character: node.startPosition.column,
-      },
-      end: {
-        line: node.endPosition.row,
-        character: node.endPosition.column,
-      },
-    },
-  };
 }

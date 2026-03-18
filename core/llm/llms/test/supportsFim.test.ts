@@ -1,4 +1,4 @@
-import { jest } from "@jest/globals";
+import { expect, test } from "vitest";
 import Anthropic from "../Anthropic.js";
 import Deepseek from "../Deepseek.js";
 import FunctionNetwork from "../FunctionNetwork.js";

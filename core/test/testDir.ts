@@ -8,7 +8,7 @@ const TEST_WORKER_ID =
   process.env.VITEST_WORKER_ID ??
   process.env.JEST_WORKER_ID ??
   "main";
-export const TEST_DIR_PATH = path.join(
+const TEST_DIR_PATH = path.join(
   os.tmpdir(),
   `testWorkspaceDir-${TEST_WORKER_ID}-${process.pid}`,
 );

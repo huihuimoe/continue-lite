@@ -1,4 +1,6 @@
 import { ChildProcess } from "child_process";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { Mocked } from "vitest";
 import {
   clearAllBackgroundProcesses,
   getAllBackgroundedProcessIds,
@@ -20,12 +22,12 @@ import {
 const createMockProcess = (
   pid: number = 123,
   killed: boolean = false,
-): jest.Mocked<ChildProcess> => {
+): Mocked<ChildProcess> => {
   const mockProcess = {
     pid,
     killed,
-    kill: jest.fn(),
-  } as unknown as jest.Mocked<ChildProcess>;
+    kill: vi.fn(),
+  } as unknown as Mocked<ChildProcess>;
 
   // Make kill() update the killed property
   mockProcess.kill.mockImplementation(() => {
@@ -47,7 +49,7 @@ describe("processTerminalStates", () => {
     backgroundedIds.forEach((id) => removeBackgroundedProcess(id));
 
     // Clear all timers
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   test("should mark a process as backgrounded", () => {
@@ -106,7 +108,7 @@ describe("processTerminalStates", () => {
     test("should mark a process as running", () => {
       const toolCallId = "test-123";
       const mockProcess = createMockProcess();
-      const mockCallback = jest.fn();
+      const mockCallback = vi.fn();
       const initialOutput = "initial output";
 
       markProcessAsRunning(
@@ -192,11 +194,11 @@ describe("processTerminalStates", () => {
 
   describe("terminal command cancellation", () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test("should cancel a running terminal command", async () => {
@@ -246,7 +248,7 @@ describe("processTerminalStates", () => {
       const cancelPromise = killTerminalProcess(toolCallId);
 
       // Fast-forward time to trigger the timeout
-      jest.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(5000);
 
       await cancelPromise;
 
@@ -263,7 +265,7 @@ describe("processTerminalStates", () => {
       const cancelPromise = killTerminalProcess(toolCallId);
 
       // Fast-forward time to trigger the timeout
-      jest.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(5000);
 
       await cancelPromise;
 

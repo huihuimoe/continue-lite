@@ -29,7 +29,7 @@ export function getProxy(
   return getProxyFromEnv(protocol);
 }
 
-export function getEnvNoProxyPatterns(): string[] {
+function getEnvNoProxyPatterns(): string[] {
   const envValue = process.env.NO_PROXY || process.env.no_proxy;
   if (envValue) {
     return envValue
@@ -41,7 +41,7 @@ export function getEnvNoProxyPatterns(): string[] {
   }
 }
 
-export function getReqOptionsNoProxyPatterns(
+function getReqOptionsNoProxyPatterns(
   options: RequestOptions | undefined,
 ): string[] {
   return (

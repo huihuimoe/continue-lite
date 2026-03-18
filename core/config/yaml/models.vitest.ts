@@ -78,7 +78,6 @@ describe("llmsFromModelConfig requestOptions merging", () => {
         summarize: [],
         subagent: [],
       },
-      allowAnonymousTelemetry: false,
     } as ContinueConfig;
     vi.clearAllMocks();
   });

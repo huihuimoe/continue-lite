@@ -79,12 +79,12 @@ export interface PromptMetadata {
 
 export type Prompt = SystemPrompt | UserPrompt;
 
-export interface SystemPrompt {
+interface SystemPrompt {
   role: "system";
   content: string;
 }
 
-export interface UserPrompt {
+interface UserPrompt {
   role: "user";
   content: string;
 }
@@ -94,21 +94,6 @@ export interface NextEditTemplate {
 }
 
 export interface TemplateVars {}
-
-export interface InstinctTemplateVars extends TemplateVars {
-  contextSnippets: string;
-  currentFileContent: string;
-  editDiffHistory: string; // could be a singe large unified diff
-  currentFilePath: string;
-  languageShorthand: string;
-}
-
-export interface MercuryTemplateVars extends TemplateVars {
-  recentlyViewedCodeSnippets: string;
-  currentFileContent: string;
-  editDiffHistory: string; // could be a singe large unified diff
-  currentFilePath: string;
-}
 
 /**
  * Context object containing all necessary information for model-specific operations.
@@ -122,23 +107,4 @@ export interface ModelSpecificContext {
   autocompleteContext: string;
   historyDiff?: string;
   workspaceDirs?: string[];
-}
-
-/**
- * Configuration for editable region calculation.
- */
-export interface EditableRegionConfig {
-  usingFullFileDiff?: boolean;
-  maxTokens?: number;
-  topMargin?: number;
-  bottomMargin?: number;
-}
-
-/**
- * Configuration for prompt generation.
- */
-export interface PromptConfig {
-  includeHistory?: boolean;
-  includeRecentEdits?: boolean;
-  maxContextSnippets?: number;
 }

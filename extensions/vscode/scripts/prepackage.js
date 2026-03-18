@@ -4,12 +4,29 @@ const path = require("path");
 const ncp = require("ncp").ncp;
 const { rimrafSync } = require("rimraf");
 
+const { execCmdSync } = require("../../../scripts/util");
 const {
   validateFilesPresent,
   autodetectPlatformAndArch,
 } = require("../../../scripts/util/index");
 
 const { writeBuildTimestamp } = require("./write-build-timestamp");
+
+const continueDir = path.join(__dirname, "..", "..", "..");
+
+async function generateConfigYamlSchema() {
+  const cwd = process.cwd();
+  process.chdir(path.join(continueDir, "packages", "config-yaml"));
+  execCmdSync("npm install");
+  execCmdSync("npm run build");
+  execCmdSync("npm run generate-schema");
+  fs.copyFileSync(
+    path.join("schema", "config-yaml-schema.json"),
+    path.join(continueDir, "extensions", "vscode", "config-yaml-schema.json"),
+  );
+  process.chdir(cwd);
+  console.log("[info] Generated config.yaml schema");
+}
 
 const extensionRoot = path.join(__dirname, "..");
 const coreRoot = path.join(__dirname, "..", "..", "..", "core");
@@ -187,11 +204,14 @@ void (async () => {
     "tree-sitter runtime WASM",
   );
 
+  await generateConfigYamlSchema();
+
   validateFilesPresent([
     "tree-sitter/code-snippet-queries/c_sharp.scm",
     "tag-qry/tree-sitter-c_sharp-tags.scm",
     "out/web-tree-sitter.wasm",
     "out/tree-sitter-wasms/tree-sitter-typescript.wasm",
+    "config-yaml-schema.json",
   ]);
 
   console.log(

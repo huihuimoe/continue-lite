@@ -1,10 +1,5 @@
 import { SecretLocation, SecretResult, SecretType } from "./SecretResult.js";
-import {
-  FQSN,
-  PackageIdentifier,
-  PackageSlug,
-  packageSlugsEqual,
-} from "./slugs.js";
+import { FQSN, PackageIdentifier, PackageSlug } from "./slugs.js";
 
 /**
  * A registry stores the content of packages
@@ -12,7 +7,7 @@ import {
 export interface Registry {
   getContent(fullSlug: PackageIdentifier): Promise<string>;
 }
-export type SecretNamesMap = Map<FQSN, string>;
+type SecretNamesMap = Map<FQSN, string>;
 
 /**
  * A secret store stores secrets
@@ -32,7 +27,7 @@ export interface PlatformSecretStore {
   ): Promise<string | undefined>;
 }
 
-export function getLocationsToLook(
+function getLocationsToLook(
   assistantSlug: PackageSlug,
   blockSlug: PackageSlug | undefined,
   currentUserSlug: string,
@@ -90,77 +85,6 @@ export function getLocationsToLook(
       : []),
   ];
   return locationsToLook;
-}
-
-export function listAvailableSecrets(
-  userSecretNames: string[],
-  orgSecretNames: string[],
-  assistantSecretNames: string[],
-  blockSecretNames: string[],
-  assistantSlug: PackageSlug,
-  blockSlug: PackageSlug | undefined,
-  currentUserSlug: string,
-  orgScopeSlug: string | null,
-): SecretLocation[] {
-  // Create a set of all secret names
-  const allSecretNames = new Set([
-    ...userSecretNames,
-    ...orgSecretNames,
-    ...assistantSecretNames,
-    ...blockSecretNames,
-  ]);
-
-  // Use the resolution order to get a single SecretLocation for each secret name
-  const secretLocations: SecretLocation[] = [];
-  for (const secretName of allSecretNames) {
-    // Get the order of places to look
-    const locationsToLook = getLocationsToLook(
-      assistantSlug,
-      blockSlug,
-      currentUserSlug,
-      secretName,
-      orgScopeSlug,
-    );
-
-    // Go through the locations one by one
-    for (const secretLocation of locationsToLook) {
-      // "Looking in a location" in this case means looking through one of the lists of secret names
-      // First we get that list of secret names
-      let secretNamesList: string[] = [];
-      switch (secretLocation.secretType) {
-        case SecretType.User:
-          secretNamesList = userSecretNames;
-          break;
-        case SecretType.Organization:
-          secretNamesList = orgSecretNames;
-          break;
-        case SecretType.Package:
-          if (packageSlugsEqual(secretLocation.packageSlug, assistantSlug)) {
-            secretNamesList = assistantSecretNames;
-          } else if (
-            blockSlug &&
-            packageSlugsEqual(secretLocation.packageSlug, blockSlug)
-          ) {
-            secretNamesList = blockSecretNames;
-          }
-          break;
-      }
-
-      // Then we look through that list for the matching secret name
-      if (secretNamesList) {
-        const matchingSecretName = secretNamesList.find(
-          (secretName) => secretName === secretLocation.secretName,
-        );
-        if (matchingSecretName) {
-          // If we find a matching secret name, we add the location to the list
-          secretLocations.push(secretLocation);
-          break;
-        }
-      }
-    }
-  }
-
-  return secretLocations;
 }
 
 export async function resolveFQSN(

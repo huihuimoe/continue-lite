@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const completionOptionsSchema = z.object({
+const completionOptionsSchema = z.object({
   temperature: z.number().optional(),
   topP: z.number().optional(),
   topK: z.number().optional(),
@@ -17,18 +17,16 @@ export const completionOptionsSchema = z.object({
   raw: z.boolean().optional(),
   stream: z.boolean().optional(),
 });
-export type CompletionOptions = z.infer<typeof completionOptionsSchema>;
+type CompletionOptions = z.infer<typeof completionOptionsSchema>;
 
-export const clientCertificateOptionsSchema = z.object({
+const clientCertificateOptionsSchema = z.object({
   cert: z.string(),
   key: z.string(),
   passphrase: z.string().optional(),
 });
-export type ClientCertificateOptions = z.infer<
-  typeof clientCertificateOptionsSchema
->;
+type ClientCertificateOptions = z.infer<typeof clientCertificateOptionsSchema>;
 
-export const requestOptionsSchema = z.object({
+const requestOptionsSchema = z.object({
   timeout: z.number().optional(),
   verifySsl: z.boolean().optional(),
   caBundlePath: z.union([z.string(), z.array(z.string())]).optional(),
@@ -40,7 +38,7 @@ export const requestOptionsSchema = z.object({
 });
 export type RequestOptions = z.infer<typeof requestOptionsSchema>;
 
-export const modelDescriptionSchema = z.object({
+const modelDescriptionSchema = z.object({
   title: z.string(),
   provider: z.enum([
     "openai",
@@ -100,14 +98,14 @@ export const modelDescriptionSchema = z.object({
 });
 export type ModelDescription = z.infer<typeof modelDescriptionSchema>;
 
-export const uiOptionsSchema = z.object({
+const uiOptionsSchema = z.object({
   fontSize: z.number().optional(),
   displayRawMarkdown: z.boolean().optional(),
   codeWrap: z.boolean().optional(),
 });
-export type UiOptions = z.infer<typeof uiOptionsSchema>;
+type UiOptions = z.infer<typeof uiOptionsSchema>;
 
-export const tabAutocompleteOptionsSchema = z.object({
+const tabAutocompleteOptionsSchema = z.object({
   disable: z.boolean(),
   maxPromptTokens: z.number(),
   debounceDelay: z.number(),
@@ -132,17 +130,15 @@ export const tabAutocompleteOptionsSchema = z.object({
   experimental_includeDiff: z.union([z.boolean(), z.number()]).optional(),
   experimental_enableStaticContextualization: z.boolean().optional(),
 });
-export type TabAutocompleteOptions = z.infer<
-  typeof tabAutocompleteOptionsSchema
->;
+type TabAutocompleteOptions = z.infer<typeof tabAutocompleteOptionsSchema>;
 
-export const contextProviderSchema = z.object({
+const contextProviderSchema = z.object({
   name: z.string(),
   params: z.record(z.string(), z.any()),
 });
-export type ContextProvider = z.infer<typeof contextProviderSchema>;
+type ContextProvider = z.infer<typeof contextProviderSchema>;
 
-export const analyticsSchema = z.object({
+const analyticsSchema = z.object({
   provider: z.enum([
     "posthog",
     "amplitude",
@@ -156,36 +152,35 @@ export const analyticsSchema = z.object({
   url: z.string().optional(),
   clientKey: z.string().optional(),
 });
-export type Analytics = z.infer<typeof analyticsSchema>;
+type Analytics = z.infer<typeof analyticsSchema>;
 
-export const devDataSchema = z.object({
+const devDataSchema = z.object({
   url: z.string().optional(),
 });
-export type DevData = z.infer<typeof devDataSchema>;
+type DevData = z.infer<typeof devDataSchema>;
 
-export const customCommandSchema = z.object({
+const customCommandSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   prompt: z.string(),
 });
-export type CustomCommand = z.infer<typeof customCommandSchema>;
+type CustomCommand = z.infer<typeof customCommandSchema>;
 
-export const docDescriptionSchema = z.object({
+const docDescriptionSchema = z.object({
   title: z.string(),
   startUrl: z.string(),
   rootUrl: z.string().optional(),
   faviconUrl: z.string().optional(),
 });
-export type DocDescription = z.infer<typeof docDescriptionSchema>;
+type DocDescription = z.infer<typeof docDescriptionSchema>;
 
-export const configJsonSchema = z.object({
+const configJsonSchema = z.object({
   models: z.array(modelDescriptionSchema),
   tabAutocompleteModel: modelDescriptionSchema.optional(),
   analytics: analyticsSchema,
   devData: devDataSchema,
   customCommands: z.array(customCommandSchema).optional(),
   docs: z.array(docDescriptionSchema).optional(),
-  allowAnonymousTelemetry: z.boolean().optional(),
   systemMessage: z.string().optional(),
   completionOptions: completionOptionsSchema.optional(),
   requestOptions: requestOptionsSchema.optional(),

@@ -13,9 +13,9 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@continuedev/config-types": "^1.0.14",
-    "http-proxy-agent": "^7.0.2",
-    "https-proxy-agent": "^7.0.6",
-    "undici": "^7.22.0"
+    "http-proxy-agent": "^8.0.0",
+    "https-proxy-agent": "^8.0.0",
+    "undici": "^7.24.1"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
@@ -25,6 +25,6 @@
     "@types/node": "^22",
     "semantic-release": "^25.0.3",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.0"
   }
 }

@@ -1,7 +1,9 @@
+import { isAbortError } from "../../util/isAbortError.js";
+
 /**
  * Configuration options for the retry decorator
  */
-export interface RetryOptions {
+interface RetryOptions {
   /** Maximum number of retry attempts (default: 3) */
   maxAttempts?: number;
   /** Base delay in milliseconds (default: 1000) */
@@ -103,7 +105,7 @@ function defaultShouldRetry(error: any, attempt: number): boolean {
   }
 
   // Abort signal errors should not be retried
-  if (error.name === "AbortError" || error.code === "ABORT_ERR") {
+  if (isAbortError(error)) {
     return false;
   }
 

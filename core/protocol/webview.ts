@@ -18,6 +18,5 @@ export type ToWebviewFromIdeOrCoreProtocol = {
   setTTSActive: [boolean, void];
   getWebviewHistoryLength: [undefined, number];
   getCurrentSessionId: [undefined, string];
-  "jetbrains/setColors": [Record<string, string | null | undefined>, void];
   freeTrialExceeded: [undefined, void];
 };

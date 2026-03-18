@@ -2,9 +2,8 @@ import ignore from "ignore";
 
 import path from "path";
 import { fileURLToPath } from "url";
-import { ContinueError, ContinueErrorReason } from "./errors";
 
-export const DEFAULT_SECURITY_IGNORE_FILETYPES = [
+const DEFAULT_SECURITY_IGNORE_FILETYPES = [
   "*.env",
   "*.env.*",
   ".env*",
@@ -46,7 +45,7 @@ export const DEFAULT_SECURITY_IGNORE_FILETYPES = [
   "*.gpg",
 ];
 
-export const DEFAULT_SECURITY_IGNORE_DIRS = [
+const DEFAULT_SECURITY_IGNORE_DIRS = [
   ".env/",
   "env/",
   ".aws/",
@@ -69,7 +68,7 @@ export const DEFAULT_SECURITY_IGNORE_DIRS = [
   ".tmp/",
 ];
 
-export const ADDITIONAL_INDEXING_IGNORE_FILETYPES = [
+const ADDITIONAL_INDEXING_IGNORE_FILETYPES = [
   "*.DS_Store",
   "*-lock.json",
   "*.lock",
@@ -137,7 +136,7 @@ export const ADDITIONAL_INDEXING_IGNORE_FILETYPES = [
   ".continue/",
 ];
 
-export const ADDITIONAL_INDEXING_IGNORE_DIRS = [
+const ADDITIONAL_INDEXING_IGNORE_DIRS = [
   ".git/",
   ".svn/",
   "node_modules/",
@@ -173,31 +172,16 @@ export const DEFAULT_IGNORE_DIRS = [
   ...ADDITIONAL_INDEXING_IGNORE_DIRS,
 ];
 
-export const DEFAULT_IGNORES = [
-  ...DEFAULT_IGNORE_FILETYPES,
-  ...DEFAULT_IGNORE_DIRS,
-];
+const DEFAULT_IGNORES = [...DEFAULT_IGNORE_FILETYPES, ...DEFAULT_IGNORE_DIRS];
 
-export const defaultIgnoresGlob = `!{${DEFAULT_IGNORES.join(",")}}`;
-
-export const defaultSecurityIgnoreFile = ignore().add(
+const defaultSecurityIgnoreFile = ignore().add(
   DEFAULT_SECURITY_IGNORE_FILETYPES,
 );
-export const defaultSecurityIgnoreDir = ignore().add(
-  DEFAULT_SECURITY_IGNORE_DIRS,
-);
-export const defaultIgnoreFile = ignore().add(DEFAULT_IGNORE_FILETYPES);
-export const defaultIgnoreDir = ignore().add(DEFAULT_IGNORE_DIRS);
+const defaultSecurityIgnoreDir = ignore().add(DEFAULT_SECURITY_IGNORE_DIRS);
+const defaultIgnoreFile = ignore().add(DEFAULT_IGNORE_FILETYPES);
+const defaultIgnoreDir = ignore().add(DEFAULT_IGNORE_DIRS);
 
-export const DEFAULT_SECURITY_IGNORE =
-  DEFAULT_SECURITY_IGNORE_FILETYPES.join("\n") +
-  "\n" +
-  DEFAULT_SECURITY_IGNORE_DIRS.join("\n");
-
-export const DEFAULT_IGNORE =
-  DEFAULT_IGNORE_FILETYPES.join("\n") + "\n" + DEFAULT_IGNORE_DIRS.join("\n");
-
-export const defaultFileAndFolderSecurityIgnores = ignore()
+const defaultFileAndFolderSecurityIgnores = ignore()
   .add(defaultSecurityIgnoreFile)
   .add(defaultSecurityIgnoreDir);
 
@@ -226,15 +210,6 @@ export function isSecurityConcern(filePathOrUri: string) {
   }
 
   return defaultFileAndFolderSecurityIgnores.ignores(filepath);
-}
-
-export function throwIfFileIsSecurityConcern(filepath: string) {
-  if (isSecurityConcern(filepath)) {
-    throw new ContinueError(
-      ContinueErrorReason.FileIsSecurityConcern,
-      `Reading or Editing ${filepath} is not allowed because it is a security concern. Do not attempt to read or edit this file in any way.`,
-    );
-  }
 }
 
 export function gitIgArrayFromFile(file: string) {

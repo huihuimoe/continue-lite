@@ -95,7 +95,7 @@ export const FUNCTIONS = [
   },
 ];
 
-export const CLASSES = [
+const CLASSES = [
   {
     nodeType: "class_definition with multiple superclasses",
     fileName: "python/classes.py",

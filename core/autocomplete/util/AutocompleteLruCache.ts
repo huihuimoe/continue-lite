@@ -27,7 +27,7 @@ function truncateSqliteLikePattern(value: string): string {
  * - Evicts oldest entries when capacity is exceeded
  * - Supports prefix matching for flexible autocomplete retrieval
  */
-export class AutocompleteLruCache {
+class AutocompleteLruCache {
   private static capacity = 1000;
   private static flushInterval = 30000;
   private static instancePromise?: Promise<AutocompleteLruCache>;

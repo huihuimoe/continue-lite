@@ -6,71 +6,13 @@
  */
 
 import type { ChatCompletionMessageParam } from "openai/resources.mjs";
-import type { ChatHistoryItem } from "../index.js";
-import type {
-  AssistantChatMessage,
-  ChatMessage,
-  MessageContent,
-  ToolCall,
-} from "../llm/chatTypes.js";
-import type { ContextItemWithId } from "../index.js";
-
-/**
- * Convert ChatCompletionMessageParam to ChatMessage
- */
-export function convertToUnifiedMessage(
-  message: ChatCompletionMessageParam,
-): ChatMessage {
-  switch (message.role) {
-    case "system":
-      return {
-        role: "system",
-        content: typeof message.content === "string" ? message.content : "",
-      };
-
-    case "user":
-      return {
-        role: "user",
-        content: convertMessageContent(message.content),
-      };
-
-    case "assistant": {
-      const assistantMessage: AssistantChatMessage = {
-        role: "assistant",
-        content: convertMessageContent(message.content || ""),
-      };
-
-      // Convert tool calls if present
-      if ("tool_calls" in message && message.tool_calls) {
-        assistantMessage.toolCalls = message.tool_calls.map((tc: any) => ({
-          id: tc.id,
-          type: "function" as const,
-          function: {
-            name: tc.function?.name || "",
-            arguments: tc.function?.arguments || "",
-          },
-        }));
-      }
-
-      return assistantMessage;
-    }
-
-    case "tool":
-      return {
-        role: "tool",
-        content: typeof message.content === "string" ? message.content : "",
-        toolCallId: message.tool_call_id,
-      };
-
-    default:
-      throw new Error(`Unsupported message role: ${(message as any).role}`);
-  }
-}
+import type { ChatHistoryItem, ContextItemWithId } from "../index.js";
+import type { ChatMessage, MessageContent } from "../llm/chatTypes.js";
 
 /**
  * Convert ChatMessage to ChatCompletionMessageParam
  */
-export function convertFromUnifiedMessage(
+function convertFromUnifiedMessage(
   message: ChatMessage,
 ): ChatCompletionMessageParam {
   switch (message.role) {
@@ -194,40 +136,6 @@ function convertFromMessageContent(
 }
 
 /**
- * Create a ChatHistoryItem from a ChatMessage
- */
-export function createHistoryItem(
-  message: ChatMessage,
-  contextItems: ContextItemWithId[] = [],
-): ChatHistoryItem {
-  return {
-    message,
-    contextItems,
-  };
-}
-
-/**
- * Convert array of ChatCompletionMessageParam to ChatHistoryItem array
- */
-export function convertToUnifiedHistory(
-  messages: ChatCompletionMessageParam[],
-): ChatHistoryItem[] {
-  const historyItems: ChatHistoryItem[] = [];
-
-  for (const message of messages) {
-    const unifiedMessage = convertToUnifiedMessage(message);
-
-    if (unifiedMessage.role === "tool") {
-      continue;
-    }
-
-    historyItems.push(createHistoryItem(unifiedMessage));
-  }
-
-  return historyItems;
-}
-
-/**
  * Convert ChatHistoryItem array to ChatCompletionMessageParam array
  */
 export function convertFromUnifiedHistory(
@@ -261,59 +169,4 @@ export function convertFromUnifiedHistory(
   }
 
   return messages;
-}
-
-/**
- * Convert ChatHistoryItem array to ChatCompletionMessageParam array with injected system message
- * @param historyItems - The chat history items
- * @param systemMessage - The system message to inject at the beginning
- */
-export function convertFromUnifiedHistoryWithSystemMessage(
-  historyItems: ChatHistoryItem[],
-  systemMessage: string,
-): ChatCompletionMessageParam[] {
-  const messages: ChatCompletionMessageParam[] = [];
-
-  // Inject system message at the beginning
-  messages.push({
-    role: "system",
-    content: systemMessage,
-  });
-
-  // Convert the rest of the history
-  const convertedMessages = convertFromUnifiedHistory(historyItems);
-  messages.push(...convertedMessages);
-
-  return messages;
-}
-
-/**
- * Extract tool call information from a ChatHistoryItem
- */
-export function extractToolCallInfo(historyItem: ChatHistoryItem): {
-  hasToolCalls: boolean;
-  toolCalls?: ToolCall[];
-} {
-  const toolCalls =
-    historyItem.message.role === "assistant"
-      ? historyItem.message.toolCalls?.map(normalizeToolCall)
-      : undefined;
-
-  return {
-    hasToolCalls: !!(toolCalls && toolCalls.length > 0),
-    toolCalls,
-  };
-}
-
-function normalizeToolCall(
-  toolCall: NonNullable<AssistantChatMessage["toolCalls"]>[number],
-): ToolCall {
-  return {
-    id: toolCall.id ?? "",
-    type: "function",
-    function: {
-      name: toolCall.function?.name ?? "",
-      arguments: toolCall.function?.arguments ?? "",
-    },
-  };
 }

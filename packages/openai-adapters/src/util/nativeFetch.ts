@@ -10,10 +10,10 @@
  */
 
 // Store references to native fetch and related globals at module load time
-export const nativeFetch = globalThis.fetch;
-export const nativeResponse = globalThis.Response;
-export const nativeRequest = globalThis.Request;
-export const nativeHeaders = globalThis.Headers;
+const nativeFetch = globalThis.fetch;
+const nativeResponse = globalThis.Response;
+const nativeRequest = globalThis.Request;
+const nativeHeaders = globalThis.Headers;
 
 /**
  * Temporarily restores native fetch for the duration of a callback.

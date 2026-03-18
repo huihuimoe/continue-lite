@@ -41,7 +41,7 @@ export enum LanguageName {
   SOLIDITY = "solidity",
 }
 
-export const supportedLanguages: { [key: string]: LanguageName } = {
+const supportedLanguages: { [key: string]: LanguageName } = {
   cpp: LanguageName.CPP,
   hpp: LanguageName.CPP,
   cc: LanguageName.CPP,
@@ -229,7 +229,7 @@ const GET_SYMBOLS_FOR_NODE_TYPES: SyntaxNode["type"][] = [
   // "arrow_function",
 ];
 
-export async function getSymbolsForFile(
+async function getSymbolsForFile(
   filepath: string,
   contents: string,
 ): Promise<SymbolWithRange[] | undefined> {

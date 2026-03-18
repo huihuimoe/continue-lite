@@ -24,10 +24,7 @@ export const mcpServersJsonSchema = z.union([
 ]);
 export type McpJsonConfig = z.infer<typeof mcpServersJsonSchema>;
 
-export const mcpServersRecordSchema = z.record(
-  z.string(),
-  mcpServersJsonSchema,
-);
+const mcpServersRecordSchema = z.record(z.string(), mcpServersJsonSchema);
 export type McpServersJsonConfigRecord = z.infer<typeof mcpServersRecordSchema>;
 
 export const claudeDesktopLikeConfigFileSchema = z.object({
@@ -37,7 +34,7 @@ export type McpServersJsonConfigFile = z.infer<
   typeof claudeDesktopLikeConfigFileSchema
 >;
 
-export const claudeCodeLikeConfigFileSchema = z.object({
+const claudeCodeLikeConfigFileSchema = z.object({
   mcpServers: mcpServersRecordSchema.optional(),
   projects: z.record(
     z.string(),
@@ -46,6 +43,6 @@ export const claudeCodeLikeConfigFileSchema = z.object({
     }),
   ),
 });
-export type claudeCodeLikeConfigFileSchema = z.infer<
+type claudeCodeLikeConfigFileSchema = z.infer<
   typeof claudeCodeLikeConfigFileSchema
 >;

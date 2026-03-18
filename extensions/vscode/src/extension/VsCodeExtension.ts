@@ -6,12 +6,7 @@ import { EXTENSION_NAME } from "core/control-plane/env";
 import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";
-import {
-  getConfigJsonPath,
-  getConfigTsPath,
-  getConfigYamlPath,
-  getContinueGlobalPath,
-} from "core/util/paths";
+import { getConfigYamlPath, getContinueGlobalPath } from "core/util/paths";
 import * as vscode from "vscode";
 
 import { ContinueCompletionProvider } from "../autocomplete/completionProvider";
@@ -245,16 +240,6 @@ export class VsCodeExtension {
       },
     );
 
-    fs.watchFile(getConfigJsonPath(), { interval: 1000 }, async (stats) => {
-      if (stats.size === 0) {
-        return;
-      }
-
-      await this.configHandler.reloadConfig(
-        "Global JSON config updated - fs file watch",
-      );
-    });
-
     fs.watchFile(
       getConfigYamlPath("vscode"),
       { interval: 1000 },
@@ -268,14 +253,6 @@ export class VsCodeExtension {
         );
       },
     );
-
-    fs.watchFile(getConfigTsPath(), { interval: 1000 }, (stats) => {
-      if (stats.size === 0) {
-        return;
-      }
-
-      void this.configHandler.reloadConfig("config.ts updated - fs file watch");
-    });
 
     const globalRulesDir = path.join(getContinueGlobalPath(), "rules");
     if (fs.existsSync(globalRulesDir)) {

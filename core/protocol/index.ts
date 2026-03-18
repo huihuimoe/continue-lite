@@ -12,17 +12,12 @@ import {
 export type IProtocol = Record<string, [any, any]>;
 
 // IDE
-export type ToIdeProtocol = ToIdeFromWebviewProtocol & ToIdeFromCoreProtocol;
-export type FromIdeProtocol = ToWebviewFromIdeProtocol &
+type FromIdeProtocol = ToWebviewFromIdeProtocol &
   ToCoreFromIdeProtocol &
   ToWebviewOrCoreFromIdeProtocol;
 
 // Webview
-export type ToWebviewProtocol = ToWebviewFromIdeProtocol &
-  ToWebviewFromCoreProtocol &
-  ToWebviewOrCoreFromIdeProtocol;
-export type FromWebviewProtocol = ToIdeFromWebviewProtocol &
-  ToCoreFromWebviewProtocol;
+type FromWebviewProtocol = ToIdeFromWebviewProtocol & ToCoreFromWebviewProtocol;
 
 // Core
 export type ToCoreProtocol = ToCoreFromIdeProtocol &

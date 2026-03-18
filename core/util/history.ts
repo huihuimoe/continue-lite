@@ -9,9 +9,9 @@ import {
   getSessionsListPath,
 } from "./paths.js";
 
-export type HistoryMessageMode = "chat" | "agent" | "plan" | "background";
+type HistoryMessageMode = "chat" | "agent" | "plan" | "background";
 
-export interface HistorySessionUsage {
+interface HistorySessionUsage {
   completionTokens: number;
   promptTokens: number;
   promptTokensDetails?: {
@@ -28,7 +28,7 @@ export interface HistorySessionUsage {
   totalCost: number;
 }
 
-export interface HistorySessionMetadata {
+interface HistorySessionMetadata {
   sessionId: string;
   title: string;
   dateCreated: string;
@@ -46,7 +46,7 @@ export interface HistorySession {
   usage?: HistorySessionUsage;
 }
 
-export interface ListHistoryOptions {
+interface ListHistoryOptions {
   offset?: number;
   limit?: number;
 }
@@ -62,7 +62,7 @@ function safeParseArray<T>(
   }
 }
 
-export class HistoryManager {
+class HistoryManager {
   list(options: ListHistoryOptions): HistorySessionMetadata[] {
     const filepath = getSessionsListPath();
     if (!fs.existsSync(filepath)) {

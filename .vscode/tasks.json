@@ -22,8 +22,8 @@
       "dependsOn": [
         "tsc:watch",
         "vscode-extension:continue-ui:build",
-        "vscode-extension:esbuild",
-        "vscode-extension:esbuild-notify",
+        "vscode-extension:rolldown",
+        "vscode-extension:rolldown-notify",
         "gui:dev"
       ],
       "group": {
@@ -32,10 +32,10 @@
       }
     },
     {
-      "label": "vscode-extension:esbuild-notify",
-      "dependsOn": ["vscode-extension:esbuild"],
+      "label": "vscode-extension:rolldown-notify",
+      "dependsOn": ["vscode-extension:rolldown"],
       "type": "npm",
-      "script": "esbuild-notify",
+      "script": "rolldown-notify",
       "path": "extensions/vscode",
       "presentation": {
         "group": "build-tasks",
@@ -47,10 +47,10 @@
       }
     },
     {
-      "label": "vscode-extension:esbuild",
+      "label": "vscode-extension:rolldown",
       "dependsOn": ["vscode-extension:continue-ui:build"],
       "type": "npm",
-      "script": "esbuild-watch",
+      "script": "rolldown-watch",
       "path": "extensions/vscode",
       "isBackground": true,
       "presentation": {
@@ -73,14 +73,14 @@
           "background": {
             "activeOnStart": true,
             "beginsPattern": ">",
-            "endsPattern": "VS Code Extension esbuild complete"
+            "endsPattern": "VS Code Extension rolldown complete"
           }
         }
       ]
     },
     {
       "label": "vscode-extension:package",
-      "dependsOn": ["vscode-extension:esbuild"],
+      "dependsOn": ["vscode-extension:rolldown"],
       "type": "npm",
       "script": "package",
       "path": "extensions/vscode",

@@ -1,6 +1,6 @@
 export type ToolCallDelta = import("./chatTypes").ToolCallDelta;
 
-export interface ToolSchema {
+interface ToolSchema {
   type?: string;
   function: {
     name: string;

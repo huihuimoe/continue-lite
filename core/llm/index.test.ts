@@ -159,16 +159,16 @@ describe("BaseLLM", () => {
     expect("rerank" in (baseLLM as any)).toBe(false);
   });
 
-  describe("fetch", () => {
+  describe.skip("fetch", () => {
     // TODO: Implement tests for fetch method
   });
-  describe("*_streamFim", () => {
+  describe.skip("*_streamFim", () => {
     // TODO: Implement tests for *_streamFim method
   });
-  describe("complete", () => {
+  describe.skip("complete", () => {
     // TODO: Implement tests for complete method
   });
-  describe("*streamChat", () => {
+  describe.skip("*streamChat", () => {
     // TODO: Implement tests for *streamChat method
   });
 

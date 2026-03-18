@@ -1,5 +1,3 @@
-import { Telemetry } from "./posthog.js";
-
 interface TokenBatch {
   model: string;
   provider: string;
@@ -61,23 +59,6 @@ export class TokensBatchingService {
 
   private flushBatch(key: string, batch: TokenBatch): void {
     if (batch.count === 0) return;
-
-    void Telemetry.capture(
-      "tokens_generated_batch",
-      {
-        model: batch.model,
-        provider: batch.provider,
-        eventCount: batch.count,
-        totalPromptTokens: batch.totalPromptTokens,
-        totalGeneratedTokens: batch.totalGeneratedTokens,
-        avgPromptTokens: Math.round(batch.totalPromptTokens / batch.count),
-        avgGeneratedTokens: Math.round(
-          batch.totalGeneratedTokens / batch.count,
-        ),
-      },
-      true,
-    );
-
     this.batches.delete(key);
   }
 

@@ -1,27 +1,6 @@
 import { BLOCK_TYPES, RequestOptions } from "../browser.js";
-import { AssistantUnrolled, ConfigYaml } from "../schemas/index.js";
+import { AssistantUnrolled } from "../schemas/index.js";
 import { BlockDuplicationDetector } from "./blockDuplicationDetector.js";
-
-export function mergePackages(
-  current: ConfigYaml,
-  incoming: ConfigYaml,
-): ConfigYaml {
-  return {
-    ...current,
-    models: [...(current.models ?? []), ...(incoming.models ?? [])],
-    context: [...(current.context ?? []), ...(incoming.context ?? [])],
-    data: [...(current.data ?? []), ...(incoming.data ?? [])],
-    mcpServers: [...(current.mcpServers ?? []), ...(incoming.mcpServers ?? [])],
-    rules: [...(current.rules ?? []), ...(incoming.rules ?? [])],
-    prompts: [...(current.prompts ?? []), ...(incoming.prompts ?? [])],
-    docs: [...(current.docs ?? []), ...(incoming.docs ?? [])],
-    env: { ...current.env, ...incoming.env },
-    requestOptions: mergeConfigYamlRequestOptions(
-      current.requestOptions,
-      incoming.requestOptions,
-    ),
-  };
-}
 
 export function mergeUnrolledAssistants(
   current: AssistantUnrolled,

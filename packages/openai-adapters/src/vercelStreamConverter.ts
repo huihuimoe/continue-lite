@@ -64,7 +64,7 @@ export type VercelStreamPart =
   | { type: "error"; error: unknown }
   | { type: "raw"; rawValue: unknown };
 
-export interface VercelStreamConverterOptions {
+interface VercelStreamConverterOptions {
   model: string;
 }
 

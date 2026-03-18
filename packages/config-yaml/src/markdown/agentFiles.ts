@@ -202,10 +202,3 @@ export function parseAgentFileTools(toolsString?: string): ParsedAgentTools {
     allBuiltIn,
   };
 }
-
-export function parseAgentFileRules(rules: string) {
-  return rules
-    .split(",")
-    .map((r) => r.trim())
-    .filter(Boolean);
-}
