@@ -41,9 +41,9 @@ function resolveAutocompleteModelMetadata(
   selectedAutocompleteModel: ILLM | undefined,
 ): {
   autocompleteModel?: string | ILLM;
-  modelName?: string;
-  modelProvider?: string;
-  modelTitle?: string;
+  modelName: string;
+  modelProvider: string;
+  modelTitle: string;
   maxPromptTokens: number;
 } {
   let autocompleteModel: string | ILLM | undefined =
@@ -72,13 +72,15 @@ function resolveAutocompleteModelMetadata(
     modelName:
       typeof autocompleteModel === "string"
         ? (resolvedModel?.model ?? autocompleteModel)
-        : autocompleteModel?.model,
+        : (autocompleteModel?.model ?? "unknown"),
     modelProvider:
-      resolvedModel?.providerName ?? resolvedModel?.underlyingProviderName,
+      resolvedModel?.providerName ??
+      resolvedModel?.underlyingProviderName ??
+      "unknown",
     modelTitle:
       typeof autocompleteModel === "string"
         ? (resolvedModel?.title ?? autocompleteModel)
-        : (autocompleteModel?.title ?? autocompleteModel?.model),
+        : (autocompleteModel?.title ?? autocompleteModel?.model ?? "unknown"),
     maxPromptTokens:
       resolvedModel?.autocompleteOptions?.maxPromptTokens ??
       DEFAULT_AUTOCOMPLETE_OPTS.maxPromptTokens,

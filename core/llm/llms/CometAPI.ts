@@ -57,7 +57,7 @@ class CometAPI extends OpenAI {
       );
       if (info?.contextLength) {
         // Always prefer cometapi-specific llm-info over generic provider matches
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+         
         // @ts-ignore - accessing protected for targeted fix
         this._contextLength = info.contextLength;
       }
