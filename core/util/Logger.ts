@@ -1,5 +1,7 @@
 import winston from "winston";
 
+import { isAbortError } from "./isAbortError";
+
 class LoggerClass {
   private static instance: LoggerClass;
   private winston: winston.Logger;
@@ -63,6 +65,10 @@ class LoggerClass {
     error: Error | string | unknown,
     context?: Record<string, any>,
   ): void {
+    if (isAbortError(error)) {
+      return;
+    }
+
     let errorMessage: string;
 
     if (error instanceof Error) {

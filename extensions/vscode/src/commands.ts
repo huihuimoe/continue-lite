@@ -81,13 +81,17 @@ export function registerAllCommands(
     ) => {
       const outcome = nextEditLoggingService.accept(completionId);
 
-      if (!outcome?.nextJumpPosition || !outcome.nextJumpContent) {
+      if (!outcome?.nextJumpPosition) {
         return;
       }
 
       const editor = vscode.window.activeTextEditor;
-      const currentPosition =
-        editor?.selection.active ?? outcome.finalCursorPosition;
+      const currentPosition: vscode.Position =
+        editor?.selection.active ??
+        new vscode.Position(
+          outcome.finalCursorPosition.line,
+          outcome.finalCursorPosition.character,
+        );
 
       void JumpManager.getInstance().suggestJump(
         currentPosition,

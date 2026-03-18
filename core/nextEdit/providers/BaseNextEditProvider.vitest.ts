@@ -94,7 +94,7 @@ describe("BaseNextEditModelProvider full-file diff jump metadata", () => {
     const ide = {
       getRepoName: async () => "repo",
       getUniqueId: async () => "unique-id",
-    } as IDE;
+    } as unknown as IDE;
 
     const outcome = await provider.handleFullFileDiff({
       helper,
@@ -178,7 +178,7 @@ describe("BaseNextEditModelProvider full-file diff jump metadata", () => {
     const ide = {
       getRepoName: async () => "repo",
       getUniqueId: async () => "unique-id",
-    } as IDE;
+    } as unknown as IDE;
 
     const outcome = await provider.handleFullFileDiff({
       helper,

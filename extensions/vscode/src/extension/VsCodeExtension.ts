@@ -164,7 +164,9 @@ export class VsCodeExtension {
         autocompleteModel.title,
       );
 
-    await this.maybeWarnAboutAutocompleteFimSupport(autocompleteModel);
+    void this.maybeWarnAboutAutocompleteFimSupport(
+      autocompleteModel ?? undefined,
+    );
 
     let nextEditEnabled = vscodeConfig.get<boolean>("enableNextEdit");
     if (nextEditEnabled === undefined) {
@@ -300,19 +302,15 @@ export class VsCodeExtension {
       },
     );
 
-    fs.watchFile(
-      getConfigYamlPath("vscode"),
-      { interval: 1000 },
-      async (stats) => {
-        if (stats.size === 0) {
-          return;
-        }
+    fs.watchFile(getConfigYamlPath(), { interval: 1000 }, async (stats) => {
+      if (stats.size === 0) {
+        return;
+      }
 
-        await this.configHandler.reloadConfig(
-          "Global YAML config updated - fs file watch",
-        );
-      },
-    );
+      await this.configHandler.reloadConfig(
+        "Global YAML config updated - fs file watch",
+      );
+    });
 
     const globalRulesDir = path.join(getContinueGlobalPath(), "rules");
     if (fs.existsSync(globalRulesDir)) {

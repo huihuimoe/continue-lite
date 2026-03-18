@@ -185,4 +185,28 @@ describe("commands", () => {
       "const remote = 42;",
     );
   });
+
+  it("still suggests a jump when the next hunk is deletion-only", async () => {
+    const context = { subscriptions: [] as Array<{ dispose: () => void }> };
+    const battery = createBattery(true);
+    const configHandler = createConfigHandler();
+    const nextEditLoggingService = {
+      accept: vi.fn().mockReturnValue({
+        nextJumpPosition: { line: 12, character: 0 },
+        nextJumpContent: "",
+      }),
+    };
+
+    registerAllCommands(context as any, battery as any, configHandler as any);
+    await registeredCommands["continue.logNextEditOutcomeAccept"](
+      "completion-id",
+      nextEditLoggingService,
+    );
+
+    expect(jumpManagerInstance.suggestJump).toHaveBeenCalledWith(
+      { line: 3, character: 2 },
+      expect.objectContaining({ line: 12, character: 0 }),
+      "",
+    );
+  });
 });

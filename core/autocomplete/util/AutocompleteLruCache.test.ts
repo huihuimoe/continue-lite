@@ -341,7 +341,9 @@ describe("AutocompleteLruCache", () => {
       });
 
       it("should log error when flush fails", async () => {
-        const consoleError = vi.spyOn(console, "error").mockImplementation();
+        const consoleError = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
         await cache.put("key", "value");
         const dbError = new Error("Database failure");
         mockDb.run.mockRejectedValueOnce(dbError);
@@ -371,7 +373,9 @@ describe("AutocompleteLruCache", () => {
       });
 
       it("should release mutex even if error occurs", async () => {
-        const consoleError = vi.spyOn(console, "error").mockImplementation();
+        const consoleError = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
         const releaseSpy = vi.fn();
         vi.spyOn((cache as any).mutex, "acquire").mockResolvedValue(releaseSpy);
 
@@ -477,7 +481,9 @@ describe("AutocompleteLruCache", () => {
     });
 
     it("should handle flush errors gracefully", async () => {
-      const consoleError = vi.spyOn(console, "error").mockImplementation();
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const flushError = new Error("Flush failed");
       vi.spyOn(cache, "flush").mockRejectedValue(flushError);
 

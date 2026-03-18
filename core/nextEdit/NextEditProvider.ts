@@ -394,6 +394,21 @@ export class NextEditProvider {
     }
 
     // Build context for model-specific prompt generation.
+    const normalizedFilepath = localPathOrUriToPath(helper.filepath);
+    const documentHistoryTracker = DocumentHistoryTracker.getInstance();
+
+    if (!documentHistoryTracker.hasDocument(normalizedFilepath)) {
+      const ast = await getAst(helper.filepath, helper.fileContents);
+
+      if (ast) {
+        documentHistoryTracker.ensureDocument(
+          normalizedFilepath,
+          helper.fileContents,
+          ast,
+        );
+      }
+    }
+
     const context: ModelSpecificContext = {
       helper,
       snippetPayload,
@@ -403,8 +418,8 @@ export class NextEditProvider {
       autocompleteContext: this.autocompleteContext,
       historyDiff: createDiff({
         beforeContent:
-          DocumentHistoryTracker.getInstance().getMostRecentDocumentHistory(
-            localPathOrUriToPath(helper.filepath),
+          documentHistoryTracker.getMostRecentDocumentHistory(
+            normalizedFilepath,
           ) ?? "",
         afterContent: helper.fileContents,
         filePath: helper.filepath,

@@ -322,6 +322,43 @@ describe("VsCodeExtension updateNextEditState", () => {
 
     expect(mocks.showWarningMessage).toHaveBeenCalledTimes(1);
   });
+
+  it("does not block next-edit state updates while the Sweep/Ollama warning is open", async () => {
+    let resolveWarning: (() => void) | undefined;
+    mocks.showWarningMessage.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((resolve) => {
+          resolveWarning = () => resolve(undefined);
+        }),
+    );
+
+    const extension = createExtension({
+      model: "sweep-next-edit",
+      title: "Sweep Next Edit",
+      providerName: "ollama",
+      supportsFim: () => false,
+    });
+
+    const updatePromise = extension.updateNextEditState({
+      subscriptions: [],
+    } as any);
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mocks.workspaceConfig.update).toHaveBeenCalledWith(
+      "enableNextEdit",
+      true,
+      vscode.ConfigurationTarget.Global,
+    );
+    expect(extension.completionProvider.activateNextEdit).toHaveBeenCalledTimes(
+      1,
+    );
+
+    resolveWarning?.();
+    await updatePromise;
+  });
 });
 
 describe("VsCodeExtension constructor", () => {
@@ -330,7 +367,9 @@ describe("VsCodeExtension constructor", () => {
   });
 
   it("watches only the global YAML config file", () => {
-    new VsCodeExtension({ subscriptions: [] } as vscode.ExtensionContext);
+    new VsCodeExtension({
+      subscriptions: [],
+    } as unknown as vscode.ExtensionContext);
 
     expect(mocks.fsWatchFile).toHaveBeenCalledTimes(1);
     expect(mocks.fsWatchFile).toHaveBeenCalledWith(
