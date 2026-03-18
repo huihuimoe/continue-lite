@@ -239,6 +239,39 @@ describe("OpenAI", () => {
     });
   });
 
+  test("streamComplete uses /completions for local sweep models on openai-compatible backends", async () => {
+    const openai = new OpenAI({
+      apiKey: "test-api-key",
+      model: "sweep-next-edit-1.5b",
+      apiBase: "http://localhost:1234/v1/",
+    });
+
+    await runLlmTest({
+      llm: openai,
+      methodToTest: "streamComplete",
+      params: ["Hello", new AbortController().signal],
+      expectedRequest: {
+        url: "http://localhost:1234/v1/completions",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer test-api-key",
+          "api-key": "test-api-key",
+        },
+        body: {
+          model: "sweep-next-edit-1.5b",
+          prompt: "Hello",
+          stream: true,
+          max_tokens: 4096,
+        },
+      },
+      mockStream: [
+        { choices: [{ text: "Hello" }] },
+        { choices: [{ text: " world" }] },
+      ],
+    });
+  });
+
   test("complete should send a valid request", async () => {
     const openai = new OpenAI({
       apiKey: "test-api-key",
@@ -269,6 +302,38 @@ describe("OpenAI", () => {
         { choices: [{ delta: { content: "Hello" } }] },
         { choices: [{ delta: { content: " world" } }] },
       ],
+    });
+  });
+
+  test("complete uses /completions for local sweep models on openai-compatible backends", async () => {
+    const openai = new OpenAI({
+      apiKey: "test-api-key",
+      model: "sweep-next-edit-1.5b",
+      apiBase: "http://localhost:1234/v1/",
+    });
+
+    await runLlmTest({
+      llm: openai,
+      methodToTest: "complete",
+      params: ["Hello", new AbortController().signal],
+      expectedRequest: {
+        url: "http://localhost:1234/v1/completions",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer test-api-key",
+          "api-key": "test-api-key",
+        },
+        body: {
+          model: "sweep-next-edit-1.5b",
+          prompt: "Hello",
+          stream: false,
+          max_tokens: 4096,
+        },
+      },
+      mockResponse: {
+        choices: [{ text: "Hello world" }],
+      },
     });
   });
 

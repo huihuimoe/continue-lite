@@ -38,6 +38,17 @@ export class SweepNextEditProvider extends BaseNextEditModelProvider {
     return { topMargin: 10, bottomMargin: 10 };
   }
 
+  getInferenceOptions() {
+    return {
+      mode: "complete" as const,
+      completionOptions: {
+        raw: true,
+        stop: ["<|file_sep|>", "</s>"],
+        temperature: 0,
+      },
+    };
+  }
+
   extractCompletion(message: string): string {
     let completion = message.replace(/\r\n/g, "\n");
 

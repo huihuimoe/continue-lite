@@ -294,29 +294,19 @@ export class ContinueCompletionProvider
 
       // Determine why this method was triggered.
       const isJumping = this.jumpManager.isJumpInProgress();
-      let chainExists = this.nextEditProvider.chainExists();
-
-      let resetChainInFullFileDiff = false;
+      const chainExists = this.nextEditProvider.chainExists();
 
       if (isJumping && chainExists) {
         // Case 2: Jumping (chain exists, jump was taken)
-        // console.debug("trigger reason: jumping");
-
         // Reset jump state.
         this.jumpManager.setJumpInProgress(false);
-
-        await this.nextEditProvider.deleteChain();
-        chainExists = false;
-        resetChainInFullFileDiff = this.usingFullFileDiff;
-      } else if (chainExists) {
-        await this.nextEditProvider.deleteChain();
-        chainExists = false;
-        resetChainInFullFileDiff = this.usingFullFileDiff;
       }
 
-      if (!chainExists && !outcome) {
+      if (!outcome) {
         // Case 1: Typing (chain does not exist).
-        this.nextEditProvider.startChain();
+        if (!chainExists) {
+          this.nextEditProvider.startChain();
+        }
 
         const input: AutocompleteInput = {
           pos,
@@ -334,21 +324,16 @@ export class ContinueCompletionProvider
             { withChain: false, usingFullFileDiff: this.usingFullFileDiff },
           );
 
-          if (
-            resetChainInFullFileDiff &&
-            (!outcome ||
-              (!outcome.completion && outcome.diffLines.length === 0))
-          ) {
-            // No next edit outcome after resetting chain; returning null
-            return null;
-          }
-
           // If initial outcome is null, suggest a jump instead.
           // Calling this method again will call it with chain active but jump not suggested yet.
           if (
             !outcome ||
             (!outcome.completion && outcome.diffLines.length === 0)
           ) {
+            if (chainExists) {
+              return null;
+            }
+
             return this.provideInlineCompletionItems(
               document,
               position,

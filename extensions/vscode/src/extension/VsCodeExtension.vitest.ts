@@ -292,6 +292,73 @@ describe("VsCodeExtension updateNextEditState", () => {
     expect(GhostTextAcceptanceTracker.clearInstance).toHaveBeenCalledTimes(1);
     expect(NextEditWindowManager.freeTabAndEsc).toHaveBeenCalledTimes(1);
   });
+
+  it("warns when a Sweep Ollama autocomplete model lacks .Suffix FIM support", async () => {
+    const extension = createExtension({
+      model: "sweep-next-edit",
+      title: "Sweep Next Edit",
+      providerName: "ollama",
+      supportsFim: () => false,
+    });
+
+    await extension.updateNextEditState({ subscriptions: [] } as any);
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+      expect.stringContaining("does not advertise .Suffix support"),
+      "Open config menu",
+    );
+  });
+
+  it("only warns once per unsupported Sweep Ollama model", async () => {
+    const extension = createExtension({
+      model: "sweep-next-edit",
+      title: "Sweep Next Edit",
+      providerName: "ollama",
+      supportsFim: () => false,
+    });
+
+    await extension.updateNextEditState({ subscriptions: [] } as any);
+    await extension.updateNextEditState({ subscriptions: [] } as any);
+
+    expect(mocks.showWarningMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not block next-edit state updates while the Sweep/Ollama warning is open", async () => {
+    let resolveWarning: (() => void) | undefined;
+    mocks.showWarningMessage.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((resolve) => {
+          resolveWarning = () => resolve(undefined);
+        }),
+    );
+
+    const extension = createExtension({
+      model: "sweep-next-edit",
+      title: "Sweep Next Edit",
+      providerName: "ollama",
+      supportsFim: () => false,
+    });
+
+    const updatePromise = extension.updateNextEditState({
+      subscriptions: [],
+    } as any);
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mocks.workspaceConfig.update).toHaveBeenCalledWith(
+      "enableNextEdit",
+      true,
+      vscode.ConfigurationTarget.Global,
+    );
+    expect(extension.completionProvider.activateNextEdit).toHaveBeenCalledTimes(
+      1,
+    );
+
+    resolveWarning?.();
+    await updatePromise;
+  });
 });
 
 describe("VsCodeExtension constructor", () => {
@@ -300,7 +367,9 @@ describe("VsCodeExtension constructor", () => {
   });
 
   it("watches only the global YAML config file", () => {
-    new VsCodeExtension({ subscriptions: [] } as vscode.ExtensionContext);
+    new VsCodeExtension({
+      subscriptions: [],
+    } as unknown as vscode.ExtensionContext);
 
     expect(mocks.fsWatchFile).toHaveBeenCalledTimes(1);
     expect(mocks.fsWatchFile).toHaveBeenCalledWith(
@@ -314,6 +383,9 @@ describe("VsCodeExtension constructor", () => {
 function createExtension(autocompleteModel?: {
   model: string;
   title?: string;
+  providerName?: string;
+  underlyingProviderName?: string;
+  supportsFim?: () => boolean;
 }) {
   type TestVsCodeExtension = {
     configHandler: {

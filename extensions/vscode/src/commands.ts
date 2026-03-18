@@ -15,6 +15,7 @@ import {
   setupStatusBar,
   StatusBarStatus,
 } from "./autocomplete/statusBar";
+import { JumpManager } from "./activation/JumpManager";
 import { Battery } from "./util/battery";
 import { getMetaKeyLabel } from "./util/util";
 
@@ -78,7 +79,28 @@ export function registerAllCommands(
       completionId: string,
       nextEditLoggingService: NextEditLoggingService,
     ) => {
-      nextEditLoggingService.accept(completionId);
+      const outcome = nextEditLoggingService.accept(completionId);
+
+      if (!outcome?.nextJumpPosition) {
+        return;
+      }
+
+      const editor = vscode.window.activeTextEditor;
+      const currentPosition: vscode.Position =
+        editor?.selection.active ??
+        new vscode.Position(
+          outcome.finalCursorPosition.line,
+          outcome.finalCursorPosition.character,
+        );
+
+      void JumpManager.getInstance().suggestJump(
+        currentPosition,
+        new vscode.Position(
+          outcome.nextJumpPosition.line,
+          outcome.nextJumpPosition.character,
+        ),
+        outcome.nextJumpContent,
+      );
     },
     "continue.logNextEditOutcomeReject": (
       completionId: string,

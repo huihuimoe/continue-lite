@@ -7,7 +7,7 @@ import {
 import { shouldStopAtMarkdownBlock } from "../../../utils/streamMarkdownUtils";
 import * as lineStream from "./lineStream";
 
-// eslint-disable-next-line max-lines-per-function
+ 
 describe("lineStream", () => {
   let mockFullStop: Mock;
 

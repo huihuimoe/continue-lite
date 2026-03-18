@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
-const CORE_DIST_DIR = path.join(REPO_ROOT, "core", "dist");
 const EVIDENCE_DIR = path.join(REPO_ROOT, ".sisyphus", "evidence");
+const CORE_PROBE_SCRIPT = path.join(
+  SCRIPT_DIR,
+  "sweep-next-edit-smoke-core.ts",
+);
 
 const DEFAULTS = {
   apiBase: "http://localhost:11434",
@@ -18,6 +21,38 @@ const DEFAULTS = {
   model: "sweepai/sweep-next-edit",
   maxTokens: 96,
   temperature: 0,
+};
+
+const MODE_EXPECTATIONS = {
+  fim: {
+    requiredPromptFragments: [
+      "<|file_sep|>sweep-next-edit.ts",
+      "<|fim_prefix|>",
+      "<|fim_suffix|>",
+      "<|fim_middle|>",
+    ],
+    requiredCompletionFragments: ["prefix + name"],
+    forbiddenCompletionFragments: [
+      "<|fim_prefix|>",
+      "<|fim_suffix|>",
+      "<|file_sep|>",
+    ],
+  },
+  "next-edit": {
+    requiredPromptFragments: [
+      "<|file_sep|>current/sweep-next-edit.ts",
+      "<|file_sep|>updated/sweep-next-edit.ts",
+      "original",
+      "current",
+      "updated",
+    ],
+    requiredCompletionFragments: ["prefix + name"],
+    forbiddenCompletionFragments: [
+      "<|fim_prefix|>",
+      "<|fim_suffix|>",
+      "<|file_sep|>",
+    ],
+  },
 };
 
 const SAMPLE = {
@@ -30,28 +65,66 @@ const SAMPLE = {
   suffix: [";", "  return message;", "}", ""].join("\n"),
 };
 
-export function getDefaultEvidenceFilename({ mode = "fim", expectMissing }) {
+export function getDefaultEvidenceFilename({
+  mode = "fim",
+  expectMissing,
+  provider = "ollama",
+}) {
+  const providerPrefix = provider === "ollama" ? "ollama" : provider;
+
   if (mode === "next-edit") {
     return expectMissing
-      ? "task-10-ollama-next-edit-smoke-error.json"
-      : "task-10-ollama-next-edit-smoke.json";
+      ? `task-10-${providerPrefix}-next-edit-smoke-error.json`
+      : `task-10-${providerPrefix}-next-edit-smoke.json`;
   }
 
   return expectMissing
-    ? "task-5-ollama-fim-smoke-error.json"
-    : "task-5-ollama-fim-smoke.json";
+    ? `task-5-${providerPrefix}-fim-smoke-error.json`
+    : `task-5-${providerPrefix}-fim-smoke.json`;
 }
 
 export function findMatchingModelEntry(models, requestedModel) {
   return models.find((model) => {
-    if (!model?.name) {
+    const identifier = model?.name ?? model?.id;
+    if (!identifier) {
       return false;
     }
     return (
-      model.name === requestedModel ||
-      model.name.startsWith(`${requestedModel}:`)
+      identifier === requestedModel ||
+      identifier.startsWith(`${requestedModel}:`)
     );
   });
+}
+
+export function assertExpectation({ mode, prompt, completion }) {
+  const expectation = MODE_EXPECTATIONS[mode];
+  if (!expectation) {
+    throw new Error(`No expectation configured for mode ${mode}.`);
+  }
+
+  for (const fragment of expectation.requiredPromptFragments) {
+    if (!prompt.includes(fragment)) {
+      throw new Error(
+        `Generated prompt for ${mode} is missing required fragment: ${fragment}`,
+      );
+    }
+  }
+
+  for (const fragment of expectation.requiredCompletionFragments) {
+    if (!completion.includes(fragment)) {
+      throw new Error(
+        `Completion for ${mode} is missing required fragment: ${fragment}`,
+      );
+    }
+  }
+
+  for (const fragment of expectation.forbiddenCompletionFragments) {
+    if (completion.includes(fragment)) {
+      throw new Error(
+        `Completion for ${mode} still contains prompt artifact: ${fragment}`,
+      );
+    }
+  }
 }
 
 export function summarizeShowResponse(showResponse) {
@@ -140,9 +213,9 @@ export function parseArgs(argv) {
     );
   }
 
-  if (args.provider !== "ollama") {
+  if (!["ollama", "openai"].includes(args.provider)) {
     throw new Error(
-      `Unsupported provider: ${args.provider}. Only --provider=ollama is implemented.`,
+      `Unsupported provider: ${args.provider}. Supported providers: --provider=ollama or --provider=openai.`,
     );
   }
 
@@ -210,78 +283,20 @@ function runCurlJson(curlArgs) {
   };
 }
 
-async function pathExists(filePath) {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function ensureCoreDist() {
-  const sentinel = path.join(CORE_DIST_DIR, "llm", "llms", "Ollama.js");
-  if (await pathExists(sentinel)) {
-    return;
+function summarizeModelListResponse(provider, body) {
+  if (provider === "ollama") {
+    const models = Array.isArray(body?.models) ? body.models : [];
+    return {
+      models,
+      identifiers: models.map((model) => model.name),
+    };
   }
 
-  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  const result = spawnSync(npmCommand, ["--prefix", "core", "run", "build"], {
-    cwd: REPO_ROOT,
-    stdio: "inherit",
-  });
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    throw new Error(
-      `npm --prefix core run build failed with status ${result.status}`,
-    );
-  }
-}
-
-async function importCoreModules() {
-  await ensureCoreDist();
-
-  const [
-    { default: Ollama },
-    { CompletionStreamer },
-    { renderPrompt },
-    { SweepNextEditProvider },
-  ] = await Promise.all([
-    import(
-      pathToFileURL(path.join(CORE_DIST_DIR, "llm", "llms", "Ollama.js")).href
-    ),
-    import(
-      pathToFileURL(
-        path.join(
-          CORE_DIST_DIR,
-          "autocomplete",
-          "generation",
-          "CompletionStreamer.js",
-        ),
-      ).href
-    ),
-    import(
-      pathToFileURL(
-        path.join(CORE_DIST_DIR, "autocomplete", "templating", "index.js"),
-      ).href
-    ),
-    import(
-      pathToFileURL(
-        path.join(
-          CORE_DIST_DIR,
-          "nextEdit",
-          "providers",
-          "SweepNextEditProvider.js",
-        ),
-      ).href
-    ),
-  ]);
-
-  return { Ollama, CompletionStreamer, renderPrompt, SweepNextEditProvider };
+  const models = Array.isArray(body?.data) ? body.data : [];
+  return {
+    models,
+    identifiers: models.map((model) => model.id),
+  };
 }
 
 function buildSmokeRenderContext(model) {
@@ -400,26 +415,53 @@ async function writeEvidence(evidencePath, payload) {
   );
 }
 
-async function waitForFimSupport(llm, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (llm.supportsFim()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-
-  throw new Error(
-    `Ollama never reported FIM support for ${llm.model} within ${timeoutMs}ms.`,
+function runCoreProbe(options) {
+  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+  const payload = Buffer.from(JSON.stringify(options), "utf8").toString(
+    "base64",
   );
-}
+  const result = spawnSync(
+    npmCommand,
+    [
+      "--prefix",
+      "core",
+      "exec",
+      "--",
+      "tsx",
+      CORE_PROBE_SCRIPT,
+      `--payload=${payload}`,
+    ],
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    },
+  );
 
-async function collect(generator) {
-  const chunks = [];
-  for await (const chunk of generator) {
-    chunks.push(chunk);
+  if (result.error) {
+    throw result.error;
   }
-  return chunks;
+
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() ||
+        result.stdout.trim() ||
+        `Core probe exited with status ${result.status}`,
+    );
+  }
+
+  try {
+    const lines = result.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const jsonLine = [...lines].reverse().find((line) => line.startsWith("{"));
+    if (!jsonLine) {
+      throw new Error("No JSON payload found in core probe output.");
+    }
+    return JSON.parse(jsonLine);
+  } catch (error) {
+    throw new Error(`Failed to parse core probe output: ${result.stdout}`);
+  }
 }
 
 export async function runSmokeHarness(rawArgs = process.argv.slice(2)) {
@@ -442,20 +484,28 @@ export async function runSmokeHarness(rawArgs = process.argv.slice(2)) {
   };
 
   try {
-    const tagsResponse = runCurlJson(["-sS", `${options.apiBase}/api/tags`]);
-    if (tagsResponse.statusCode !== 200) {
+    const modelsEndpoint =
+      options.provider === "ollama"
+        ? `${options.apiBase}/api/tags`
+        : `${options.apiBase}/models`;
+    const modelsResponse = runCurlJson(["-sS", modelsEndpoint]);
+    if (modelsResponse.statusCode !== 200) {
       throw new Error(
-        `Ollama /api/tags returned HTTP ${tagsResponse.statusCode}.`,
+        `${options.provider} model listing returned HTTP ${modelsResponse.statusCode}.`,
       );
     }
 
-    const models = Array.isArray(tagsResponse.body?.models)
-      ? tagsResponse.body.models
-      : [];
-    const matchedModel = findMatchingModelEntry(models, options.model);
+    const preflightModels = summarizeModelListResponse(
+      options.provider,
+      modelsResponse.body,
+    );
+    const matchedModel = findMatchingModelEntry(
+      preflightModels.models,
+      options.model,
+    );
 
     evidence.preflight = {
-      tagNames: models.map((model) => model.name),
+      modelIdentifiers: preflightModels.identifiers,
       matchedModel: matchedModel ?? null,
     };
 
@@ -475,143 +525,66 @@ export async function runSmokeHarness(rawArgs = process.argv.slice(2)) {
       return options.expectMissing ? 0 : 1;
     }
 
-    const showResponse = runCurlJson([
-      "-sS",
-      `${options.apiBase}/api/show`,
-      "-H",
-      "Content-Type: application/json",
-      "-d",
-      JSON.stringify({ name: options.model }),
-    ]);
+    if (options.provider === "ollama") {
+      const showResponse = runCurlJson([
+        "-sS",
+        `${options.apiBase}/api/show`,
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        JSON.stringify({ name: options.model }),
+      ]);
 
-    if (showResponse.statusCode !== 200) {
+      if (showResponse.statusCode !== 200) {
+        throw new Error(
+          `Ollama /api/show returned HTTP ${showResponse.statusCode}.`,
+        );
+      }
+
+      evidence.preflight.show = summarizeShowResponse(showResponse.body);
+
+      if (!evidence.preflight.show.template) {
+        throw new Error(
+          `Ollama /api/show returned empty metadata for ${options.model}.`,
+        );
+      }
+
+      if (
+        options.mode === "fim" &&
+        !evidence.preflight.show.templateHasSuffix
+      ) {
+        throw new Error(
+          `Ollama model ${options.model} does not advertise a .Suffix-aware template; repository FIM path will refuse this model.`,
+        );
+      }
+    }
+
+    const startedAtMs = Date.now();
+    const probe = runCoreProbe(options);
+
+    evidence.prompt = probe.prompt;
+    evidence.expected = MODE_EXPECTATIONS[options.mode];
+    evidence.result = {
+      durationMs: Date.now() - startedAtMs,
+      ...probe.result,
+    };
+
+    const completion =
+      typeof probe.result?.completion === "string"
+        ? probe.result.completion
+        : "";
+
+    if (!completion.trim()) {
       throw new Error(
-        `Ollama /api/show returned HTTP ${showResponse.statusCode}.`,
+        "Smoke request completed but returned an empty completion.",
       );
     }
 
-    evidence.preflight.show = summarizeShowResponse(showResponse.body);
-
-    if (!evidence.preflight.show.template) {
-      throw new Error(
-        `Ollama /api/show returned empty metadata for ${options.model}.`,
-      );
-    }
-
-    if (options.mode === "fim" && !evidence.preflight.show.templateHasSuffix) {
-      throw new Error(
-        `Ollama model ${options.model} does not advertise a .Suffix-aware template; repository FIM path will refuse this model.`,
-      );
-    }
-
-    const { Ollama, CompletionStreamer, renderPrompt, SweepNextEditProvider } =
-      await importCoreModules();
-
-    const llm = new Ollama({
-      apiBase: options.apiBase,
-      model: options.model,
-      completionOptions: {
-        model: options.model,
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-      },
+    assertExpectation({
+      mode: options.mode,
+      prompt: probe.prompt.prompt,
+      completion,
     });
-
-    if (options.mode === "fim") {
-      const renderContext = buildSmokeRenderContext(options.model);
-      const promptContext = renderPrompt(renderContext);
-
-      evidence.prompt = {
-        filepath: SAMPLE.filepath,
-        prefix: promptContext.prefix,
-        suffix: promptContext.suffix,
-        prompt: promptContext.prompt,
-        completionOptions: promptContext.completionOptions ?? {},
-      };
-
-      await waitForFimSupport(llm, 5000);
-
-      const streamer = new CompletionStreamer(() => {});
-      const abortController = new AbortController();
-      const startedAtMs = Date.now();
-      const chunks = await collect(
-        streamer.streamCompletionWithFilters(
-          abortController.signal,
-          llm,
-          promptContext.prefix,
-          promptContext.suffix,
-          promptContext.prompt,
-          false,
-          {
-            ...promptContext.completionOptions,
-            model: options.model,
-            maxTokens: options.maxTokens,
-            temperature: options.temperature,
-          },
-          renderContext.helper,
-        ),
-      );
-      const completion = chunks.join("");
-
-      evidence.result = {
-        durationMs: Date.now() - startedAtMs,
-        chunkCount: chunks.length,
-        chunks,
-        completion,
-        completionLength: completion.trim().length,
-      };
-
-      if (!completion.trim()) {
-        throw new Error(
-          "Smoke request completed but returned an empty completion.",
-        );
-      }
-    } else {
-      const provider = new SweepNextEditProvider();
-      const nextEditContext = buildNextEditSmokeContext(options.model);
-      const prompts = await provider.generatePrompts(nextEditContext);
-      const promptMetadata = provider.buildPromptMetadata(nextEditContext);
-      const editableRegion = provider.calculateEditableRegion(
-        nextEditContext.helper,
-        false,
-      );
-
-      evidence.prompt = {
-        filepath: SAMPLE.filepath,
-        promptRole: promptMetadata.prompt.role,
-        prompt: promptMetadata.prompt.content,
-        promptMessages: prompts,
-        userEdits: promptMetadata.userEdits,
-        userExcerpts: promptMetadata.userExcerpts,
-        editableRegion,
-      };
-
-      const abortController = new AbortController();
-      const startedAtMs = Date.now();
-      const message = await llm.chat(prompts, abortController.signal, {
-        stream: false,
-        model: options.model,
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-      });
-      const rawCompletion =
-        typeof message.content === "string" ? message.content : "";
-      const completion = provider.extractCompletion(rawCompletion);
-
-      evidence.result = {
-        durationMs: Date.now() - startedAtMs,
-        rawCompletion,
-        rawCompletionLength: rawCompletion.trim().length,
-        completion,
-        completionLength: completion.trim().length,
-      };
-
-      if (!completion.trim()) {
-        throw new Error(
-          "Next Edit smoke request completed but returned an empty completion.",
-        );
-      }
-    }
 
     evidence.status = "success";
     evidence.finishedAt = new Date().toISOString();

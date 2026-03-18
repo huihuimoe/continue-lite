@@ -8,8 +8,15 @@ let lastQuickPick: any;
 let quickPickAcceptCallback: AcceptCallback | undefined;
 let configValues: Record<string, any> = {};
 let configUpdate = vi.fn<ConfigUpdateCallback>().mockResolvedValue(undefined);
+let jumpManagerInstance: any;
 
 vi.mock("vscode", () => ({
+  Position: class {
+    constructor(
+      public line: number,
+      public character: number,
+    ) {}
+  },
   commands: {
     registerCommand: vi.fn(
       (command: string, callback: (...args: any[]) => unknown) => {
@@ -35,6 +42,11 @@ vi.mock("vscode", () => ({
       return quickPick;
     }),
     showInformationMessage: vi.fn(),
+    activeTextEditor: {
+      selection: {
+        active: { line: 3, character: 2 },
+      },
+    },
   },
   workspace: {
     getConfiguration: vi.fn(() => ({
@@ -51,6 +63,12 @@ vi.mock("vscode", () => ({
   },
   StatusBarAlignment: {
     Right: 1,
+  },
+}));
+
+vi.mock("./activation/JumpManager", () => ({
+  JumpManager: {
+    getInstance: () => jumpManagerInstance,
   },
 }));
 
@@ -76,6 +94,9 @@ describe("commands", () => {
     quickPickAcceptCallback = undefined;
     configValues = {};
     configUpdate = vi.fn<ConfigUpdateCallback>().mockResolvedValue(undefined);
+    jumpManagerInstance = {
+      suggestJump: vi.fn().mockResolvedValue(true),
+    };
   });
 
   it("builds the status bar menu with retained quick pick options and toggles Next Edit", async () => {
@@ -138,5 +159,54 @@ describe("commands", () => {
       "Please enable tab autocomplete first to use Next Edit",
     );
     expect(configUpdate).not.toHaveBeenCalled();
+  });
+
+  it("suggests a jump after accepting a next edit with remote jump metadata", async () => {
+    const context = { subscriptions: [] as Array<{ dispose: () => void }> };
+    const battery = createBattery(true);
+    const configHandler = createConfigHandler();
+    const nextEditLoggingService = {
+      accept: vi.fn().mockReturnValue({
+        nextJumpPosition: { line: 12, character: 0 },
+        nextJumpContent: "const remote = 42;",
+      }),
+    };
+
+    registerAllCommands(context as any, battery as any, configHandler as any);
+    await registeredCommands["continue.logNextEditOutcomeAccept"](
+      "completion-id",
+      nextEditLoggingService,
+    );
+
+    expect(nextEditLoggingService.accept).toHaveBeenCalledWith("completion-id");
+    expect(jumpManagerInstance.suggestJump).toHaveBeenCalledWith(
+      { line: 3, character: 2 },
+      expect.objectContaining({ line: 12, character: 0 }),
+      "const remote = 42;",
+    );
+  });
+
+  it("still suggests a jump when the next hunk is deletion-only", async () => {
+    const context = { subscriptions: [] as Array<{ dispose: () => void }> };
+    const battery = createBattery(true);
+    const configHandler = createConfigHandler();
+    const nextEditLoggingService = {
+      accept: vi.fn().mockReturnValue({
+        nextJumpPosition: { line: 12, character: 0 },
+        nextJumpContent: "",
+      }),
+    };
+
+    registerAllCommands(context as any, battery as any, configHandler as any);
+    await registeredCommands["continue.logNextEditOutcomeAccept"](
+      "completion-id",
+      nextEditLoggingService,
+    );
+
+    expect(jumpManagerInstance.suggestJump).toHaveBeenCalledWith(
+      { line: 3, character: 2 },
+      expect.objectContaining({ line: 12, character: 0 }),
+      "",
+    );
   });
 });

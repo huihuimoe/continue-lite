@@ -48,6 +48,64 @@ export class VsCodeExtension {
   private readonly battery: Battery;
   private readonly completionProvider: ContinueCompletionProvider;
   private readonly ARBITRARY_TYPING_DELAY = 2000;
+  private lastWarnedAutocompleteFimModel: string | undefined;
+
+  private async maybeWarnAboutAutocompleteFimSupport(
+    autocompleteModel:
+      | {
+          model?: string;
+          title?: string;
+          providerName?: string;
+          underlyingProviderName?: string;
+          supportsFim?: () => boolean;
+        }
+      | undefined,
+  ): Promise<void> {
+    if (!autocompleteModel) {
+      this.lastWarnedAutocompleteFimModel = undefined;
+      return;
+    }
+
+    const providerName =
+      autocompleteModel.providerName ??
+      autocompleteModel.underlyingProviderName;
+    const modelIdentifier = autocompleteModel.model ?? autocompleteModel.title;
+    const isSweepModel = Boolean(
+      autocompleteModel.model?.includes(NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT) ||
+      autocompleteModel.title
+        ?.toLowerCase()
+        .includes(NEXT_EDIT_MODELS.SWEEP_NEXT_EDIT),
+    );
+
+    if (
+      providerName !== "ollama" ||
+      !isSweepModel ||
+      autocompleteModel.supportsFim?.() !== false
+    ) {
+      this.lastWarnedAutocompleteFimModel = undefined;
+      return;
+    }
+
+    if (
+      !modelIdentifier ||
+      this.lastWarnedAutocompleteFimModel === modelIdentifier
+    ) {
+      return;
+    }
+
+    this.lastWarnedAutocompleteFimModel = modelIdentifier;
+
+    const selection = await vscode.window.showWarningMessage(
+      `The current Sweep/Ollama autocomplete model (${autocompleteModel.title || autocompleteModel.model || "unknown"}) does not advertise .Suffix support in its Ollama template. Autocomplete will fall back to a raw prompt instead of true FIM infill.`,
+      "Open config menu",
+    );
+
+    if (selection === "Open config menu") {
+      await vscode.commands.executeCommand(
+        "continue.openTabAutocompleteConfigMenu",
+      );
+    }
+  }
 
   private registerCoreRequestHandlers(
     messenger: InProcessMessenger<ToCoreProtocol, FromCoreProtocol>,
@@ -105,6 +163,10 @@ export class VsCodeExtension {
         autocompleteModel.model,
         autocompleteModel.title,
       );
+
+    void this.maybeWarnAboutAutocompleteFimSupport(
+      autocompleteModel ?? undefined,
+    );
 
     let nextEditEnabled = vscodeConfig.get<boolean>("enableNextEdit");
     if (nextEditEnabled === undefined) {
@@ -240,19 +302,15 @@ export class VsCodeExtension {
       },
     );
 
-    fs.watchFile(
-      getConfigYamlPath("vscode"),
-      { interval: 1000 },
-      async (stats) => {
-        if (stats.size === 0) {
-          return;
-        }
+    fs.watchFile(getConfigYamlPath(), { interval: 1000 }, async (stats) => {
+      if (stats.size === 0) {
+        return;
+      }
 
-        await this.configHandler.reloadConfig(
-          "Global YAML config updated - fs file watch",
-        );
-      },
-    );
+      await this.configHandler.reloadConfig(
+        "Global YAML config updated - fs file watch",
+      );
+    });
 
     const globalRulesDir = path.join(getContinueGlobalPath(), "rules");
     if (fs.existsSync(globalRulesDir)) {

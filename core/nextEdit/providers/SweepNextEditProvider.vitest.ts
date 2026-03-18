@@ -82,6 +82,19 @@ function buildContext(overrides?: {
 }
 
 describe("SweepNextEditProvider", () => {
+  it("requests raw completion with sweep stop tokens", () => {
+    const provider = new SweepNextEditProvider();
+
+    expect(provider.getInferenceOptions()).toEqual({
+      mode: "complete",
+      completionOptions: {
+        raw: true,
+        stop: ["<|file_sep|>", "</s>"],
+        temperature: 0,
+      },
+    });
+  });
+
   it("builds prompt metadata with repeated file blocks and rewrite triplets", () => {
     const provider = new SweepNextEditProvider();
     const metadata = provider.buildPromptMetadata(buildContext());

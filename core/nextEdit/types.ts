@@ -68,6 +68,8 @@ export interface NextEditOutcome extends TabAutocompleteOptions {
   editableRegionStartLine: number;
   editableRegionEndLine: number;
   diffLines: DiffLine[];
+  nextJumpPosition?: Position;
+  nextJumpContent?: string;
   profileType?: "local" | "platform" | "control-plane";
 }
 

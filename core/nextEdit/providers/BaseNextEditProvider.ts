@@ -2,7 +2,13 @@ import * as path from "path";
 
 import { HelperVars } from "../../autocomplete/util/HelperVars.js";
 import { myersDiff } from "../../diff/myers.js";
-import type { DiffLine, IDE, ILLM, Position } from "../../index.js";
+import type {
+  CompletionOptions,
+  DiffLine,
+  IDE,
+  ILLM,
+  Position,
+} from "../../index.js";
 import { countTokens } from "../../llm/countTokens.js";
 import {
   calculateFinalCursorPosition,
@@ -43,6 +49,15 @@ export abstract class BaseNextEditModelProvider {
     editableRegionStartLine: number;
     editableRegionEndLine: number;
   };
+
+  getInferenceOptions(): {
+    mode: "chat" | "complete";
+    completionOptions?: Partial<CompletionOptions>;
+  } {
+    return {
+      mode: "chat",
+    };
+  }
 
   // Methods that can be used as default fallback.
   public async handlePartialFileDiff(params: {
@@ -138,7 +153,7 @@ export abstract class BaseNextEditModelProvider {
     );
 
     if (cursorLocalDiffGroup) {
-      return await this.createOutcomeFromDiffGroup({
+      const outcome = await this.createOutcomeFromDiffGroup({
         diffGroup: cursorLocalDiffGroup,
         helper,
         startTime,
@@ -149,6 +164,30 @@ export abstract class BaseNextEditModelProvider {
         ide,
         profileType,
       });
+
+      const nearestJumpGroup = this.findNearestNonCursorDiffGroup(
+        diffGroups,
+        cursorLocalDiffGroup,
+      );
+
+      if (nearestJumpGroup) {
+        const rebasedJumpLine = this.rebaseJumpLineToPostAcceptancePosition(
+          nearestJumpGroup,
+          cursorLocalDiffGroup,
+          helper.fileLines.length,
+        );
+
+        outcome.nextJumpPosition = {
+          line: rebasedJumpLine,
+          character: 0,
+        };
+        outcome.nextJumpContent = nearestJumpGroup.lines
+          .filter((line) => line.type !== "old")
+          .map((line) => line.line)
+          .join("\n");
+      }
+
+      return outcome;
     }
 
     return undefined;
@@ -164,6 +203,57 @@ export abstract class BaseNextEditModelProvider {
     return diffGroups.find(
       (group) => currentLine >= group.startLine && currentLine <= group.endLine,
     );
+  }
+
+  private findNearestNonCursorDiffGroup(
+    diffGroups: DiffGroup[],
+    cursorLocalDiffGroup: DiffGroup,
+  ): DiffGroup | undefined {
+    return diffGroups
+      .filter((group) => group !== cursorLocalDiffGroup)
+      .sort((a, b) => {
+        const aDistance = Math.abs(
+          a.startLine - cursorLocalDiffGroup.startLine,
+        );
+        const bDistance = Math.abs(
+          b.startLine - cursorLocalDiffGroup.startLine,
+        );
+
+        return aDistance - bDistance;
+      })[0];
+  }
+
+  private rebaseJumpLineToPostAcceptancePosition(
+    nearestJumpGroup: DiffGroup,
+    cursorLocalDiffGroup: DiffGroup,
+    originalFileLineCount: number,
+  ): number {
+    const acceptedGroupNetLineDelta =
+      this.getNetLineDelta(cursorLocalDiffGroup);
+    const shouldRebase =
+      nearestJumpGroup.startLine > cursorLocalDiffGroup.endLine;
+
+    const rebasedLine = shouldRebase
+      ? nearestJumpGroup.startLine + acceptedGroupNetLineDelta
+      : nearestJumpGroup.startLine;
+
+    const postAcceptanceLineCount = Math.max(
+      originalFileLineCount + acceptedGroupNetLineDelta,
+      1,
+    );
+
+    return Math.min(Math.max(rebasedLine, 0), postAcceptanceLineCount - 1);
+  }
+
+  private getNetLineDelta(diffGroup: DiffGroup): number {
+    const oldLineCount = diffGroup.lines.filter(
+      (line) => line.type !== "new",
+    ).length;
+    const newLineCount = diffGroup.lines.filter(
+      (line) => line.type !== "old",
+    ).length;
+
+    return newLineCount - oldLineCount;
   }
 
   private async createOutcomeFromDiffGroup(params: {

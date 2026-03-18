@@ -424,6 +424,18 @@ export class NextEditWindowManager {
 
     const diffChars = myersCharDiff(oldEditRangeSlice, newEditRangeSlice);
 
+    // Reserve tab and esc before rendering so the keybinding is active as soon as
+    // the suggestion becomes visible.
+    try {
+      await NextEditWindowManager.reserveTabAndEsc();
+    } catch (err) {
+      console.error(
+        `Error reserving Tab/Esc before showing decorations: ${err}`,
+      );
+      await this.hideAllNextEditWindows();
+      return;
+    }
+
     // Create and apply decoration with the text.
     if (newEditRangeSlice !== "") {
       try {
@@ -445,17 +457,6 @@ export class NextEditWindowManager {
     }
 
     this.renderDeletions(editor, diffChars);
-
-    // Reserve tab and esc to either accept or reject the displayed next edit contents.
-    try {
-      await NextEditWindowManager.reserveTabAndEsc();
-    } catch (err) {
-      console.error(
-        `Error reserving Tab/Esc after showing decorations: ${err}`,
-      );
-      await this.hideAllNextEditWindows();
-      return;
-    }
   }
 
   /**

@@ -144,7 +144,7 @@ export class Core {
     }
   }
 
-  /* eslint-disable max-lines-per-function */
+   
   private registerMessageHandlers(_ideSettingsPromise: Promise<IdeSettings>) {
     const on = this.messenger.on.bind(this.messenger);
 

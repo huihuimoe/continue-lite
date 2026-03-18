@@ -1,8 +1,9 @@
-import { IDE, Position } from "../..";
+import { IDE, ILLM, Position } from "../..";
 import { AutocompleteCodeSnippet } from "../../autocomplete/snippets/types";
 import { GetLspDefinitionsFunction } from "../../autocomplete/types";
 import { ConfigHandler } from "../../config/ConfigHandler";
 import { DataLogger } from "../../data/log";
+import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../util/parameters";
 import { NextEditProvider } from "../NextEditProvider";
 import { RecentlyEditedRange } from "../types";
 import { getAutocompleteContext } from "./autocompleteContextFetching";
@@ -13,12 +14,6 @@ import {
   prevEditLruCache,
   setPrevEdit,
 } from "./prevEditLruCache";
-
-const randomNumberBetween = (min: number, max: number) => {
-  min = Math.ceil(min); // Ensure min is an integer
-  max = Math.floor(max); // Ensure max is an integer
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
 
 interface ProcessNextEditDataParams {
   filePath: string;
@@ -32,12 +27,64 @@ interface ProcessNextEditDataParams {
   recentlyEditedRanges: RecentlyEditedRange[];
   recentlyVisitedRanges: AutocompleteCodeSnippet[];
   workspaceDir: string;
-  modelNameOrInstance?: string | undefined;
+  modelNameOrInstance?: string | ILLM | undefined;
 }
 
 interface filenameAndDiff {
   filename: string;
   diff: string;
+}
+
+function resolveAutocompleteModelMetadata(
+  configuredModels: ILLM[],
+  modelNameOrInstance: string | ILLM | undefined,
+  selectedAutocompleteModel: ILLM | undefined,
+): {
+  autocompleteModel?: string | ILLM;
+  modelName: string;
+  modelProvider: string;
+  modelTitle: string;
+  maxPromptTokens: number;
+} {
+  let autocompleteModel: string | ILLM | undefined =
+    modelNameOrInstance ?? selectedAutocompleteModel;
+
+  if (typeof autocompleteModel === "string") {
+    autocompleteModel =
+      configuredModels.find(
+        (model) =>
+          model.title === autocompleteModel ||
+          model.model === autocompleteModel,
+      ) ?? autocompleteModel;
+  }
+
+  const resolvedModel =
+    typeof autocompleteModel === "string"
+      ? configuredModels.find(
+          (model) =>
+            model.title === autocompleteModel ||
+            model.model === autocompleteModel,
+        )
+      : autocompleteModel;
+
+  return {
+    autocompleteModel,
+    modelName:
+      typeof autocompleteModel === "string"
+        ? (resolvedModel?.model ?? autocompleteModel)
+        : (autocompleteModel?.model ?? "unknown"),
+    modelProvider:
+      resolvedModel?.providerName ??
+      resolvedModel?.underlyingProviderName ??
+      "unknown",
+    modelTitle:
+      typeof autocompleteModel === "string"
+        ? (resolvedModel?.title ?? autocompleteModel)
+        : (autocompleteModel?.title ?? autocompleteModel?.model ?? "unknown"),
+    maxPromptTokens:
+      resolvedModel?.autocompleteOptions?.maxPromptTokens ??
+      DEFAULT_AUTOCOMPLETE_OPTS.maxPromptTokens,
+  };
 }
 
 export const processNextEditData = async ({
@@ -54,15 +101,24 @@ export const processNextEditData = async ({
   workspaceDir,
   modelNameOrInstance,
 }: ProcessNextEditDataParams) => {
-  // To switch to the user's autocomplete model, uncomment the following lines
-  // const { config } = await configHandler.loadConfig();
-  // const autocompleteModel =
-  //   (modelNameOrInstance || config?.selectedModelByRole.autocomplete) ??
-  //   undefined;
+  const { config } = await configHandler.loadConfig();
+  const configuredAutocompleteModels = (config?.modelsByRole.autocomplete ??
+    []) as ILLM[];
+  const selectedAutocompleteModel = config?.selectedModelByRole.autocomplete as
+    | ILLM
+    | undefined;
 
-  const modelName = "Codestral";
-  const modelProvider = "mistral";
-  const maxPromptTokens = randomNumberBetween(500, 12000);
+  const {
+    autocompleteModel,
+    modelName,
+    modelProvider,
+    modelTitle,
+    maxPromptTokens,
+  } = resolveAutocompleteModelMetadata(
+    configuredAutocompleteModels,
+    modelNameOrInstance,
+    selectedAutocompleteModel,
+  );
 
   const autocompleteContext = await getAutocompleteContext(
     filePath,
@@ -74,7 +130,7 @@ export const processNextEditData = async ({
     recentlyVisitedRanges,
     maxPromptTokens,
     beforeContent,
-    modelName,
+    autocompleteModel,
   );
 
   NextEditProvider.getInstance().addAutocompleteContext(autocompleteContext);
@@ -127,7 +183,7 @@ export const processNextEditData = async ({
         context: autocompleteContext,
         modelProvider,
         modelName,
-        modelTitle: modelName,
+        modelTitle,
       },
     });
   }

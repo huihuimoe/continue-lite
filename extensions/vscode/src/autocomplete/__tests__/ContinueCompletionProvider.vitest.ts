@@ -94,7 +94,7 @@ describe("ContinueCompletionProvider triggering logic", () => {
     expect(mockNextEditProvider.deleteChain).not.toHaveBeenCalled();
   });
 
-  it("rebuilds a full-file-diff chain when stale chain state exists", async () => {
+  it("keeps the existing chain alive when requesting the next next-edit suggestion", async () => {
     const document = createDocument();
     setActiveEditor(document);
 
@@ -109,14 +109,14 @@ describe("ContinueCompletionProvider triggering logic", () => {
       createToken(),
     );
 
-    expect(mockNextEditProvider.deleteChain).toHaveBeenCalledTimes(1);
-    expect(mockNextEditProvider.startChain).toHaveBeenCalledTimes(1);
+    expect(mockNextEditProvider.deleteChain).not.toHaveBeenCalled();
+    expect(mockNextEditProvider.startChain).not.toHaveBeenCalled();
     expect(
       mockNextEditProvider.provideInlineCompletionItems,
     ).toHaveBeenCalledTimes(1);
   });
 
-  it("returns null after rebuilding a stale full-file-diff chain when no outcome is available", async () => {
+  it("returns null without tearing down the chain when the follow-up next-edit suggestion is empty", async () => {
     const document = createDocument();
     setActiveEditor(document);
 
@@ -135,14 +135,14 @@ describe("ContinueCompletionProvider triggering logic", () => {
     );
 
     expect(result).toBeNull();
-    expect(mockNextEditProvider.deleteChain).toHaveBeenCalledTimes(1);
-    expect(mockNextEditProvider.startChain).toHaveBeenCalledTimes(1);
+    expect(mockNextEditProvider.deleteChain).not.toHaveBeenCalled();
+    expect(mockNextEditProvider.startChain).not.toHaveBeenCalled();
     expect(
       mockNextEditProvider.provideInlineCompletionItems,
     ).toHaveBeenCalledTimes(1);
   });
 
-  it("rebuilds the chain when a jump resumes without reading saved completion state", async () => {
+  it("preserves the chain when a jump resumes without reading saved completion state", async () => {
     const document = createDocument();
     setActiveEditor(document);
 
@@ -165,8 +165,8 @@ describe("ContinueCompletionProvider triggering logic", () => {
     );
 
     expect(mockJumpManager.setJumpInProgress).toHaveBeenCalledWith(false);
-    expect(mockNextEditProvider.deleteChain).toHaveBeenCalledTimes(1);
-    expect(mockNextEditProvider.startChain).toHaveBeenCalledTimes(1);
+    expect(mockNextEditProvider.deleteChain).not.toHaveBeenCalled();
+    expect(mockNextEditProvider.startChain).not.toHaveBeenCalled();
     expect(
       mockNextEditProvider.provideInlineCompletionItems,
     ).toHaveBeenCalledTimes(1);
