@@ -171,8 +171,14 @@ export abstract class BaseNextEditModelProvider {
       );
 
       if (nearestJumpGroup) {
+        const rebasedJumpLine = this.rebaseJumpLineToPostAcceptancePosition(
+          nearestJumpGroup,
+          cursorLocalDiffGroup,
+          helper.fileLines.length,
+        );
+
         outcome.nextJumpPosition = {
-          line: nearestJumpGroup.startLine,
+          line: rebasedJumpLine,
           character: 0,
         };
         outcome.nextJumpContent = nearestJumpGroup.lines
@@ -215,6 +221,39 @@ export abstract class BaseNextEditModelProvider {
 
         return aDistance - bDistance;
       })[0];
+  }
+
+  private rebaseJumpLineToPostAcceptancePosition(
+    nearestJumpGroup: DiffGroup,
+    cursorLocalDiffGroup: DiffGroup,
+    originalFileLineCount: number,
+  ): number {
+    const acceptedGroupNetLineDelta =
+      this.getNetLineDelta(cursorLocalDiffGroup);
+    const shouldRebase =
+      nearestJumpGroup.startLine > cursorLocalDiffGroup.endLine;
+
+    const rebasedLine = shouldRebase
+      ? nearestJumpGroup.startLine + acceptedGroupNetLineDelta
+      : nearestJumpGroup.startLine;
+
+    const postAcceptanceLineCount = Math.max(
+      originalFileLineCount + acceptedGroupNetLineDelta,
+      1,
+    );
+
+    return Math.min(Math.max(rebasedLine, 0), postAcceptanceLineCount - 1);
+  }
+
+  private getNetLineDelta(diffGroup: DiffGroup): number {
+    const oldLineCount = diffGroup.lines.filter(
+      (line) => line.type !== "new",
+    ).length;
+    const newLineCount = diffGroup.lines.filter(
+      (line) => line.type !== "old",
+    ).length;
+
+    return newLineCount - oldLineCount;
   }
 
   private async createOutcomeFromDiffGroup(params: {
