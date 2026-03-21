@@ -18,13 +18,13 @@ import HuggingFaceTEIEmbeddingsProvider from "./HuggingFaceTEI";
 import HuggingFaceTGI from "./HuggingFaceTGI";
 import Inception from "./Inception";
 import Kindo from "./Kindo";
+import Lemonade from "./Lemonade";
 import LlamaCpp from "./LlamaCpp";
 import Llamafile from "./Llamafile";
 import LlamaStack from "./LlamaStack";
-import Lemonade from "./Lemonade";
 import LMStudio from "./LMStudio";
-import Mistral from "./Mistral";
 import Mimo from "./Mimo";
+import Mistral from "./Mistral";
 import MockLLM from "./Mock";
 import Moonshot from "./Moonshot";
 import Msty from "./Msty";
@@ -43,6 +43,7 @@ import SambaNova from "./SambaNova";
 import Scaleway from "./Scaleway";
 import SiliconFlow from "./SiliconFlow";
 import TARS from "./TARS";
+import Tensorix from "./Tensorix";
 import TestLLM from "./Test";
 import TextGenWebUI from "./TextGenWebUI";
 import Together from "./Together";
@@ -102,6 +103,7 @@ export const LLMClasses = [
   VertexAI,
   xAI,
   SiliconFlow,
+  Tensorix,
   Scaleway,
   Relace,
   Inception,

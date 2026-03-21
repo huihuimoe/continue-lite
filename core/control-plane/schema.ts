@@ -17,6 +17,7 @@ const modelDescriptionSchema = z.object({
     "ovhcloud",
     "nebius",
     "siliconflow",
+    "tensorix",
     "scaleway",
     "watsonx",
   ]),
