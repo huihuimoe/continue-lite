@@ -70,7 +70,6 @@ export interface NextEditOutcome extends TabAutocompleteOptions {
   diffLines: DiffLine[];
   nextJumpPosition?: Position;
   nextJumpContent?: string;
-  profileType?: "local" | "platform" | "control-plane";
 }
 
 export interface PromptMetadata {

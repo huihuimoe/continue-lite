@@ -9,7 +9,6 @@ import {
   vi,
 } from "vitest";
 import { IDE } from "../..";
-import { ControlPlaneClient } from "../../control-plane/client";
 import { LocalPlatformClient } from "./LocalPlatformClient";
 
 vi.mock("../../util/paths", { spy: true });
@@ -34,23 +33,11 @@ describe("LocalPlatformClient", () => {
     secretName: "TEST_WORKSPACE_SECRET_KEY",
   };
 
-  const testResolvedFQSN: SecretResult = {
-    found: true,
-    fqsn: testFQSN,
-    secretLocation: {
-      secretName: testFQSN.secretName,
-      secretType: SecretType.Organization,
-      orgSlug: "test-org-slug",
-    },
-  };
-
-  let testControlPlaneClient: ControlPlaneClient;
   let testIde: IDE;
   beforeEach(
     /**dynamic import before each test for test isolation */
     async () => {
       const testFixtures = await import("../../test/fixtures");
-      testControlPlaneClient = testFixtures.testControlPlaneClient;
       testIde = testFixtures.testIde;
     },
   );
@@ -79,28 +66,11 @@ describe("LocalPlatformClient", () => {
   });
 
   test("should not be able to resolve FQSNs if they do not exist", async () => {
-    const localPlatformClient = new LocalPlatformClient(
-      null,
-      testControlPlaneClient,
-      testIde,
-    );
+    const localPlatformClient = new LocalPlatformClient(testIde);
     const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
 
     expect(resolvedFQSNs.length).toBeGreaterThan(0);
-    expect(resolvedFQSNs[0]?.found).toBe(false);
-  });
-
-  test("should be able to resolve FQSNs if they exist", async () => {
-    testControlPlaneClient.resolveFQSNs = vi.fn(async () => [testResolvedFQSN]);
-    const localPlatformClient = new LocalPlatformClient(
-      null,
-      testControlPlaneClient,
-      testIde,
-    );
-    const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
-    expect(testControlPlaneClient.resolveFQSNs).toHaveBeenCalled();
-    expect(resolvedFQSNs).toEqual([testResolvedFQSN]);
-    expect(resolvedFQSNs[0]?.found).toBe(true);
+    expect(resolvedFQSNs[0]?.found).toBeUndefined();
   });
 
   describe("searches for secrets in local .env files", () => {
@@ -112,11 +82,7 @@ describe("LocalPlatformClient", () => {
     });
 
     test("should be able to get secrets from ~/.continue/.env files", async () => {
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
       expect(getContinueDotEnv).toHaveBeenCalled();
       expect(resolvedFQSNs.length).toBe(1);
@@ -162,11 +128,7 @@ describe("LocalPlatformClient", () => {
         return originalIdeReadFile(fileUri);
       });
 
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([
         testFQSN,
         testFQSN2,
@@ -216,11 +178,7 @@ describe("LocalPlatformClient", () => {
         return originalIdeReadFile(fileUri);
       });
 
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
 
       expect(resolvedFQSNs.length).toBe(1);
@@ -241,20 +199,6 @@ describe("LocalPlatformClient", () => {
     const ogProcessEnv = { ...process.env };
 
     beforeEach(async () => {
-      // Ensure secrets are not found in ControlPlane initially for these tests
-      const mockResolveFQSNsNotFound = async (
-        fqsns: FQSN[],
-      ): Promise<(SecretResult | undefined)[]> =>
-        fqsns.map((fqsn) => ({
-          found: false,
-          fqsn,
-          secretLocation: {
-            secretName: fqsn.secretName,
-            secretType: SecretType.NotFound as SecretType.NotFound,
-          },
-        }));
-      testControlPlaneClient.resolveFQSNs = vi.fn(mockResolveFQSNsNotFound);
-
       // Ensure secrets are not found in local .env files
       const utilPaths = await import("../../util/paths");
       utilPaths.getContinueDotEnv = vi.fn(() => ({}));
@@ -277,11 +221,7 @@ describe("LocalPlatformClient", () => {
       const processEnvSecretValue = "secret-from-process-env";
       process.env[testFQSN.secretName] = processEnvSecretValue;
 
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
 
       expect(resolvedFQSNs.length).toBe(1);
@@ -304,58 +244,11 @@ describe("LocalPlatformClient", () => {
       // Ensure it's not in process.env
       expect(process.env[testFQSN.secretName]).toBeUndefined();
 
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
 
       expect(resolvedFQSNs.length).toBe(1);
-      expect(resolvedFQSNs[0]?.found).toBe(false);
-      expect(resolvedFQSNs[0]?.secretLocation?.secretType).toBe(
-        SecretType.NotFound,
-      );
-    });
-
-    test("should prioritize ControlPlane over process.env", async () => {
-      const controlPlaneValue = "secret-from-control-plane";
-
-      const mockResolveFQSNsControlPlaneFound = async (): Promise<
-        (SecretResult | undefined)[]
-      > => [
-        {
-          found: true,
-          fqsn: testFQSN,
-          value: controlPlaneValue,
-          secretLocation: {
-            secretType: SecretType.Organization as SecretType.Organization,
-            orgSlug: (testResolvedFQSN.secretLocation as any).orgSlug,
-            secretName: testFQSN.secretName,
-          },
-        },
-      ];
-      testControlPlaneClient.resolveFQSNs = vi.fn(
-        mockResolveFQSNsControlPlaneFound,
-      );
-
-      process.env[testFQSN.secretName] =
-        "secret-from-process-env-should-be-ignored";
-
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
-      const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
-
-      expect(resolvedFQSNs.length).toBe(1);
-      const result = resolvedFQSNs[0];
-      expect(result?.found).toBe(true);
-      expect((result as SecretResult & { value: unknown })?.value).toBe(
-        controlPlaneValue,
-      );
-      expect(result?.secretLocation?.secretType).toBe(SecretType.Organization);
+      expect(resolvedFQSNs[0]).toBeUndefined();
     });
 
     test("should prioritize local ~/.continue/.env file over process.env", async () => {
@@ -368,11 +261,7 @@ describe("LocalPlatformClient", () => {
       process.env[testFQSN.secretName] =
         "secret-from-process-env-should-be-ignored";
 
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
 
       expect(resolvedFQSNs.length).toBe(1);
@@ -400,11 +289,7 @@ describe("LocalPlatformClient", () => {
       process.env[testFQSN.secretName] =
         "secret-from-process-env-should-be-ignored";
 
-      const localPlatformClient = new LocalPlatformClient(
-        null,
-        testControlPlaneClient,
-        testIde,
-      );
+      const localPlatformClient = new LocalPlatformClient(testIde);
       const resolvedFQSNs = await localPlatformClient.resolveFQSNs([testFQSN]);
 
       expect(resolvedFQSNs.length).toBe(1);

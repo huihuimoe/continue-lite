@@ -11,8 +11,6 @@ import {
   ILLMLogger,
   SerializedContinueConfig,
 } from "../../";
-import { ControlPlaneClient } from "../../control-plane/client.js";
-import { PolicySingleton } from "../../control-plane/PolicySingleton";
 import { getConfigYamlPath } from "../../util/paths";
 import { TTS } from "../../util/tts";
 import { getWorkspaceContinueRuleDotFiles } from "../getWorkspaceContinueRuleDotFiles";
@@ -45,27 +43,22 @@ async function loadRules(ide: IDE) {
 
 export default async function doLoadConfig(options: {
   ide: IDE;
-  controlPlaneClient: ControlPlaneClient;
   llmLogger: ILLMLogger;
   overrideConfigJson?: SerializedContinueConfig;
   overrideConfigYaml?: AssistantUnrolled;
   profileId: string;
   overrideConfigYamlByPath?: string;
-  orgScopeId: string | null;
   packageIdentifier: PackageIdentifier;
 }): Promise<ConfigResult<ContinueConfig>> {
   const {
     ide,
-    controlPlaneClient,
     llmLogger,
     overrideConfigYaml,
     profileId,
     overrideConfigYamlByPath,
-    orgScopeId,
     packageIdentifier,
   } = options;
 
-  const ideInfo = await ide.getIdeInfo();
   const uniqueId = await ide.getUniqueId();
   const ideSettings = await ide.getIdeSettings();
 
@@ -88,8 +81,6 @@ export default async function doLoadConfig(options: {
     uniqueId,
     llmLogger,
     overrideConfigYaml,
-    controlPlaneClient,
-    orgScopeId,
     packageIdentifier: yamlPackageIdentifier,
   });
   newConfig = result.config;

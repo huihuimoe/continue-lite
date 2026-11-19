@@ -19,6 +19,7 @@ import {
   GeminiChatRequestBody,
   GeminiChatResponse,
   GeminiGenerationConfig,
+  mergeConsecutiveGeminiMessages,
 } from "./gemini-types";
 
 interface GeminiToolCallDelta extends ToolCallDelta {
@@ -33,7 +34,7 @@ class Gemini extends BaseLLM {
   static providerName = "gemini";
 
   static defaultOptions: Partial<LLMOptions> = {
-    model: "gemini-pro",
+    model: "gemini-2.5-flash",
     apiBase: "https://generativelanguage.googleapis.com/v1beta/",
     maxStopWords: 5,
   };
@@ -320,6 +321,8 @@ class Gemini extends BaseLLM {
           };
         }),
     };
+
+    body.contents = mergeConsecutiveGeminiMessages(body.contents);
     if (options) {
       body.generationConfig = this.convertArgs(options);
     }

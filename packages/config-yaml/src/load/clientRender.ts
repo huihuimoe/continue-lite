@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { PlatformClient, SecretStore } from "../interfaces/index.js";
 import { encodeSecretLocation } from "../interfaces/SecretResult.js";
 import {
@@ -18,8 +17,6 @@ export async function renderSecrets(
   packageIdentifier: PackageIdentifier,
   unrolledConfigContent: string,
   clientSecretStore: SecretStore,
-  orgScopeId: string | null, // The "scope" that the user is logged in with
-  onPremProxyUrl: string | null,
   platformClient?: PlatformClient,
 ): Promise<AssistantUnrolled> {
   // 1. First we need to get a list of all the FQSNs that are required to render the config
@@ -65,14 +62,7 @@ export async function renderSecrets(
   // 6. The rendered YAML is parsed and validated again
   const parsedYaml = parseAssistantUnrolled(renderedYaml);
 
-  // 7. We update any of the items with the proxy version if there are un-rendered secrets
-  const finalConfig = useProxyForUnrenderedSecrets(
-    parsedYaml,
-    packageIdentifier,
-    orgScopeId,
-    onPremProxyUrl,
-  );
-  return finalConfig;
+  return parsedYaml;
 }
 
 export function packageIdentifierToShorthandSlug(
@@ -84,13 +74,4 @@ export function packageIdentifierToShorthandSlug(
     case "file":
       return "/";
   }
-}
-
-export function useProxyForUnrenderedSecrets(
-  config: AssistantUnrolled,
-  _packageIdentifier: PackageIdentifier,
-  _orgScopeId: string | null,
-  _onPremProxyUrl: string | null,
-): AssistantUnrolled {
-  return config;
 }

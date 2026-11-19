@@ -1,4 +1,4 @@
-function parseDataUrl(dataUrl: string):
+export function parseDataUrl(dataUrl: string):
   | {
       mimeType: string;
       base64Data: string;

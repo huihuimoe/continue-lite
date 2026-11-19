@@ -1,6 +1,7 @@
 import { COUNT_COMPLETION_REJECTED_AFTER } from "../util/parameters";
 
 import { DataLogger } from "../data/log";
+
 import { NextEditOutcome } from "./types";
 
 export class NextEditLoggingService {
@@ -214,13 +215,5 @@ export class NextEditLoggingService {
     });
 
     // const { prompt, completion, prefix, suffix, ...restOfOutcome } = outcome;
-    if (outcome.requestId && outcome.accepted !== undefined) {
-      void this.logAcceptReject(outcome.requestId, outcome.accepted);
-    }
   }
-
-  private async logAcceptReject(
-    requestId: string,
-    accepted: boolean,
-  ): Promise<void> {}
 }

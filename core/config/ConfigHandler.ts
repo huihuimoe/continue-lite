@@ -6,7 +6,6 @@ import {
 
 import EventEmitter from "node:events";
 
-import { ControlPlaneClient } from "../control-plane/client.js";
 import {
   BrowserSerializedContinueConfig,
   ContinueConfig,
@@ -27,7 +26,6 @@ export type { ProfileDescription };
 type ConfigUpdateFunction = (payload: ConfigResult<ContinueConfig>) => void;
 
 export class ConfigHandler {
-  controlPlaneClient: ControlPlaneClient;
   private readonly globalContext = new GlobalContext();
   private profileManager: ProfileLifecycleManager | null;
   totalConfigReloads = 0;
@@ -40,10 +38,6 @@ export class ConfigHandler {
     private llmLogger: ILLMLogger,
     _initialSessionInfoPromise?: Promise<unknown>,
   ) {
-    this.controlPlaneClient = new ControlPlaneClient(
-      Promise.resolve(undefined),
-      this.ide,
-    );
     this.profileManager = this.createLocalProfileManager();
 
     this.initter = new EventEmitter();
@@ -56,7 +50,7 @@ export class ConfigHandler {
 
   private createLocalProfileManager(): ProfileLifecycleManager {
     return new ProfileLifecycleManager(
-      new LocalProfileLoader(this.ide, this.controlPlaneClient, this.llmLogger),
+      new LocalProfileLoader(this.ide, this.llmLogger),
       this.ide,
     );
   }

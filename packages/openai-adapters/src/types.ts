@@ -30,6 +30,7 @@ const BasePlusConfig = BaseConfig.extend({
 
 // OpenAI and compatible
 export const OpenAIConfigSchema = BasePlusConfig.extend({
+  useResponsesApi: z.boolean().optional(),
   provider: z.union([
     z.literal("openai"),
     z.literal("mistral"),
@@ -51,6 +52,7 @@ export const OpenAIConfigSchema = BasePlusConfig.extend({
     z.literal("kindo"),
     z.literal("msty"),
     z.literal("openrouter"),
+    z.literal("clawrouter"),
     z.literal("sambanova"),
     z.literal("text-gen-webui"),
     z.literal("vllm"),
@@ -75,12 +77,17 @@ const DeepseekConfigSchema = OpenAIConfigSchema.extend({
 });
 export type DeepseekConfig = z.infer<typeof DeepseekConfigSchema>;
 
-const LlamastackConfigSchema = OpenAIConfigSchema.extend({
+export const MiniMaxConfigSchema = OpenAIConfigSchema.extend({
+  provider: z.literal("minimax"),
+});
+export type MiniMaxConfig = z.infer<typeof MiniMaxConfigSchema>;
+
+export const LlamastackConfigSchema = OpenAIConfigSchema.extend({
   provider: z.literal("llamastack"),
 });
 export type LlamastackConfig = z.infer<typeof LlamastackConfigSchema>;
 
-const MockConfigSchema = BasePlusConfig.extend({
+export const MockConfigSchema = BasePlusConfig.extend({
   provider: z.literal("mock"),
 });
 
@@ -235,6 +242,7 @@ const LLMConfigSchema = z.discriminatedUnion("provider", [
   OpenAIConfigSchema,
   MoonshotConfigSchema,
   DeepseekConfigSchema,
+  MiniMaxConfigSchema,
   CohereConfigSchema,
   AzureConfigSchema,
   GeminiConfigSchema,

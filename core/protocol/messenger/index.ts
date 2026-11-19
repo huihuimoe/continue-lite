@@ -80,13 +80,11 @@ export class InProcessMessenger<
     try {
       return listener(msg);
     } catch (error) {
-      // Capture message handling errors to Sentry
       Logger.error(error, {
         messageType: String(messageType),
         messageId: msg.messageId,
       });
 
-      // Re-throw the original error
       throw error;
     }
   }
@@ -131,13 +129,11 @@ export class InProcessMessenger<
       });
       return response;
     } catch (error) {
-      // Capture message handling errors to Sentry
       Logger.error(error, {
         messageType: String(messageType),
         messageId,
       });
 
-      // Re-throw the original error
       throw error;
     }
   }
@@ -168,13 +164,11 @@ export class InProcessMessenger<
       });
       return Promise.resolve(response);
     } catch (error) {
-      // Capture message handling errors to Sentry
       Logger.error(error, {
         messageType: String(messageType),
         messageId,
       });
 
-      // Re-throw the original error
       throw error;
     }
   }

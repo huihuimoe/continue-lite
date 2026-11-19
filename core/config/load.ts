@@ -7,7 +7,6 @@ import {
   ILLM,
   ModelDescription,
 } from "..";
-import { useHub } from "../control-plane/env";
 import { serializePromptTemplates } from "./util";
 
 function llmToSerializedModelDescription(llm: ILLM): ModelDescription {
@@ -38,7 +37,7 @@ function llmToSerializedModelDescription(llm: ILLM): ModelDescription {
 
 async function finalToBrowserConfig(
   final: ContinueConfig,
-  ide: IDE,
+  _ide: IDE,
 ): Promise<BrowserSerializedContinueConfig> {
   return {
     completionOptions: final.completionOptions,
@@ -46,7 +45,7 @@ async function finalToBrowserConfig(
     experimental: final.experimental,
     rules: final.rules,
     tabAutocompleteOptions: final.tabAutocompleteOptions,
-    usePlatform: await useHub(ide.getIdeSettings()),
+    usePlatform: false,
     modelsByRole: Object.fromEntries(
       Object.entries(final.modelsByRole).map(([k, v]) => [
         k,

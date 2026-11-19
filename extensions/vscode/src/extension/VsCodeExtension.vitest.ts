@@ -93,7 +93,7 @@ vi.mock("core/config/ConfigHandler", () => ({
   ConfigHandler: class {},
 }));
 
-vi.mock("core/control-plane/env", () => ({
+vi.mock("core/util/constants", () => ({
   EXTENSION_NAME: "continue",
 }));
 

@@ -1,7 +1,7 @@
 import { exec } from "node:child_process";
 
 import type { Range } from "core";
-import { EXTENSION_NAME } from "core/control-plane/env";
+import { EXTENSION_NAME } from "core/util/constants";
 import * as URI from "uri-js";
 import * as vscode from "vscode";
 

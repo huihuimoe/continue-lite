@@ -1,6 +1,6 @@
 import { CompletionProvider } from "core/autocomplete/CompletionProvider";
 import { ConfigHandler } from "core/config/ConfigHandler";
-import { EXTENSION_NAME } from "core/control-plane/env";
+import { EXTENSION_NAME } from "core/util/constants";
 import { NextEditLoggingService } from "core/nextEdit/NextEditLoggingService";
 import * as vscode from "vscode";
 

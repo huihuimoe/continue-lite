@@ -1,4 +1,4 @@
-import { EXTENSION_NAME } from "core/control-plane/env";
+import { EXTENSION_NAME } from "core/util/constants";
 import { findUriInDirs } from "core/util/uri";
 import * as URI from "uri-js";
 import * as vscode from "vscode";

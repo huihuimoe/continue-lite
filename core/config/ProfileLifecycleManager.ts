@@ -17,7 +17,6 @@ import { IProfileLoader } from "./profile/IProfileLoader.js";
 
 export interface ProfileDescription {
   fullSlug: FullSlug;
-  profileType: "control-plane" | "local" | "platform";
   title: string;
   id: string;
   iconUrl: string;

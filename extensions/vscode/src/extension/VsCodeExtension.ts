@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import { ConfigHandler } from "core/config/ConfigHandler";
-import { EXTENSION_NAME } from "core/control-plane/env";
+import { EXTENSION_NAME } from "core/util/constants";
 import { Core } from "core/core";
 import { FromCoreProtocol, ToCoreProtocol } from "core/protocol";
 import { InProcessMessenger } from "core/protocol/messenger";

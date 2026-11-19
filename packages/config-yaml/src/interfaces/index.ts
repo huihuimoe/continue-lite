@@ -73,16 +73,6 @@ function getLocationsToLook(
       userSlug: currentUserSlug,
       secretName,
     },
-    // Free Trial (must be using a eligible block)
-    ...(blockSlug
-      ? [
-          {
-            secretType: SecretType.FreeTrial as const,
-            secretName,
-            blockSlug,
-          },
-        ]
-      : []),
   ];
   return locationsToLook;
 }

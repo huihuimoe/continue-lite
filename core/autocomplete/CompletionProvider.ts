@@ -273,8 +273,6 @@ export class CompletionProvider {
         gitRepo: await this.ide.getRepoName(helper.filepath),
         uniqueId: await this.ide.getUniqueId(),
         timestamp: new Date().toISOString(),
-        profileType:
-          this.configHandler.getActiveProfile()?.profileDescription.profileType,
         ...helper.options,
       };
 

@@ -24,6 +24,7 @@ import Llamafile from "./Llamafile";
 import LlamaStack from "./LlamaStack";
 import LMStudio from "./LMStudio";
 import Mimo from "./Mimo";
+import MiniMax from "./MiniMax";
 import Mistral from "./Mistral";
 import MockLLM from "./Mock";
 import Moonshot from "./Moonshot";
@@ -36,6 +37,7 @@ import Nvidia from "./Nvidia";
 import Ollama from "./Ollama";
 import OpenAI from "./OpenAI";
 import OpenRouter from "./OpenRouter";
+import ClawRouter from "./ClawRouter";
 import OVHcloud from "./OVHcloud";
 import { Relace } from "./Relace";
 import Replicate from "./Replicate";
@@ -78,6 +80,7 @@ export const LLMClasses = [
   LMStudio,
   Mistral,
   Mimo,
+  MiniMax,
   DeepInfra,
   Flowise,
   Groq,
@@ -90,6 +93,7 @@ export const LLMClasses = [
   Azure,
   WatsonX,
   OpenRouter,
+  ClawRouter,
   Nvidia,
   Vllm,
   SambaNova,

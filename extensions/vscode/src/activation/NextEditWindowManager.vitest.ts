@@ -86,7 +86,7 @@ vi.mock("vscode", () => ({
   },
 }));
 
-vi.mock("core/control-plane/env", () => ({
+vi.mock("core/util/constants", () => ({
   EXTENSION_NAME: "continue",
 }));
 

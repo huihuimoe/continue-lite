@@ -1,11 +1,13 @@
 import { z } from "zod";
 
-const clientCertificateOptionsSchema = z.object({
+export const clientCertificateOptionsSchema = z.object({
   cert: z.string(),
   key: z.string(),
   passphrase: z.string().optional(),
 });
-type ClientCertificateOptions = z.infer<typeof clientCertificateOptionsSchema>;
+export type ClientCertificateOptions = z.infer<
+  typeof clientCertificateOptionsSchema
+>;
 
 export const requestOptionsSchema = z.object({
   timeout: z.number().optional(),
@@ -18,7 +20,7 @@ export const requestOptionsSchema = z.object({
   clientCertificate: clientCertificateOptionsSchema.optional(),
 });
 export type RequestOptions = z.infer<typeof requestOptionsSchema>;
-const modelRolesSchema = z.enum([
+export const modelRolesSchema = z.enum([
   "chat",
   "autocomplete",
   "embed",
@@ -32,7 +34,7 @@ export type ModelRole = z.infer<typeof modelRolesSchema>;
 
 // TODO consider just using array of strings for model capabilities
 // To allow more dynamic string parsing
-const modelCapabilitySchema = z.union([
+export const modelCapabilitySchema = z.union([
   z.literal("tool_use"),
   z.literal("image_input"),
   z.literal("next_edit"),
@@ -40,7 +42,7 @@ const modelCapabilitySchema = z.union([
 ]);
 
 // not ideal but lose type suggestions if use z.infer because of the string fallback
-type ModelCapability = "tool_use" | "image_input" | "next_edit";
+export type ModelCapability = "tool_use" | "image_input" | "next_edit";
 
 export const completionOptionsSchema = z.object({
   contextLength: z.number().optional(),
@@ -57,36 +59,69 @@ export const completionOptionsSchema = z.object({
   reasoningBudgetTokens: z.number().optional(),
   promptCaching: z.boolean().optional(),
   stream: z.boolean().optional(),
+  keepAlive: z.number().optional(),
 });
-type CompletionOptions = z.infer<typeof completionOptionsSchema>;
+export type CompletionOptions = z.infer<typeof completionOptionsSchema>;
 
-const embeddingTasksSchema = z.union([z.literal("chunk"), z.literal("query")]);
-type EmbeddingTasks = z.infer<typeof embeddingTasksSchema>;
+export const embeddingTasksSchema = z.union([
+  z.literal("chunk"),
+  z.literal("query"),
+]);
+export type EmbeddingTasks = z.infer<typeof embeddingTasksSchema>;
 
-const embeddingPrefixesSchema = z.record(embeddingTasksSchema, z.string());
-type EmbeddingPrefixes = z.infer<typeof embeddingPrefixesSchema>;
+export const embeddingPrefixesSchema = z.record(
+  embeddingTasksSchema,
+  z.string(),
+);
+export type EmbeddingPrefixes = z.infer<typeof embeddingPrefixesSchema>;
 
-const cacheBehaviorSchema = z.object({
+export const cacheBehaviorSchema = z.object({
   cacheSystemMessage: z.boolean().optional(),
   cacheConversation: z.boolean().optional(),
 });
-type CacheBehavior = z.infer<typeof cacheBehaviorSchema>;
+export type CacheBehavior = z.infer<typeof cacheBehaviorSchema>;
 
-const embedOptionsSchema = z
-  .object({
-    maxChunkSize: z.unknown().optional(),
-    maxBatchSize: z.unknown().optional(),
-    embeddingPrefixes: z.record(z.string(), z.unknown()).optional(),
-  })
-  .passthrough();
-type EmbedOptions = z.infer<typeof embedOptionsSchema>;
+export const embedOptionsSchema = z.object({
+  maxChunkSize: z.number().optional(),
+  maxBatchSize: z.number().optional(),
+  embeddingPrefixes: embeddingPrefixesSchema.optional(),
+});
+export type EmbedOptions = z.infer<typeof embedOptionsSchema>;
 
-const chatOptionsSchema = z.object({
+/**
+ * Schema for overriding a tool's system message description.
+ * Used for models that don't support native tool calling.
+ */
+export const systemMessageDescriptionOverrideSchema = z.object({
+  prefix: z.string().optional(),
+  exampleArgs: z
+    .array(z.tuple([z.string(), z.union([z.string(), z.number()])]))
+    .optional(),
+});
+
+/**
+ * Schema for overriding built-in tool prompts.
+ * Allows customization of tool descriptions and behavior per model.
+ */
+export const toolOverrideSchema = z.object({
+  description: z.string().optional(),
+  displayTitle: z.string().optional(),
+  wouldLikeTo: z.string().optional(),
+  isCurrently: z.string().optional(),
+  hasAlready: z.string().optional(),
+  systemMessageDescription: systemMessageDescriptionOverrideSchema.optional(),
+  disabled: z.boolean().optional(),
+});
+export type ToolOverrideConfig = z.infer<typeof toolOverrideSchema>;
+
+export const chatOptionsSchema = z.object({
   baseSystemMessage: z.string().optional(),
   baseAgentSystemMessage: z.string().optional(),
   basePlanSystemMessage: z.string().optional(),
+  /** Tool overrides keyed by tool name (e.g., "run_terminal_command") */
+  toolOverrides: z.record(z.string(), toolOverrideSchema).optional(),
 });
-type ChatOptions = z.infer<typeof chatOptionsSchema>;
+export type ChatOptions = z.infer<typeof chatOptionsSchema>;
 
 const templateSchema = z.enum([
   "llama2",
@@ -109,7 +144,7 @@ const templateSchema = z.enum([
   "codestral",
 ]);
 
-const autocompleteOptionsSchema = z.object({
+export const autocompleteOptionsSchema = z.object({
   disable: z.boolean().optional(),
   maxPromptTokens: z.number().optional(),
   debounceDelay: z.number().optional(),
@@ -145,6 +180,7 @@ const baseModelFields = {
   model: z.string(),
   apiKey: z.string().optional(),
   apiBase: z.string().optional(),
+  contextLength: z.number().optional(),
   maxStopWords: z.number().optional(),
   roles: modelRolesSchema.array().optional(),
   capabilities: modelCapabilitySchema.array().optional(),
@@ -154,7 +190,8 @@ const baseModelFields = {
   embedOptions: embedOptionsSchema.optional(),
   chatOptions: chatOptionsSchema.optional(),
   promptTemplates: promptTemplatesSchema.optional(),
-  useLegacyCompletionsEndpoint: z.never().optional(),
+  useLegacyCompletionsEndpoint: z.boolean().optional(),
+  useResponsesApi: z.boolean().optional(),
   env: z
     .record(z.string(), z.union([z.string(), z.boolean(), z.number()]))
     .optional(),
@@ -167,6 +204,11 @@ export const modelSchema = z.object({
   sourceFile: z.string().optional(),
 });
 
-export const partialModelSchema = modelSchema.partial();
+export const partialModelSchema = z
+  .object({
+    ...baseModelFields,
+    provider: z.string(),
+  })
+  .partial();
 
 export type ModelConfig = z.infer<typeof modelSchema>;

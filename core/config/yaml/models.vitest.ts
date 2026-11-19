@@ -2,7 +2,6 @@ import { ModelConfig } from "@continuedev/config-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ContinueConfig, ILLMLogger } from "../..";
-import { controlPlaneSettingsSchema } from "../../control-plane/schema";
 import { llmsFromModelConfig } from "./models";
 
 // Mock the LLM classes
@@ -375,71 +374,5 @@ describe("llmsFromModelConfig requestOptions merging", () => {
     });
     expect((result[0] as any).maxEmbeddingBatchSize).toBeUndefined();
     expect((result[0] as any).maxEmbeddingChunkSize).toBeUndefined();
-  });
-
-  it("accepts legacy control-plane embeddings and reranker settings", () => {
-    const result = controlPlaneSettingsSchema.safeParse({
-      models: [
-        {
-          title: "chat",
-          provider: "openai",
-          model: "gpt-4o-mini",
-        },
-      ],
-      tabAutocompleteModel: {
-        title: "autocomplete",
-        provider: "openai",
-        model: "gpt-4o-mini",
-      },
-      embeddingsModel: {
-        provider: "openai",
-        model: "text-embedding-3-large",
-        apiKey: "legacy-key",
-      },
-      reranker: {
-        name: "cohere",
-        params: {
-          model: "rerank-english-v3.0",
-        },
-      },
-      analytics: {},
-      devData: {},
-    });
-
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts opaque compatibility payloads for control-plane embeddingsModel and reranker", () => {
-    const result = controlPlaneSettingsSchema.safeParse({
-      models: [
-        {
-          title: "chat",
-          provider: "openai",
-          model: "gpt-4o-mini",
-        },
-      ],
-      tabAutocompleteModel: {
-        title: "autocomplete",
-        provider: "openai",
-        model: "gpt-4o-mini",
-      },
-      embeddingsModel: {
-        legacyProvider: "custom-legacy-provider",
-        requestOptions: {
-          timeout: "not-a-number-anymore",
-        },
-      },
-      reranker: {
-        legacyName: "custom-legacy-reranker",
-        params: {
-          threshold: "0.25",
-          fallback: true,
-        },
-      },
-      analytics: {},
-      devData: {},
-    });
-
-    expect(result.success).toBe(true);
   });
 });

@@ -14,11 +14,9 @@ import {
 import { dirname } from "node:path";
 
 import { ContinueConfig, IDE, IdeSettings, ILLMLogger } from "../..";
-import { ControlPlaneClient } from "../../control-plane/client";
 import { GlobalContext } from "../../util/GlobalContext";
 import { modifyAnyConfigWithSharedConfig } from "../sharedConfig";
 
-import { getControlPlaneEnvSync } from "../../control-plane/env";
 import { getCleanUriPath } from "../../util/uri";
 import { getAllDotContinueDefinitionFiles } from "../loadLocalAssistants";
 import { unrollLocalYamlBlocks } from "./loadLocalYamlBlocks";
@@ -30,20 +28,11 @@ const RETAINED_YAML_BLOCK_TYPES = new Set(["models", "data", "rules"]);
 
 async function loadConfigYaml(options: {
   overrideConfigYaml: AssistantUnrolled | undefined;
-  controlPlaneClient: ControlPlaneClient;
-  orgScopeId: string | null;
   ideSettings: IdeSettings;
   ide: IDE;
   packageIdentifier: PackageIdentifier;
 }): Promise<ConfigResult<AssistantUnrolled>> {
-  const {
-    overrideConfigYaml,
-    controlPlaneClient,
-    orgScopeId,
-    ideSettings,
-    ide,
-    packageIdentifier,
-  } = options;
+  const { overrideConfigYaml, ide, packageIdentifier } = options;
 
   // Add local .continue blocks
   // Use "content" field to pass pre-read content directly, avoiding
@@ -70,16 +59,12 @@ async function loadConfigYaml(options: {
   //   `Loading config.yaml from ${JSON.stringify(packageIdentifier)} with root path ${rootPath}`,
   // );
 
-  // Registry client is only used if local blocks are present, but logic same for hub/local assistants
   const getRegistryClient = async () => {
     const rootPath =
       packageIdentifier.uriType === "file"
         ? dirname(getCleanUriPath(packageIdentifier.fileUri))
         : undefined;
     return new RegistryClient({
-      accessToken: await controlPlaneClient.getAccessToken(),
-      apiBase: getControlPlaneEnvSync(ideSettings.continueTestEnvironment)
-        .CONTROL_PLANE_URL,
       rootPath,
     });
   };
@@ -95,8 +80,6 @@ async function loadConfigYaml(options: {
         localPackageIdentifiers,
         ide,
         await getRegistryClient(),
-        orgScopeId,
-        controlPlaneClient,
       );
       if (unrolledLocal.errors) {
         errors.push(...unrolledLocal.errors);
@@ -113,13 +96,7 @@ async function loadConfigYaml(options: {
       {
         renderSecrets: true,
         currentUserSlug: "",
-        onPremProxyUrl: null,
-        orgScopeId,
-        platformClient: new LocalPlatformClient(
-          orgScopeId,
-          controlPlaneClient,
-          ide,
-        ),
+        platformClient: new LocalPlatformClient(ide),
         injectBlocks: localPackageIdentifiers,
       },
     );
@@ -234,8 +211,6 @@ export async function loadContinueConfigFromYaml(options: {
   uniqueId: string;
   llmLogger: ILLMLogger;
   overrideConfigYaml: AssistantUnrolled | undefined;
-  controlPlaneClient: ControlPlaneClient;
-  orgScopeId: string | null;
   packageIdentifier: PackageIdentifier;
 }): Promise<ConfigResult<ContinueConfig>> {
   const {
@@ -244,15 +219,11 @@ export async function loadContinueConfigFromYaml(options: {
     uniqueId,
     llmLogger,
     overrideConfigYaml,
-    controlPlaneClient,
-    orgScopeId,
     packageIdentifier,
   } = options;
 
   const configYamlResult = await loadConfigYaml({
     overrideConfigYaml,
-    controlPlaneClient,
-    orgScopeId,
     ideSettings,
     ide,
     packageIdentifier,
