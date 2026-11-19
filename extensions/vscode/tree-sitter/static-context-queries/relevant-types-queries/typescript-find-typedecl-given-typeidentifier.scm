@@ -7,5 +7,5 @@
   body: (_) @type.value)
 
 (enum_declaration
-  name: (type_identifier) @type.identifier
+  name: (identifier) @type.identifier
   body: (_) @type.value)
